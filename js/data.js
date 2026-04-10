@@ -39,6 +39,7 @@ const DEFAULT_SETTINGS = {
 
   // Labour
   labourRatePerHour: 35.00,
+  workingHoursPerDay: 8,
 
   // Travel
   mileageRatePence: 45,

@@ -16,6 +16,15 @@ function formatPercent(value) {
   return value.toFixed(1) + '%';
 }
 
+function formatTime(minutes) {
+  if (!minutes) return '0 mins';
+  const hrs = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  if (hrs === 0) return `${mins} mins`;
+  if (mins === 0) return `${hrs}h`;
+  return `${hrs}h ${mins}m`;
+}
+
 function getProfitClass(margin) {
   if (margin >= 20) return 'profit-good';
   if (margin >= 10) return 'profit-ok';
@@ -155,12 +164,41 @@ function renderQuoteSummary(result) {
       </div>
     </div>
 
+    ${result.timePlan.totalMins > 0 ? `
+    <div class="summary-section time-plan-section">
+      <h3>Time Plan</h3>
+      <div class="summary-row">
+        <span>Travel out (one way)</span>
+        <span>${formatTime(result.timePlan.travelOutMins)}</span>
+      </div>
+      <div class="summary-row">
+        <span>Calibration work</span>
+        <span>${formatTime(result.timePlan.jobMins)}</span>
+      </div>
+      <div class="summary-row">
+        <span>Travel return</span>
+        <span>${formatTime(result.timePlan.travelReturnMins)}</span>
+      </div>
+      <div class="summary-row subtotal">
+        <span>Total time</span>
+        <span>${formatTime(result.timePlan.totalMins)}</span>
+      </div>
+      <div class="time-plan-days">
+        <div class="days-count">${result.timePlan.totalDays} day${result.timePlan.totalDays !== 1 ? 's' : ''}</div>
+        <div class="days-detail">Based on ${result.timePlan.workMinsPerDay / 60}hr working day</div>
+        ${result.timePlan.travelDayBefore ? `
+        <div class="days-breakdown">
+          ${result.timePlan.travelOutDays} travel out + ${result.timePlan.jobDays} on-site${result.timePlan.travelReturnDays ? ' + 1 return' : ''}
+        </div>
+        ${result.timePlan.returnNote ? `<div class="days-note">${result.timePlan.returnNote}</div>` : ''}
+        ` : ''}
+      </div>
+    </div>` : ''}
+
     <div class="summary-section profit-section ${profitClass}">
       <div class="profit-amount">${formatCurrency(result.profitAmount)}</div>
       <div class="profit-margin">${formatPercent(result.profitMarginPercent)} margin</div>
       <div class="profit-pipettes">${result.totalPipettes} pipette${result.totalPipettes !== 1 ? 's' : ''} total</div>
-      ${result.estimatedCalMinutes > 0 ? `
-      <div class="profit-estimate">Est. calibration time: ${Math.ceil(result.estimatedCalMinutes / 60 * 10) / 10} hrs</div>` : ''}
     </div>
 
     ${result.notes ? `
@@ -261,7 +299,7 @@ function collectServiceLevelsFromEditor() {
 function populateSettingsForm(settings) {
   const fields = [
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
-    'labourRatePerHour', 'mileageRatePence', 'travelChargePerMile',
+    'labourRatePerHour', 'workingHoursPerDay', 'mileageRatePence', 'travelChargePerMile',
     'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault',
     'discountRegularPercent', 'discountContractPercent',
   ];
@@ -288,6 +326,7 @@ function collectSettingsFromForm() {
     costMultiChannel12: num('s_costMultiChannel12'),
     costMultiChannel16: num('s_costMultiChannel16'),
     labourRatePerHour: num('s_labourRatePerHour'),
+    workingHoursPerDay: num('s_workingHoursPerDay') || 8,
     mileageRatePence: num('s_mileageRatePence'),
     travelChargeToCustomer: document.getElementById('s_travelChargeToCustomer').checked,
     travelChargePerMile: num('s_travelChargePerMile'),

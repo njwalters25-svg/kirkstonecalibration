@@ -145,6 +145,58 @@ function calculateQuote(input, settings) {
   result.estimatedCalMinutes =
     (sc * minsPerSC) + ((mc8 + mc12 + mc16) * minsPerMC);
 
+  // --- Time plan ---
+  const workMinsPerDay = (settings.workingHoursPerDay || 8) * 60;
+
+  // Travel: one-way time entered, return trip is same
+  const travelOutMins = travelMinutes;
+  const travelReturnMins = travelMinutes;
+  const travelTotalMins = travelOutMins + travelReturnMins;
+
+  // Calibration: use entered value, or estimated if not entered
+  const jobMins = calMinutes || result.estimatedCalMinutes;
+
+  result.timePlan = {
+    travelOutMins,
+    travelReturnMins,
+    travelTotalMins,
+    jobMins,
+    totalMins: travelTotalMins + jobMins,
+    workMinsPerDay,
+    travelDayBefore: !!input.travelDayBefore,
+  };
+
+  // Work out days needed
+  if (input.travelDayBefore) {
+    // Day 1: travel out (partial or full day)
+    // Day 2+: job time spread across working days
+    // Last day or extra: travel return
+    const jobDays = Math.ceil(jobMins / workMinsPerDay);
+    // Can we fit the return travel into the last job day?
+    const lastDayJobMins = jobMins - ((jobDays - 1) * workMinsPerDay);
+    const lastDaySpare = workMinsPerDay - lastDayJobMins;
+    const returnFitsInLastDay = travelReturnMins <= lastDaySpare;
+
+    result.timePlan.travelOutDays = 1; // dedicated travel day
+    result.timePlan.jobDays = jobDays;
+    result.timePlan.travelReturnDays = returnFitsInLastDay ? 0 : 1;
+    result.timePlan.totalDays = 1 + jobDays + (returnFitsInLastDay ? 0 : 1);
+    result.timePlan.returnNote = returnFitsInLastDay
+      ? 'Return travel fits into last job day'
+      : 'Separate return travel day needed';
+  } else {
+    // Everything runs consecutively in working days
+    const totalMins = travelOutMins + jobMins + travelReturnMins;
+    const rawDays = totalMins / workMinsPerDay;
+    const totalDays = Math.ceil(rawDays);
+
+    result.timePlan.travelOutDays = 0; // no dedicated travel day
+    result.timePlan.jobDays = 0;       // not separated
+    result.timePlan.travelReturnDays = 0;
+    result.timePlan.totalDays = totalDays;
+    result.timePlan.returnNote = '';
+  }
+
   // --- Notes (pass through for display/print) ---
   result.notes = input.notes || '';
 

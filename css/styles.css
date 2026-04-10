@@ -642,6 +642,46 @@ body {
   font-weight: 600;
 }
 
+/* Time plan */
+.time-plan-section {
+  background: #f7fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.time-plan-days {
+  text-align: center;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.days-count {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.days-detail {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  margin-top: 0.15rem;
+}
+
+.days-breakdown {
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-top: 0.35rem;
+}
+
+.days-note {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-style: italic;
+  margin-top: 0.2rem;
+}
+
 /* Notes */
 .notes-section {
   background: #fafafa;
