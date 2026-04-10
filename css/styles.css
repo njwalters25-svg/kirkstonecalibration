@@ -696,6 +696,19 @@ body {
   margin-top: 0.2rem;
 }
 
+.nights-count {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-top: 0.5rem;
+}
+
+.nights-cost {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.15rem;
+}
+
 /* Notes */
 .notes-section {
   background: #fafafa;
