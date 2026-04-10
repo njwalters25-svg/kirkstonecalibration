@@ -43,11 +43,10 @@
                 <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd">
               </div>
               <div class="form-group">
-                <label>Service Level</label>
-                <div class="radio-group">
-                  <label><input type="radio" name="serviceLevel" value="standard" checked> Standard</label>
-                  <label><input type="radio" name="serviceLevel" value="express"> Express / Priority</label>
-                </div>
+                <label for="serviceLevelId">Service Level</label>
+                <select id="serviceLevelId">
+                  <!-- Populated dynamically from settings -->
+                </select>
               </div>
             </div>
 
@@ -185,32 +184,18 @@
 
     <!-- ===== SETTINGS TAB ===== -->
     <section id="settingsPanel" class="tab-panel">
-      <div class="settings-grid">
 
-        <!-- Charges to customer -->
-        <div class="settings-card">
-          <h3>Customer Charges (per pipette)</h3>
-          <div class="setting-row">
-            <label>Single-channel</label>
-            <input type="number" id="s_chargeSingleChannel" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (8-ch)</label>
-            <input type="number" id="s_chargeMultiChannel8" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (12-ch)</label>
-            <input type="number" id="s_chargeMultiChannel12" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (16-ch)</label>
-            <input type="number" id="s_chargeMultiChannel16" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
+      <!-- Service Levels (full width, above the grid) -->
+      <div class="settings-card settings-full-width">
+        <h3>Service Levels</h3>
+        <p class="settings-hint">Each level defines the readings, volumes, per-pipette charges, and time estimates. These appear as options in the quote form.</p>
+        <div id="serviceLevelsEditor"></div>
+        <div style="margin-top: 0.75rem;">
+          <button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button>
         </div>
+      </div>
+
+      <div class="settings-grid">
 
         <!-- Internal costs -->
         <div class="settings-card">
@@ -290,14 +275,9 @@
           </div>
         </div>
 
-        <!-- Service level & Discounts -->
+        <!-- Discounts -->
         <div class="settings-card">
-          <h3>Premiums & Discounts</h3>
-          <div class="setting-row">
-            <label>Express/Priority premium</label>
-            <input type="number" id="s_expressPremiumPercent" step="1" min="0">
-            <span class="unit">%</span>
-          </div>
+          <h3>Discounts</h3>
           <div class="setting-row">
             <label>Regular customer discount</label>
             <input type="number" id="s_discountRegularPercent" step="1" min="0">
@@ -307,21 +287,6 @@
             <label>Contract-winning discount</label>
             <input type="number" id="s_discountContractPercent" step="1" min="0">
             <span class="unit">%</span>
-          </div>
-        </div>
-
-        <!-- Time estimates -->
-        <div class="settings-card">
-          <h3>Time Estimates</h3>
-          <div class="setting-row">
-            <label>Minutes per single-channel</label>
-            <input type="number" id="s_minutesPerSingleChannel" step="1" min="1">
-            <span class="unit">min</span>
-          </div>
-          <div class="setting-row">
-            <label>Minutes per multi-channel</label>
-            <input type="number" id="s_minutesPerMultiChannel" step="1" min="1">
-            <span class="unit">min</span>
           </div>
         </div>
 

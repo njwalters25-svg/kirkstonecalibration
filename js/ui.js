@@ -22,12 +22,32 @@ function getProfitClass(margin) {
   return 'profit-low';
 }
 
+// --- Service level dropdown ---
+
+function populateServiceLevelDropdown(settings) {
+  const select = document.getElementById('serviceLevelId');
+  const current = select.value;
+  select.innerHTML = '';
+  settings.serviceLevels.forEach(sl => {
+    const opt = document.createElement('option');
+    opt.value = sl.id;
+    opt.textContent = sl.name;
+    select.appendChild(opt);
+  });
+  // Restore previous selection if it still exists
+  if (current && settings.serviceLevels.some(sl => sl.id === current)) {
+    select.value = current;
+  }
+}
+
+// --- Collect quote form ---
+
 function collectQuoteInputFromForm() {
   return {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
-    serviceLevel: document.querySelector('input[name="serviceLevel"]:checked')?.value || 'standard',
+    serviceLevelId: document.getElementById('serviceLevelId').value,
     singleChannelCount: parseInt(document.getElementById('singleChannelCount').value) || 0,
     multiChannel8Count: parseInt(document.getElementById('multiChannel8Count').value) || 0,
     multiChannel12Count: parseInt(document.getElementById('multiChannel12Count').value) || 0,
@@ -46,12 +66,15 @@ function collectQuoteInputFromForm() {
   };
 }
 
+// --- Quote summary ---
+
 function renderQuoteSummary(result) {
   const container = document.getElementById('quoteSummary');
   const profitClass = getProfitClass(result.profitMarginPercent);
 
   container.innerHTML = `
     <div class="summary-section">
+      <div class="service-level-badge">${result.serviceLevelName}</div>
       <h3>Revenue Breakdown</h3>
       <div class="summary-row">
         <span>Single-channel pipettes</span>
@@ -90,11 +113,6 @@ function renderQuoteSummary(result) {
       <div class="summary-row premium">
         <span>London premium</span>
         <span>+${formatCurrency(result.londonPremium)}</span>
-      </div>` : ''}
-      ${result.expressPremium > 0 ? `
-      <div class="summary-row premium">
-        <span>Express premium</span>
-        <span>+${formatCurrency(result.expressPremium)}</span>
       </div>` : ''}
       ${result.discountAmount > 0 ? `
       <div class="summary-row discount">
@@ -152,14 +170,99 @@ function renderQuoteSummary(result) {
   `;
 }
 
+// --- Settings: service levels editor ---
+
+function renderServiceLevelsEditor(settings) {
+  const container = document.getElementById('serviceLevelsEditor');
+  if (!container) return;
+
+  container.innerHTML = settings.serviceLevels.map((sl, i) => `
+    <div class="sl-card" data-index="${i}">
+      <div class="sl-card-header">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" class="sl-name" value="${sl.name}">
+          </div>
+          <div class="form-group">
+            <label>Readings</label>
+            <input type="number" class="sl-readings" min="1" value="${sl.readings}">
+          </div>
+          <div class="form-group">
+            <label>Volumes</label>
+            <input type="number" class="sl-volumes" min="1" value="${sl.volumes}">
+          </div>
+        </div>
+      </div>
+      <div class="sl-card-body">
+        <div class="sl-section-label">Customer charges (GBP per pipette)</div>
+        <div class="form-row-4">
+          <div class="form-group">
+            <label>Single-ch</label>
+            <input type="number" class="sl-chargeSingle" step="0.50" min="0" value="${sl.chargeSingleChannel}">
+          </div>
+          <div class="form-group">
+            <label>Multi 8-ch</label>
+            <input type="number" class="sl-chargeMulti8" step="0.50" min="0" value="${sl.chargeMultiChannel8}">
+          </div>
+          <div class="form-group">
+            <label>Multi 12-ch</label>
+            <input type="number" class="sl-chargeMulti12" step="0.50" min="0" value="${sl.chargeMultiChannel12}">
+          </div>
+          <div class="form-group">
+            <label>Multi 16-ch</label>
+            <input type="number" class="sl-chargeMulti16" step="0.50" min="0" value="${sl.chargeMultiChannel16}">
+          </div>
+        </div>
+        <div class="sl-section-label">Time per pipette (minutes)</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Single-channel</label>
+            <input type="number" class="sl-minsSingle" step="1" min="1" value="${sl.minutesPerSingleChannel}">
+          </div>
+          <div class="form-group">
+            <label>Multi-channel</label>
+            <input type="number" class="sl-minsMulti" step="1" min="1" value="${sl.minutesPerMultiChannel}">
+          </div>
+        </div>
+      </div>
+      <div class="sl-card-footer">
+        <button type="button" class="btn-small btn-delete sl-remove" data-index="${i}"
+          ${settings.serviceLevels.length <= 1 ? 'disabled title="Need at least one level"' : ''}>Remove</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function collectServiceLevelsFromEditor() {
+  const cards = document.querySelectorAll('#serviceLevelsEditor .sl-card');
+  return Array.from(cards).map((card, i) => {
+    const name = card.querySelector('.sl-name').value.trim() || `Level ${i + 1}`;
+    const readings = parseInt(card.querySelector('.sl-readings').value) || 1;
+    const volumes = parseInt(card.querySelector('.sl-volumes').value) || 1;
+    return {
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+      name,
+      readings,
+      volumes,
+      chargeSingleChannel: parseFloat(card.querySelector('.sl-chargeSingle').value) || 0,
+      chargeMultiChannel8: parseFloat(card.querySelector('.sl-chargeMulti8').value) || 0,
+      chargeMultiChannel12: parseFloat(card.querySelector('.sl-chargeMulti12').value) || 0,
+      chargeMultiChannel16: parseFloat(card.querySelector('.sl-chargeMulti16').value) || 0,
+      minutesPerSingleChannel: parseInt(card.querySelector('.sl-minsSingle').value) || 1,
+      minutesPerMultiChannel: parseInt(card.querySelector('.sl-minsMulti').value) || 1,
+    };
+  });
+}
+
+// --- Settings: scalar fields ---
+
 function populateSettingsForm(settings) {
   const fields = [
-    'chargeSingleChannel', 'chargeMultiChannel8', 'chargeMultiChannel12', 'chargeMultiChannel16',
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
     'labourRatePerHour', 'mileageRatePence', 'travelChargePerMile',
-    'londonPremiumPercent', 'hotelBudgetDefault', 'expressPremiumPercent',
+    'londonPremiumPercent', 'hotelBudgetDefault',
     'discountRegularPercent', 'discountContractPercent',
-    'minutesPerSingleChannel', 'minutesPerMultiChannel',
   ];
   fields.forEach(f => {
     const el = document.getElementById('s_' + f);
@@ -171,15 +274,14 @@ function populateSettingsForm(settings) {
 
   const accomCharge = document.getElementById('s_chargeAccommodationToCustomer');
   if (accomCharge) accomCharge.checked = settings.chargeAccommodationToCustomer;
+
+  renderServiceLevelsEditor(settings);
 }
 
 function collectSettingsFromForm() {
   const num = id => parseFloat(document.getElementById(id).value) || 0;
   return {
-    chargeSingleChannel: num('s_chargeSingleChannel'),
-    chargeMultiChannel8: num('s_chargeMultiChannel8'),
-    chargeMultiChannel12: num('s_chargeMultiChannel12'),
-    chargeMultiChannel16: num('s_chargeMultiChannel16'),
+    serviceLevels: collectServiceLevelsFromEditor(),
     costSingleChannel: num('s_costSingleChannel'),
     costMultiChannel8: num('s_costMultiChannel8'),
     costMultiChannel12: num('s_costMultiChannel12'),
@@ -191,13 +293,12 @@ function collectSettingsFromForm() {
     londonPremiumPercent: num('s_londonPremiumPercent'),
     hotelBudgetDefault: num('s_hotelBudgetDefault'),
     chargeAccommodationToCustomer: document.getElementById('s_chargeAccommodationToCustomer').checked,
-    expressPremiumPercent: num('s_expressPremiumPercent'),
     discountRegularPercent: num('s_discountRegularPercent'),
     discountContractPercent: num('s_discountContractPercent'),
-    minutesPerSingleChannel: num('s_minutesPerSingleChannel'),
-    minutesPerMultiChannel: num('s_minutesPerMultiChannel'),
   };
 }
+
+// --- Quote history ---
 
 function renderQuoteHistory(quotes) {
   const container = document.getElementById('quoteHistory');
@@ -213,6 +314,7 @@ function renderQuoteHistory(quotes) {
       <div class="history-header">
         <strong>${q.customerName || 'Unnamed'}</strong>
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
+        ${q.serviceLevelName ? `<span class="history-badge">${q.serviceLevelName}</span>` : ''}
       </div>
       <div class="history-details">
         <span>${q.totalPipettes} pipettes</span>

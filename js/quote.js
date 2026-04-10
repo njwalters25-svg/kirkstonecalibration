@@ -2,8 +2,20 @@
 // quote.js — Pure calculation engine, no DOM access
 // ============================================================
 
+function getServiceLevel(serviceLevelId, settings) {
+  if (!settings.serviceLevels || settings.serviceLevels.length === 0) return null;
+  return settings.serviceLevels.find(sl => sl.id === serviceLevelId)
+    || settings.serviceLevels[0];
+}
+
 function calculateQuote(input, settings) {
   const result = {};
+
+  // --- Resolve service level ---
+  const sl = getServiceLevel(input.serviceLevelId, settings);
+  result.serviceLevelName = sl ? sl.name : 'Unknown';
+  result.serviceLevelReadings = sl ? sl.readings : 0;
+  result.serviceLevelVolumes = sl ? sl.volumes : 0;
 
   // --- Pipette counts ---
   const sc = input.singleChannelCount || 0;
@@ -13,11 +25,11 @@ function calculateQuote(input, settings) {
   result.totalPipettes = sc + mc8 + mc12 + mc16;
   result.totalChannels = sc + (mc8 * 8) + (mc12 * 12) + (mc16 * 16);
 
-  // --- Revenue: Pipette charges ---
-  result.pipetteChargesSingle = sc * settings.chargeSingleChannel;
-  result.pipetteChargesMulti8 = mc8 * settings.chargeMultiChannel8;
-  result.pipetteChargesMulti12 = mc12 * settings.chargeMultiChannel12;
-  result.pipetteChargesMulti16 = mc16 * settings.chargeMultiChannel16;
+  // --- Revenue: Pipette charges (from service level) ---
+  result.pipetteChargesSingle = sc * (sl ? sl.chargeSingleChannel : 0);
+  result.pipetteChargesMulti8 = mc8 * (sl ? sl.chargeMultiChannel8 : 0);
+  result.pipetteChargesMulti12 = mc12 * (sl ? sl.chargeMultiChannel12 : 0);
+  result.pipetteChargesMulti16 = mc16 * (sl ? sl.chargeMultiChannel16 : 0);
   result.pipetteChargesTotal =
     result.pipetteChargesSingle +
     result.pipetteChargesMulti8 +
@@ -58,14 +70,7 @@ function calculateQuote(input, settings) {
     result.londonPremium = 0;
   }
 
-  // --- Express premium ---
-  if (input.serviceLevel === 'express') {
-    result.expressPremium = result.pipetteChargesTotal * (settings.expressPremiumPercent / 100);
-  } else {
-    result.expressPremium = 0;
-  }
-
-  result.subtotalBeforeDiscount = subtotal + result.londonPremium + result.expressPremium;
+  result.subtotalBeforeDiscount = subtotal + result.londonPremium;
 
   // --- Discount ---
   let discountPercent = 0;
@@ -119,13 +124,7 @@ function calculateQuote(input, settings) {
   const travelMinutes = input.travelTimeMinutes || 0;
   result.costLabourTravel = (travelMinutes / 60) * settings.labourRatePerHour;
 
-  // If travelling day before, add extra labour for that travel time
-  if (input.travelDayBefore) {
-    // Travel time is already counted — but we note this for the summary
-    result.travelDayBeforeNote = true;
-  } else {
-    result.travelDayBeforeNote = false;
-  }
+  result.travelDayBeforeNote = !!input.travelDayBefore;
 
   result.totalInternalCost =
     result.costPipettesTotal +
@@ -140,10 +139,11 @@ function calculateQuote(input, settings) {
     ? (result.profitAmount / result.totalQuotePrice) * 100
     : 0;
 
-  // --- Auto-estimated calibration time ---
+  // --- Auto-estimated calibration time (from service level) ---
+  const minsPerSC = sl ? sl.minutesPerSingleChannel : 0;
+  const minsPerMC = sl ? sl.minutesPerMultiChannel : 0;
   result.estimatedCalMinutes =
-    (sc * settings.minutesPerSingleChannel) +
-    ((mc8 + mc12 + mc16) * settings.minutesPerMultiChannel);
+    (sc * minsPerSC) + ((mc8 + mc12 + mc16) * minsPerMC);
 
   // --- Notes (pass through for display/print) ---
   result.notes = input.notes || '';

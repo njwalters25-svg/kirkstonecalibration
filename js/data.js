@@ -3,13 +3,35 @@
 // ============================================================
 
 const DEFAULT_SETTINGS = {
-  // Charges to customer (GBP per pipette)
-  chargeSingleChannel: 25.00,
-  chargeMultiChannel8: 45.00,
-  chargeMultiChannel12: 55.00,
-  chargeMultiChannel16: 65.00,
+  // Service levels — each defines readings, volumes, pricing, and time per pipette
+  serviceLevels: [
+    {
+      id: '2r2v',
+      name: '2 readings @ 2 volumes',
+      readings: 2,
+      volumes: 2,
+      chargeSingleChannel: 25.00,
+      chargeMultiChannel8: 45.00,
+      chargeMultiChannel12: 55.00,
+      chargeMultiChannel16: 65.00,
+      minutesPerSingleChannel: 15,
+      minutesPerMultiChannel: 25,
+    },
+    {
+      id: '3r3v',
+      name: '3 readings @ 3 volumes',
+      readings: 3,
+      volumes: 3,
+      chargeSingleChannel: 35.00,
+      chargeMultiChannel8: 60.00,
+      chargeMultiChannel12: 72.00,
+      chargeMultiChannel16: 85.00,
+      minutesPerSingleChannel: 25,
+      minutesPerMultiChannel: 40,
+    },
+  ],
 
-  // Internal costs per pipette (consumables, certs, wear)
+  // Internal costs per pipette (consumables, certs, wear — same regardless of service level)
   costSingleChannel: 6.00,
   costMultiChannel8: 12.00,
   costMultiChannel12: 16.00,
@@ -20,8 +42,8 @@ const DEFAULT_SETTINGS = {
 
   // Travel
   mileageRatePence: 45,
-  travelChargeToCustomer: true,       // whether to add travel charge to quote
-  travelChargePerMile: 0.45,          // GBP per mile charged to customer (if enabled)
+  travelChargeToCustomer: true,
+  travelChargePerMile: 0.45,
 
   // Location premiums
   londonPremiumPercent: 15,
@@ -30,16 +52,9 @@ const DEFAULT_SETTINGS = {
   hotelBudgetDefault: 95.00,
   chargeAccommodationToCustomer: true,
 
-  // Service level
-  expressPremiumPercent: 25,
-
   // Discounts
   discountRegularPercent: 5,
   discountContractPercent: 10,
-
-  // Pipette time estimates (minutes per pipette, for auto-estimating cal time)
-  minutesPerSingleChannel: 15,
-  minutesPerMultiChannel: 25,
 };
 
 const StorageManager = {
@@ -48,12 +63,18 @@ const StorageManager = {
   loadSettings() {
     try {
       const raw = localStorage.getItem(this._prefix + 'settings');
-      if (!raw) return { ...DEFAULT_SETTINGS };
+      if (!raw) return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
       const saved = JSON.parse(raw);
-      // Merge with defaults so new fields get their default value
-      return { ...DEFAULT_SETTINGS, ...saved };
+      // Merge scalar fields with defaults; keep saved serviceLevels array as-is
+      const merged = { ...DEFAULT_SETTINGS, ...saved };
+      if (saved.serviceLevels && Array.isArray(saved.serviceLevels)) {
+        merged.serviceLevels = saved.serviceLevels;
+      } else {
+        merged.serviceLevels = JSON.parse(JSON.stringify(DEFAULT_SETTINGS.serviceLevels));
+      }
+      return merged;
     } catch {
-      return { ...DEFAULT_SETTINGS };
+      return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
     }
   },
 
@@ -63,7 +84,7 @@ const StorageManager = {
 
   resetSettings() {
     localStorage.removeItem(this._prefix + 'settings');
-    return { ...DEFAULT_SETTINGS };
+    return JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
   },
 
   loadQuoteHistory() {

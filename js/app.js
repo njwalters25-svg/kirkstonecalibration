@@ -7,6 +7,7 @@ let currentSettings;
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
+  populateServiceLevelDropdown(currentSettings);
   restoreFormState();
   recalculate();
   renderQuoteHistory(StorageManager.loadQuoteHistory());
@@ -41,11 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // London checkbox — suggest overnight & day-before travel
   document.getElementById('isLondon').addEventListener('change', (e) => {
-    if (e.target.checked) {
-      document.getElementById('londonNote').style.display = 'block';
-    } else {
-      document.getElementById('londonNote').style.display = 'none';
-    }
+    document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
   });
 
   // Overnight toggle — show/hide hotel fields
@@ -61,10 +58,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // --- Service levels editor: Add / Remove ---
+  document.getElementById('addServiceLevel').addEventListener('click', () => {
+    const levels = collectServiceLevelsFromEditor();
+    levels.push({
+      id: 'new_' + Date.now(),
+      name: 'New level',
+      readings: 2,
+      volumes: 2,
+      chargeSingleChannel: 25,
+      chargeMultiChannel8: 45,
+      chargeMultiChannel12: 55,
+      chargeMultiChannel16: 65,
+      minutesPerSingleChannel: 15,
+      minutesPerMultiChannel: 25,
+    });
+    currentSettings.serviceLevels = levels;
+    renderServiceLevelsEditor(currentSettings);
+    wireServiceLevelRemoveButtons();
+  });
+
+  wireServiceLevelRemoveButtons();
+
   // Settings save
   document.getElementById('saveSettings').addEventListener('click', () => {
     currentSettings = collectSettingsFromForm();
     StorageManager.saveSettings(currentSettings);
+    populateServiceLevelDropdown(currentSettings);
     recalculate();
     showToast('Settings saved');
   });
@@ -74,6 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirm('Reset all settings to defaults?')) {
       currentSettings = StorageManager.resetSettings();
       populateSettingsForm(currentSettings);
+      populateServiceLevelDropdown(currentSettings);
+      wireServiceLevelRemoveButtons();
       recalculate();
       showToast('Settings reset to defaults');
     }
@@ -85,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const result = calculateQuote(input, currentSettings);
     const saved = {
       ...input,
+      serviceLevelName: result.serviceLevelName,
       totalPipettes: result.totalPipettes,
       totalQuotePrice: result.totalQuotePrice,
       totalInternalCost: result.totalInternalCost,
@@ -112,6 +135,20 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+function wireServiceLevelRemoveButtons() {
+  document.querySelectorAll('.sl-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const levels = collectServiceLevelsFromEditor();
+      if (levels.length <= 1) return;
+      const idx = parseInt(btn.dataset.index);
+      levels.splice(idx, 1);
+      currentSettings.serviceLevels = levels;
+      renderServiceLevelsEditor(currentSettings);
+      wireServiceLevelRemoveButtons();
+    });
+  });
+}
+
 function recalculate() {
   const input = collectQuoteInputFromForm();
   const result = calculateQuote(input, currentSettings);
@@ -137,6 +174,7 @@ function restoreFormState() {
   };
 
   setVal('customerName', saved.customerName);
+  setVal('serviceLevelId', saved.serviceLevelId);
   setVal('singleChannelCount', saved.singleChannelCount);
   setVal('multiChannel8Count', saved.multiChannel8Count);
   setVal('multiChannel12Count', saved.multiChannel12Count);
@@ -152,10 +190,6 @@ function restoreFormState() {
   setVal('customDiscount', saved.customDiscountPercent);
   setVal('quoteNotes', saved.notes);
 
-  if (saved.serviceLevel) {
-    const radio = document.querySelector(`input[name="serviceLevel"][value="${saved.serviceLevel}"]`);
-    if (radio) radio.checked = true;
-  }
   if (saved.discountType) {
     const radio = document.querySelector(`input[name="discountType"][value="${saved.discountType}"]`);
     if (radio) radio.checked = true;
