@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kirkstone Calibration — Quote Tool</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <div>
+      <h1>Kirkstone Calibration <span class="subtitle">Quote Tool</span></h1>
+    </div>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="quotePanel">New Quote</button>
+      <button class="tab-btn" data-tab="settingsPanel">Settings</button>
+      <button class="tab-btn" data-tab="historyPanel">History</button>
+    </nav>
+  </header>
+
+  <main class="main">
+
+    <!-- ===== PRINT HEADER (only visible in print) ===== -->
+    <div class="print-header">
+      <h1>Kirkstone Calibration</h1>
+      <p>Pipette Calibration Quote</p>
+    </div>
+
+    <!-- ===== QUOTE TAB ===== -->
+    <section id="quotePanel" class="tab-panel active">
+      <div class="quote-layout">
+
+        <!-- LEFT: Form -->
+        <div class="form-column">
+          <form id="quoteForm" autocomplete="off">
+
+            <!-- Customer & Service Level -->
+            <div class="card">
+              <h2>Job Details</h2>
+              <div class="form-group">
+                <label for="customerName">Customer Name</label>
+                <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd">
+              </div>
+              <div class="form-group">
+                <label>Service Level</label>
+                <div class="radio-group">
+                  <label><input type="radio" name="serviceLevel" value="standard" checked> Standard</label>
+                  <label><input type="radio" name="serviceLevel" value="express"> Express / Priority</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pipettes -->
+            <div class="card">
+              <h2>Pipettes</h2>
+              <div class="form-row-4">
+                <div class="form-group">
+                  <label for="singleChannelCount">Single-channel</label>
+                  <input type="number" id="singleChannelCount" min="0" value="0">
+                </div>
+                <div class="form-group">
+                  <label for="multiChannel8Count">Multi 8-ch</label>
+                  <input type="number" id="multiChannel8Count" min="0" value="0">
+                </div>
+                <div class="form-group">
+                  <label for="multiChannel12Count">Multi 12-ch</label>
+                  <input type="number" id="multiChannel12Count" min="0" value="0">
+                </div>
+                <div class="form-group">
+                  <label for="multiChannel16Count">Multi 16-ch</label>
+                  <input type="number" id="multiChannel16Count" min="0" value="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- Travel -->
+            <div class="card">
+              <h2>Travel</h2>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="travelDistance">Distance (miles, one way)</label>
+                  <input type="number" id="travelDistance" min="0" value="0" step="0.1">
+                </div>
+                <div class="form-group">
+                  <label for="travelTime">Travel time (mins, one way)</label>
+                  <input type="number" id="travelTime" min="0" value="0">
+                </div>
+              </div>
+              <div class="checkbox-group">
+                <input type="checkbox" id="travelDayBefore">
+                <label for="travelDayBefore">Travel the day before</label>
+              </div>
+            </div>
+
+            <!-- Location -->
+            <div class="card">
+              <h2>Location</h2>
+              <div class="checkbox-group">
+                <input type="checkbox" id="isLondon">
+                <label for="isLondon">London job</label>
+              </div>
+              <div id="londonNote" class="info-note">
+                London jobs often need extra planning. Consider travelling the day before
+                to avoid driving into London during rush hour. Factor in congestion charges
+                and parking. You may want to use public transport for the last leg.
+              </div>
+            </div>
+
+            <!-- Accommodation -->
+            <div class="card">
+              <h2>Accommodation</h2>
+              <div class="checkbox-group">
+                <input type="checkbox" id="overnightStay">
+                <label for="overnightStay">Overnight stay required</label>
+              </div>
+              <div id="hotelFields" style="display:none">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="hotelCost">Hotel cost per night (GBP)</label>
+                    <input type="number" id="hotelCost" min="0" step="0.01" placeholder="Leave blank for default">
+                  </div>
+                  <div class="form-group">
+                    <label for="nights">Number of nights</label>
+                    <input type="number" id="nights" min="1" value="1">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Calibration Time -->
+            <div class="card">
+              <h2>On-site Time</h2>
+              <div class="form-group">
+                <label for="calibrationTime">Calibration time (minutes)</label>
+                <input type="number" id="calibrationTime" min="0" value="0">
+              </div>
+              <button type="button" id="autoEstimate" class="btn-link">Auto-estimate from pipette count</button>
+            </div>
+
+            <!-- Discount -->
+            <div class="card">
+              <h2>Discount</h2>
+              <div class="radio-group" style="flex-direction: column; gap: 0.5rem;">
+                <label><input type="radio" name="discountType" value="none" checked> No discount</label>
+                <label><input type="radio" name="discountType" value="regular"> Regular customer</label>
+                <label><input type="radio" name="discountType" value="contract"> Contract-winning rate</label>
+                <label><input type="radio" name="discountType" value="custom" id="discountCustom"> Custom</label>
+              </div>
+              <div id="customDiscountField" style="display:none; margin-top: 0.5rem;">
+                <div class="form-group">
+                  <label for="customDiscount">Custom discount (%)</label>
+                  <input type="number" id="customDiscount" min="0" max="100" value="0" step="0.5">
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <!-- RIGHT: Summary -->
+        <div class="summary-column">
+          <div class="card">
+            <h2>Quote Summary</h2>
+            <div id="quoteSummary"></div>
+            <div class="actions-bar">
+              <button id="saveQuote" class="btn btn-primary">Save Quote</button>
+              <button id="printQuote" class="btn btn-secondary">Print / PDF</button>
+              <button id="clearForm" class="btn btn-secondary">Clear Form</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== SETTINGS TAB ===== -->
+    <section id="settingsPanel" class="tab-panel">
+      <div class="settings-grid">
+
+        <!-- Charges to customer -->
+        <div class="settings-card">
+          <h3>Customer Charges (per pipette)</h3>
+          <div class="setting-row">
+            <label>Single-channel</label>
+            <input type="number" id="s_chargeSingleChannel" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (8-ch)</label>
+            <input type="number" id="s_chargeMultiChannel8" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (12-ch)</label>
+            <input type="number" id="s_chargeMultiChannel12" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (16-ch)</label>
+            <input type="number" id="s_chargeMultiChannel16" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+        </div>
+
+        <!-- Internal costs -->
+        <div class="settings-card">
+          <h3>Internal Costs (per pipette)</h3>
+          <div class="setting-row">
+            <label>Single-channel</label>
+            <input type="number" id="s_costSingleChannel" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (8-ch)</label>
+            <input type="number" id="s_costMultiChannel8" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (12-ch)</label>
+            <input type="number" id="s_costMultiChannel12" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Multi-channel (16-ch)</label>
+            <input type="number" id="s_costMultiChannel16" step="0.50" min="0">
+            <span class="unit">GBP</span>
+          </div>
+        </div>
+
+        <!-- Labour -->
+        <div class="settings-card">
+          <h3>Labour</h3>
+          <div class="setting-row">
+            <label>Hourly rate (internal cost)</label>
+            <input type="number" id="s_labourRatePerHour" step="0.50" min="0">
+            <span class="unit">GBP/hr</span>
+          </div>
+        </div>
+
+        <!-- Travel -->
+        <div class="settings-card">
+          <h3>Travel</h3>
+          <div class="setting-row">
+            <label>Mileage rate (internal cost)</label>
+            <input type="number" id="s_mileageRatePence" step="1" min="0">
+            <span class="unit">p/mi</span>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="s_travelChargeToCustomer">
+            <label for="s_travelChargeToCustomer">Charge travel to customer</label>
+          </div>
+          <div class="setting-row">
+            <label>Travel charge rate</label>
+            <input type="number" id="s_travelChargePerMile" step="0.01" min="0">
+            <span class="unit">GBP/mi</span>
+          </div>
+        </div>
+
+        <!-- Location premiums -->
+        <div class="settings-card">
+          <h3>Location Premiums</h3>
+          <div class="setting-row">
+            <label>London premium</label>
+            <input type="number" id="s_londonPremiumPercent" step="1" min="0">
+            <span class="unit">%</span>
+          </div>
+        </div>
+
+        <!-- Accommodation -->
+        <div class="settings-card">
+          <h3>Accommodation</h3>
+          <div class="setting-row">
+            <label>Default hotel budget</label>
+            <input type="number" id="s_hotelBudgetDefault" step="5" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="checkbox-group">
+            <input type="checkbox" id="s_chargeAccommodationToCustomer">
+            <label for="s_chargeAccommodationToCustomer">Charge accommodation to customer</label>
+          </div>
+        </div>
+
+        <!-- Service level & Discounts -->
+        <div class="settings-card">
+          <h3>Premiums & Discounts</h3>
+          <div class="setting-row">
+            <label>Express/Priority premium</label>
+            <input type="number" id="s_expressPremiumPercent" step="1" min="0">
+            <span class="unit">%</span>
+          </div>
+          <div class="setting-row">
+            <label>Regular customer discount</label>
+            <input type="number" id="s_discountRegularPercent" step="1" min="0">
+            <span class="unit">%</span>
+          </div>
+          <div class="setting-row">
+            <label>Contract-winning discount</label>
+            <input type="number" id="s_discountContractPercent" step="1" min="0">
+            <span class="unit">%</span>
+          </div>
+        </div>
+
+        <!-- Time estimates -->
+        <div class="settings-card">
+          <h3>Time Estimates</h3>
+          <div class="setting-row">
+            <label>Minutes per single-channel</label>
+            <input type="number" id="s_minutesPerSingleChannel" step="1" min="1">
+            <span class="unit">min</span>
+          </div>
+          <div class="setting-row">
+            <label>Minutes per multi-channel</label>
+            <input type="number" id="s_minutesPerMultiChannel" step="1" min="1">
+            <span class="unit">min</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="settings-actions">
+        <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+        <button id="resetSettings" class="btn btn-danger">Reset to Defaults</button>
+      </div>
+    </section>
+
+    <!-- ===== HISTORY TAB ===== -->
+    <section id="historyPanel" class="tab-panel">
+      <div class="card">
+        <h2>Saved Quotes</h2>
+        <div id="quoteHistory"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Scripts (dependency order) -->
+  <script src="js/data.js"></script>
+  <script src="js/quote.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
