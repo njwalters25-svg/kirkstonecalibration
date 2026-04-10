@@ -40,6 +40,35 @@ document.addEventListener('DOMContentLoaded', () => {
     recalculate();
   });
 
+  // Calculate route from postcodes
+  document.getElementById('calcRoute').addEventListener('click', async () => {
+    const dest = document.getElementById('destinationPostcode').value.trim();
+    const statusEl = document.getElementById('routeStatus');
+
+    if (!dest) {
+      statusEl.textContent = 'Please enter a destination postcode.';
+      statusEl.className = 'route-status route-error';
+      return;
+    }
+
+    const home = currentSettings.homePostcode || 'DE75 7UJ';
+    statusEl.textContent = 'Calculating route...';
+    statusEl.className = 'route-status route-loading';
+
+    try {
+      const route = await calculateRoute(home, dest);
+      document.getElementById('travelDistance').value = route.distanceMiles;
+      document.getElementById('travelTime').value = route.durationMinutes;
+      statusEl.textContent = `${route.from} → ${route.to}: ${route.distanceMiles} miles, ~${route.durationMinutes} mins`;
+      statusEl.className = 'route-status route-success';
+      recalculate();
+      autoSaveForm();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'route-status route-error';
+    }
+  });
+
   // London checkbox — suggest overnight & day-before travel
   document.getElementById('isLondon').addEventListener('change', (e) => {
     document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
@@ -175,6 +204,7 @@ function restoreFormState() {
 
   setVal('customerName', saved.customerName);
   setVal('serviceLevelId', saved.serviceLevelId);
+  setVal('destinationPostcode', saved.destinationPostcode);
   setVal('singleChannelCount', saved.singleChannelCount);
   setVal('multiChannel8Count', saved.multiChannel8Count);
   setVal('multiChannel12Count', saved.multiChannel12Count);

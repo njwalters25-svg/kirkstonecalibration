@@ -45,7 +45,8 @@ const DEFAULT_SETTINGS = {
   travelChargeToCustomer: true,
   travelChargePerMile: 0.45,
 
-  // Location premiums
+  // Location & routing
+  homePostcode: 'DE75 7UJ',
   londonPremiumPercent: 15,
 
   // Accommodation

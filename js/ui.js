@@ -48,6 +48,7 @@ function collectQuoteInputFromForm() {
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
     serviceLevelId: document.getElementById('serviceLevelId').value,
+    destinationPostcode: document.getElementById('destinationPostcode').value.trim(),
     singleChannelCount: parseInt(document.getElementById('singleChannelCount').value) || 0,
     multiChannel8Count: parseInt(document.getElementById('multiChannel8Count').value) || 0,
     multiChannel12Count: parseInt(document.getElementById('multiChannel12Count').value) || 0,
@@ -261,7 +262,7 @@ function populateSettingsForm(settings) {
   const fields = [
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
     'labourRatePerHour', 'mileageRatePence', 'travelChargePerMile',
-    'londonPremiumPercent', 'hotelBudgetDefault',
+    'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault',
     'discountRegularPercent', 'discountContractPercent',
   ];
   fields.forEach(f => {
@@ -290,6 +291,7 @@ function collectSettingsFromForm() {
     mileageRatePence: num('s_mileageRatePence'),
     travelChargeToCustomer: document.getElementById('s_travelChargeToCustomer').checked,
     travelChargePerMile: num('s_travelChargePerMile'),
+    homePostcode: document.getElementById('s_homePostcode').value.trim() || 'DE75 7UJ',
     londonPremiumPercent: num('s_londonPremiumPercent'),
     hotelBudgetDefault: num('s_hotelBudgetDefault'),
     chargeAccommodationToCustomer: document.getElementById('s_chargeAccommodationToCustomer').checked,
