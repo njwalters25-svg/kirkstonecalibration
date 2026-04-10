@@ -53,6 +53,7 @@ const DEFAULT_SETTINGS = {
   // Accommodation
   hotelBudgetDefault: 95.00,
   chargeAccommodationToCustomer: true,
+  overnightThresholdMins: 90,           // auto-suggest overnight if travel exceeds this
 
   // Discounts
   discountRegularPercent: 5,

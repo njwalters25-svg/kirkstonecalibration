@@ -642,6 +642,20 @@ body {
   font-weight: 600;
 }
 
+/* Nights suggestion */
+.nights-suggestion {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--accent);
+  margin-top: 0.25rem;
+}
+
+.hotel-estimate {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 0.5rem;
+}
+
 /* Time plan */
 .time-plan-section {
   background: #f7fafc;

@@ -119,6 +119,7 @@
             <!-- Accommodation -->
             <div class="card">
               <h2>Accommodation</h2>
+              <div id="overnightHint" class="info-note" style="display:none; background:#fffff0; border-color:#ecc94b; color:#975a16;"></div>
               <div class="checkbox-group">
                 <input type="checkbox" id="overnightStay">
                 <label for="overnightStay">Overnight stay required</label>
@@ -132,8 +133,10 @@
                   <div class="form-group">
                     <label for="nights">Number of nights</label>
                     <input type="number" id="nights" min="1" value="1">
+                    <span id="nightsSuggestion" class="nights-suggestion" style="display:none"></span>
                   </div>
                 </div>
+                <div id="hotelEstimate" class="hotel-estimate"></div>
               </div>
             </div>
 
@@ -287,7 +290,12 @@
           <div class="setting-row">
             <label>Default hotel budget</label>
             <input type="number" id="s_hotelBudgetDefault" step="5" min="0">
-            <span class="unit">GBP</span>
+            <span class="unit">GBP/night</span>
+          </div>
+          <div class="setting-row">
+            <label>Suggest overnight if travel exceeds</label>
+            <input type="number" id="s_overnightThresholdMins" step="15" min="0">
+            <span class="unit">mins</span>
           </div>
           <div class="checkbox-group">
             <input type="checkbox" id="s_chargeAccommodationToCustomer">

@@ -182,6 +182,29 @@ function recalculate() {
   const input = collectQuoteInputFromForm();
   const result = calculateQuote(input, currentSettings);
   renderQuoteSummary(result);
+
+  // Show overnight suggestion if travel exceeds threshold
+  const hint = document.getElementById('overnightHint');
+  if (result.overnightSuggested && !input.overnightStay) {
+    hint.textContent = `Travel is ${result.timePlan.travelOutMins} mins one way — overnight stay recommended (${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''})`;
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+
+  // Auto-update suggested nights if overnight is ticked and nights field hasn't been manually set
+  if (input.overnightStay && result.suggestedNights > 0) {
+    const nightsEl = document.getElementById('nights');
+    const nightsSuggestion = document.getElementById('nightsSuggestion');
+    if (nightsSuggestion) {
+      if (result.suggestedNights !== parseInt(nightsEl.value)) {
+        nightsSuggestion.textContent = `(${result.timePlan.totalDays} days = ${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''} suggested)`;
+        nightsSuggestion.style.display = 'inline';
+      } else {
+        nightsSuggestion.style.display = 'none';
+      }
+    }
+  }
 }
 
 function autoSaveForm() {

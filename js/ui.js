@@ -116,7 +116,7 @@ function renderQuoteSummary(result) {
       </div>` : ''}
       ${result.accommodationCharge > 0 ? `
       <div class="summary-row">
-        <span>Accommodation (${result.nights} night${result.nights > 1 ? 's' : ''})</span>
+        <span>Accommodation (${result.nights} night${result.nights !== 1 ? 's' : ''} @ ${formatCurrency(result.hotelCostPerNight)})</span>
         <span>${formatCurrency(result.accommodationCharge)}</span>
       </div>` : ''}
       ${result.londonPremium > 0 ? `
@@ -147,7 +147,7 @@ function renderQuoteSummary(result) {
       </div>
       ${result.costAccommodation > 0 ? `
       <div class="summary-row">
-        <span>Accommodation</span>
+        <span>Accommodation (${result.nights} night${result.nights !== 1 ? 's' : ''})</span>
         <span>${formatCurrency(result.costAccommodation)}</span>
       </div>` : ''}
       <div class="summary-row">
@@ -300,7 +300,7 @@ function populateSettingsForm(settings) {
   const fields = [
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
     'labourRatePerHour', 'workingHoursPerDay', 'mileageRatePence', 'travelChargePerMile',
-    'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault',
+    'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault', 'overnightThresholdMins',
     'discountRegularPercent', 'discountContractPercent',
   ];
   fields.forEach(f => {
@@ -333,6 +333,7 @@ function collectSettingsFromForm() {
     homePostcode: document.getElementById('s_homePostcode').value.trim() || 'DE75 7UJ',
     londonPremiumPercent: num('s_londonPremiumPercent'),
     hotelBudgetDefault: num('s_hotelBudgetDefault'),
+    overnightThresholdMins: num('s_overnightThresholdMins') || 90,
     chargeAccommodationToCustomer: document.getElementById('s_chargeAccommodationToCustomer').checked,
     discountRegularPercent: num('s_discountRegularPercent'),
     discountContractPercent: num('s_discountContractPercent'),
