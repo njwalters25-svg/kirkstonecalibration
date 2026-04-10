@@ -172,10 +172,22 @@ body {
   transition: border-color 0.15s;
 }
 
-.form-group input:focus {
+.form-group input:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(43,108,176,0.15);
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
 }
 
 .form-row {
@@ -515,6 +527,29 @@ body {
 
 .history-total {
   font-weight: 600;
+}
+
+/* Notes */
+.notes-section {
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+}
+
+.notes-text {
+  font-size: 0.825rem;
+  color: var(--text);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.history-notes {
+  font-size: 0.75rem;
+  color: var(--text-light);
+  font-style: italic;
+  width: 100%;
+  margin-top: 0.25rem;
 }
 
 .empty-state {

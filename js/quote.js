@@ -145,5 +145,8 @@ function calculateQuote(input, settings) {
     (sc * settings.minutesPerSingleChannel) +
     ((mc8 + mc12 + mc16) * settings.minutesPerMultiChannel);
 
+  // --- Notes (pass through for display/print) ---
+  result.notes = input.notes || '';
+
   return result;
 }

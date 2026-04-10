@@ -42,6 +42,7 @@ function collectQuoteInputFromForm() {
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
     discountType: document.querySelector('input[name="discountType"]:checked')?.value || 'none',
     customDiscountPercent: parseFloat(document.getElementById('customDiscount').value) || 0,
+    notes: document.getElementById('quoteNotes').value.trim(),
   };
 }
 
@@ -142,6 +143,12 @@ function renderQuoteSummary(result) {
       ${result.estimatedCalMinutes > 0 ? `
       <div class="profit-estimate">Est. calibration time: ${Math.ceil(result.estimatedCalMinutes / 60 * 10) / 10} hrs</div>` : ''}
     </div>
+
+    ${result.notes ? `
+    <div class="summary-section notes-section">
+      <h3>Notes</h3>
+      <p class="notes-text">${result.notes.replace(/\n/g, '<br>')}</p>
+    </div>` : ''}
   `;
 }
 
@@ -212,6 +219,7 @@ function renderQuoteHistory(quotes) {
         <span class="history-total">${formatCurrency(q.totalQuotePrice)}</span>
         <span class="${getProfitClass(q.profitMarginPercent)}">${formatPercent(q.profitMarginPercent)}</span>
       </div>
+      ${q.notes ? `<div class="history-notes">${q.notes.length > 80 ? q.notes.substring(0, 80) + '...' : q.notes}</div>` : ''}
       <button class="btn-small btn-delete" onclick="deleteQuote('${q.id}')">Delete</button>
     </div>
   `).join('');

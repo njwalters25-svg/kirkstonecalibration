@@ -150,6 +150,7 @@ function restoreFormState() {
   setVal('nights', saved.nights);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
   setVal('customDiscount', saved.customDiscountPercent);
+  setVal('quoteNotes', saved.notes);
 
   if (saved.serviceLevel) {
     const radio = document.querySelector(`input[name="serviceLevel"][value="${saved.serviceLevel}"]`);
