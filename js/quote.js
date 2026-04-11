@@ -146,15 +146,10 @@ function calculateQuote(input, settings) {
     result.accommodationCharge = 0;
   }
 
-  // --- Revenue: Travel day before charge ---
-  if (input.travelDayBefore && settings.travelDayBeforeCharge > 0) {
-    result.travelDayBeforeCharge = settings.travelDayBeforeCharge;
-  } else {
-    result.travelDayBeforeCharge = 0;
-  }
+  result.travelDayBeforeCharge = 0;
 
   // --- Subtotal ---
-  let subtotal = result.pipetteChargesTotal + result.travelCharge + result.accommodationCharge + result.travelDayBeforeCharge;
+  let subtotal = result.pipetteChargesTotal + result.travelCharge + result.accommodationCharge;
 
   // --- London premium ---
   if (input.isLondon) {
