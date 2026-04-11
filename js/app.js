@@ -7,7 +7,11 @@ let currentSettings;
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
-  populateServiceLevelDropdown(currentSettings);
+
+  // Initialise with one pipette line
+  renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
+  wirePipetteLineEvents();
+
   restoreFormState();
   recalculate();
   renderQuoteHistory(StorageManager.loadQuoteHistory());
@@ -28,6 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
     autoSaveForm();
   });
   document.getElementById('quoteForm').addEventListener('change', () => {
+    recalculate();
+    autoSaveForm();
+  });
+
+  // Add pipette line
+  document.getElementById('addPipetteLine').addEventListener('click', () => {
+    const current = collectPipetteLinesFromForm();
+    current.push(getDefaultPipetteLine(currentSettings));
+    renderPipetteLines(current, currentSettings);
+    wirePipetteLineEvents();
     recalculate();
     autoSaveForm();
   });
@@ -69,12 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // London checkbox — suggest overnight & day-before travel
+  // London checkbox
   document.getElementById('isLondon').addEventListener('change', (e) => {
     document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
   });
 
-  // Overnight toggle — show/hide hotel fields
+  // Overnight toggle
   document.getElementById('overnightStay').addEventListener('change', (e) => {
     document.getElementById('hotelFields').style.display = e.target.checked ? 'block' : 'none';
   });
@@ -113,7 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveSettings').addEventListener('click', () => {
     currentSettings = collectSettingsFromForm();
     StorageManager.saveSettings(currentSettings);
-    populateServiceLevelDropdown(currentSettings);
+    // Re-render pipette lines to update service level dropdowns
+    const currentLines = collectPipetteLinesFromForm();
+    renderPipetteLines(currentLines, currentSettings);
+    wirePipetteLineEvents();
     recalculate();
     showToast('Settings saved');
   });
@@ -123,8 +140,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (confirm('Reset all settings to defaults?')) {
       currentSettings = StorageManager.resetSettings();
       populateSettingsForm(currentSettings);
-      populateServiceLevelDropdown(currentSettings);
       wireServiceLevelRemoveButtons();
+      const currentLines = collectPipetteLinesFromForm();
+      renderPipetteLines(currentLines, currentSettings);
+      wirePipetteLineEvents();
       recalculate();
       showToast('Settings reset to defaults');
     }
@@ -136,7 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const result = calculateQuote(input, currentSettings);
     const saved = {
       ...input,
-      serviceLevelName: result.serviceLevelName,
       totalPipettes: result.totalPipettes,
       totalQuotePrice: result.totalQuotePrice,
       totalInternalCost: result.totalInternalCost,
@@ -159,10 +177,27 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('hotelFields').style.display = 'none';
     document.getElementById('londonNote').style.display = 'none';
     document.getElementById('customDiscountField').style.display = 'none';
+    renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
+    wirePipetteLineEvents();
     StorageManager.clearFormState();
     recalculate();
   });
 });
+
+function wirePipetteLineEvents() {
+  document.querySelectorAll('.pl-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const lines = collectPipetteLinesFromForm();
+      if (lines.length <= 1) return;
+      const idx = parseInt(btn.dataset.index);
+      lines.splice(idx, 1);
+      renderPipetteLines(lines, currentSettings);
+      wirePipetteLineEvents();
+      recalculate();
+      autoSaveForm();
+    });
+  });
+}
 
 function wireServiceLevelRemoveButtons() {
   document.querySelectorAll('.sl-remove').forEach(btn => {
@@ -183,7 +218,7 @@ function recalculate() {
   const result = calculateQuote(input, currentSettings);
   renderQuoteSummary(result);
 
-  // Show overnight suggestion if travel exceeds threshold
+  // Show overnight suggestion
   const hint = document.getElementById('overnightHint');
   if (result.overnightSuggested && !input.overnightStay) {
     hint.textContent = `Travel is ${result.timePlan.travelOutMins} mins one way — overnight stay recommended (${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''})`;
@@ -192,7 +227,6 @@ function recalculate() {
     hint.style.display = 'none';
   }
 
-  // Auto-update suggested nights if overnight is ticked and nights field hasn't been manually set
   if (input.overnightStay && result.suggestedNights > 0) {
     const nightsEl = document.getElementById('nights');
     const nightsSuggestion = document.getElementById('nightsSuggestion');
@@ -226,12 +260,7 @@ function restoreFormState() {
   };
 
   setVal('customerName', saved.customerName);
-  setVal('serviceLevelId', saved.serviceLevelId);
   setVal('destinationPostcode', saved.destinationPostcode);
-  setVal('singleChannelCount', saved.singleChannelCount);
-  setVal('multiChannel8Count', saved.multiChannel8Count);
-  setVal('multiChannel12Count', saved.multiChannel12Count);
-  setVal('multiChannel16Count', saved.multiChannel16Count);
   setVal('travelDistance', saved.travelDistanceMiles);
   setVal('travelTime', saved.travelTimeMinutes);
   setChecked('travelDayBefore', saved.travelDayBefore);
@@ -243,12 +272,17 @@ function restoreFormState() {
   setVal('customDiscount', saved.customDiscountPercent);
   setVal('quoteNotes', saved.notes);
 
+  // Restore pipette lines
+  if (saved.pipetteLines && saved.pipetteLines.length > 0) {
+    renderPipetteLines(saved.pipetteLines, currentSettings);
+    wirePipetteLineEvents();
+  }
+
   if (saved.discountType) {
     const radio = document.querySelector(`input[name="discountType"][value="${saved.discountType}"]`);
     if (radio) radio.checked = true;
   }
 
-  // Show/hide conditional fields
   if (saved.overnightStay) document.getElementById('hotelFields').style.display = 'block';
   if (saved.isLondon) document.getElementById('londonNote').style.display = 'block';
   if (saved.discountType === 'custom') document.getElementById('customDiscountField').style.display = 'block';

@@ -35,42 +35,20 @@
         <div class="form-column">
           <form id="quoteForm" autocomplete="off">
 
-            <!-- Customer & Service Level -->
+            <!-- Customer -->
             <div class="card">
               <h2>Job Details</h2>
               <div class="form-group">
                 <label for="customerName">Customer Name</label>
                 <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd">
               </div>
-              <div class="form-group">
-                <label for="serviceLevelId">Service Level</label>
-                <select id="serviceLevelId">
-                  <!-- Populated dynamically from settings -->
-                </select>
-              </div>
             </div>
 
-            <!-- Pipettes -->
+            <!-- Pipettes (line items) -->
             <div class="card">
               <h2>Pipettes</h2>
-              <div class="form-row-4">
-                <div class="form-group">
-                  <label for="singleChannelCount">Single-channel</label>
-                  <input type="number" id="singleChannelCount" min="0" value="0">
-                </div>
-                <div class="form-group">
-                  <label for="multiChannel8Count">Multi 8-ch</label>
-                  <input type="number" id="multiChannel8Count" min="0" value="0">
-                </div>
-                <div class="form-group">
-                  <label for="multiChannel12Count">Multi 12-ch</label>
-                  <input type="number" id="multiChannel12Count" min="0" value="0">
-                </div>
-                <div class="form-group">
-                  <label for="multiChannel16Count">Multi 16-ch</label>
-                  <input type="number" id="multiChannel16Count" min="0" value="0">
-                </div>
-              </div>
+              <div id="pipetteLines"></div>
+              <button type="button" id="addPipetteLine" class="btn btn-secondary" style="margin-top:0.5rem;">+ Add line</button>
             </div>
 
             <!-- Travel -->

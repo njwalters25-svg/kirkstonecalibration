@@ -10,26 +10,58 @@ function getServiceLevel(serviceLevelId, settings) {
 
 function calculateQuote(input, settings) {
   const result = {};
+  const lines = input.pipetteLines || [];
 
-  // --- Resolve service level ---
-  const sl = getServiceLevel(input.serviceLevelId, settings);
-  result.serviceLevelName = sl ? sl.name : 'Unknown';
-  result.serviceLevelReadings = sl ? sl.readings : 0;
-  result.serviceLevelVolumes = sl ? sl.volumes : 0;
+  // --- Process each pipette line ---
+  result.lineResults = [];
+  let totalSC = 0, totalMC8 = 0, totalMC12 = 0, totalMC16 = 0;
+  let totalPipetteCharges = 0;
+  let totalPipetteCosts = 0;
+  let totalEstimatedMins = 0;
 
-  // --- Pipette counts ---
-  const sc = input.singleChannelCount || 0;
-  const mc8 = input.multiChannel8Count || 0;
-  const mc12 = input.multiChannel12Count || 0;
-  const mc16 = input.multiChannel16Count || 0;
-  result.totalPipettes = sc + mc8 + mc12 + mc16;
-  result.totalChannels = sc + (mc8 * 8) + (mc12 * 12) + (mc16 * 16);
+  lines.forEach(line => {
+    const sl = getServiceLevel(line.serviceLevelId, settings);
+    const sc = line.singleChannelCount || 0;
+    const mc8 = line.multiChannel8Count || 0;
+    const mc12 = line.multiChannel12Count || 0;
+    const mc16 = line.multiChannel16Count || 0;
 
-  // --- Estimated calibration time (from service level) ---
-  const minsPerSC = sl ? sl.minutesPerSingleChannel : 0;
-  const minsPerMC = sl ? sl.minutesPerMultiChannel : 0;
-  result.estimatedCalMinutes =
-    (sc * minsPerSC) + ((mc8 + mc12 + mc16) * minsPerMC);
+    const chargeSingle = sc * (sl ? sl.chargeSingleChannel : 0);
+    const chargeMulti8 = mc8 * (sl ? sl.chargeMultiChannel8 : 0);
+    const chargeMulti12 = mc12 * (sl ? sl.chargeMultiChannel12 : 0);
+    const chargeMulti16 = mc16 * (sl ? sl.chargeMultiChannel16 : 0);
+    const chargeTotal = chargeSingle + chargeMulti8 + chargeMulti12 + chargeMulti16;
+
+    const minsPerSC = sl ? sl.minutesPerSingleChannel : 0;
+    const minsPerMC = sl ? sl.minutesPerMultiChannel : 0;
+    const estimatedMins = (sc * minsPerSC) + ((mc8 + mc12 + mc16) * minsPerMC);
+
+    result.lineResults.push({
+      serviceLevelName: sl ? sl.name : 'Unknown',
+      singleCount: sc,
+      multi8Count: mc8,
+      multi12Count: mc12,
+      multi16Count: mc16,
+      chargeSingle,
+      chargeMulti8,
+      chargeMulti12,
+      chargeMulti16,
+      chargeTotal,
+      estimatedMins,
+    });
+
+    totalSC += sc;
+    totalMC8 += mc8;
+    totalMC12 += mc12;
+    totalMC16 += mc16;
+    totalPipetteCharges += chargeTotal;
+    totalEstimatedMins += estimatedMins;
+  });
+
+  result.totalPipettes = totalSC + totalMC8 + totalMC12 + totalMC16;
+  result.totalChannels = totalSC + (totalMC8 * 8) + (totalMC12 * 12) + (totalMC16 * 16);
+  result.pipetteChargesTotal = totalPipetteCharges;
+  result.estimatedCalMinutes = totalEstimatedMins;
 
   // --- Core time values ---
   const travelMinutes = input.travelTimeMinutes || 0;
@@ -37,7 +69,7 @@ function calculateQuote(input, settings) {
   const jobMins = calMinutes || result.estimatedCalMinutes;
   const workMinsPerDay = (settings.workingHoursPerDay || 8) * 60;
 
-  // --- Time plan (computed early — needed for hotel estimate) ---
+  // --- Time plan ---
   const travelOutMins = travelMinutes;
   const travelReturnMins = travelMinutes;
   const travelTotalMins = travelOutMins + travelReturnMins;
@@ -79,8 +111,6 @@ function calculateQuote(input, settings) {
   // --- Auto-suggest overnight & estimate nights ---
   const threshold = settings.overnightThresholdMins || 90;
   const needsOvernight = travelMinutes >= threshold || result.timePlan.totalDays > 1;
-  // Nights = total days minus 1 (you sleep between working days)
-  // If travelling day before, that's an extra night
   const suggestedNights = result.timePlan.totalDays > 1
     ? result.timePlan.totalDays - 1
     : 0;
@@ -88,7 +118,6 @@ function calculateQuote(input, settings) {
   result.overnightSuggested = needsOvernight;
   result.suggestedNights = suggestedNights;
 
-  // Use manual override if provided, otherwise use suggestion
   const overnightStay = input.overnightStay;
   const nights = overnightStay ? (input.nights || suggestedNights || 1) : 0;
   const hotelCostPerNight = overnightStay
@@ -98,17 +127,6 @@ function calculateQuote(input, settings) {
 
   result.nights = nights;
   result.hotelCostPerNight = hotelCostPerNight;
-
-  // --- Revenue: Pipette charges (from service level) ---
-  result.pipetteChargesSingle = sc * (sl ? sl.chargeSingleChannel : 0);
-  result.pipetteChargesMulti8 = mc8 * (sl ? sl.chargeMultiChannel8 : 0);
-  result.pipetteChargesMulti12 = mc12 * (sl ? sl.chargeMultiChannel12 : 0);
-  result.pipetteChargesMulti16 = mc16 * (sl ? sl.chargeMultiChannel16 : 0);
-  result.pipetteChargesTotal =
-    result.pipetteChargesSingle +
-    result.pipetteChargesMulti8 +
-    result.pipetteChargesMulti12 +
-    result.pipetteChargesMulti16;
 
   // --- Revenue: Travel charge ---
   const distanceMiles = input.travelDistanceMiles || 0;
@@ -128,10 +146,10 @@ function calculateQuote(input, settings) {
     result.accommodationCharge = 0;
   }
 
-  // --- Subtotal before premiums/discounts ---
+  // --- Subtotal ---
   let subtotal = result.pipetteChargesTotal + result.travelCharge + result.accommodationCharge;
 
-  // --- London premium (applied to pipette charges only) ---
+  // --- London premium ---
   if (input.isLondon) {
     result.londonPremium = result.pipetteChargesTotal * (settings.londonPremiumPercent / 100);
   } else {
@@ -167,21 +185,16 @@ function calculateQuote(input, settings) {
   result.totalQuotePrice = result.subtotalBeforeDiscount - result.discountAmount;
 
   // --- Internal costs ---
-  result.costPipettesSingle = sc * settings.costSingleChannel;
-  result.costPipettesMulti8 = mc8 * settings.costMultiChannel8;
-  result.costPipettesMulti12 = mc12 * settings.costMultiChannel12;
-  result.costPipettesMulti16 = mc16 * settings.costMultiChannel16;
   result.costPipettesTotal =
-    result.costPipettesSingle +
-    result.costPipettesMulti8 +
-    result.costPipettesMulti12 +
-    result.costPipettesMulti16;
+    (totalSC * settings.costSingleChannel) +
+    (totalMC8 * settings.costMultiChannel8) +
+    (totalMC12 * settings.costMultiChannel12) +
+    (totalMC16 * settings.costMultiChannel16);
 
   result.costTravel = roundTripMiles * (settings.mileageRatePence / 100);
   result.costAccommodation = totalHotelCost;
   result.costLabourCalibration = (calMinutes / 60) * settings.labourRatePerHour;
   result.costLabourTravel = (travelMinutes / 60) * settings.labourRatePerHour;
-  result.travelDayBeforeNote = !!input.travelDayBefore;
 
   result.totalInternalCost =
     result.costPipettesTotal +
@@ -196,7 +209,7 @@ function calculateQuote(input, settings) {
     ? (result.profitAmount / result.totalQuotePrice) * 100
     : 0;
 
-  // --- Notes (pass through for display/print) ---
+  // --- Notes ---
   result.notes = input.notes || '';
 
   return result;

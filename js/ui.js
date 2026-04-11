@@ -31,22 +31,67 @@ function getProfitClass(margin) {
   return 'profit-low';
 }
 
-// --- Service level dropdown ---
+// --- Pipette line items ---
 
-function populateServiceLevelDropdown(settings) {
-  const select = document.getElementById('serviceLevelId');
-  const current = select.value;
-  select.innerHTML = '';
-  settings.serviceLevels.forEach(sl => {
-    const opt = document.createElement('option');
-    opt.value = sl.id;
-    opt.textContent = sl.name;
-    select.appendChild(opt);
-  });
-  // Restore previous selection if it still exists
-  if (current && settings.serviceLevels.some(sl => sl.id === current)) {
-    select.value = current;
-  }
+function buildServiceLevelOptions(settings, selectedId) {
+  return settings.serviceLevels.map(sl =>
+    `<option value="${sl.id}" ${sl.id === selectedId ? 'selected' : ''}>${sl.name}</option>`
+  ).join('');
+}
+
+function renderPipetteLines(lines, settings) {
+  const container = document.getElementById('pipetteLines');
+  container.innerHTML = lines.map((line, i) => `
+    <div class="pipette-line" data-index="${i}">
+      <div class="pipette-line-header">
+        <div class="form-group" style="flex:1">
+          <label>Service Level</label>
+          <select class="pl-serviceLevel">${buildServiceLevelOptions(settings, line.serviceLevelId)}</select>
+        </div>
+        ${lines.length > 1 ? `<button type="button" class="btn-small btn-delete pl-remove" data-index="${i}">Remove</button>` : ''}
+      </div>
+      <div class="form-row-4">
+        <div class="form-group">
+          <label>Single-ch</label>
+          <input type="number" class="pl-single" min="0" value="${line.singleChannelCount || 0}">
+        </div>
+        <div class="form-group">
+          <label>Multi 8-ch</label>
+          <input type="number" class="pl-multi8" min="0" value="${line.multiChannel8Count || 0}">
+        </div>
+        <div class="form-group">
+          <label>Multi 12-ch</label>
+          <input type="number" class="pl-multi12" min="0" value="${line.multiChannel12Count || 0}">
+        </div>
+        <div class="form-group">
+          <label>Multi 16-ch</label>
+          <input type="number" class="pl-multi16" min="0" value="${line.multiChannel16Count || 0}">
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function collectPipetteLinesFromForm() {
+  const lineEls = document.querySelectorAll('#pipetteLines .pipette-line');
+  return Array.from(lineEls).map(el => ({
+    serviceLevelId: el.querySelector('.pl-serviceLevel').value,
+    singleChannelCount: parseInt(el.querySelector('.pl-single').value) || 0,
+    multiChannel8Count: parseInt(el.querySelector('.pl-multi8').value) || 0,
+    multiChannel12Count: parseInt(el.querySelector('.pl-multi12').value) || 0,
+    multiChannel16Count: parseInt(el.querySelector('.pl-multi16').value) || 0,
+  }));
+}
+
+function getDefaultPipetteLine(settings) {
+  const firstLevel = settings.serviceLevels[0];
+  return {
+    serviceLevelId: firstLevel ? firstLevel.id : '',
+    singleChannelCount: 0,
+    multiChannel8Count: 0,
+    multiChannel12Count: 0,
+    multiChannel16Count: 0,
+  };
 }
 
 // --- Collect quote form ---
@@ -56,12 +101,8 @@ function collectQuoteInputFromForm() {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
-    serviceLevelId: document.getElementById('serviceLevelId').value,
+    pipetteLines: collectPipetteLinesFromForm(),
     destinationPostcode: document.getElementById('destinationPostcode').value.trim(),
-    singleChannelCount: parseInt(document.getElementById('singleChannelCount').value) || 0,
-    multiChannel8Count: parseInt(document.getElementById('multiChannel8Count').value) || 0,
-    multiChannel12Count: parseInt(document.getElementById('multiChannel12Count').value) || 0,
-    multiChannel16Count: parseInt(document.getElementById('multiChannel16Count').value) || 0,
     travelDistanceMiles: parseFloat(document.getElementById('travelDistance').value) || 0,
     travelTimeMinutes: parseInt(document.getElementById('travelTime').value) || 0,
     travelDayBefore: document.getElementById('travelDayBefore').checked,
@@ -82,31 +123,28 @@ function renderQuoteSummary(result) {
   const container = document.getElementById('quoteSummary');
   const profitClass = getProfitClass(result.profitMarginPercent);
 
+  // Build per-line revenue rows
+  const lineRows = result.lineResults.map(lr => {
+    const rows = [];
+    if (lr.singleCount > 0) rows.push(`<div class="summary-row"><span>Single-ch ×${lr.singleCount}</span><span>${formatCurrency(lr.chargeSingle)}</span></div>`);
+    if (lr.multi8Count > 0) rows.push(`<div class="summary-row"><span>Multi 8-ch ×${lr.multi8Count}</span><span>${formatCurrency(lr.chargeMulti8)}</span></div>`);
+    if (lr.multi12Count > 0) rows.push(`<div class="summary-row"><span>Multi 12-ch ×${lr.multi12Count}</span><span>${formatCurrency(lr.chargeMulti12)}</span></div>`);
+    if (lr.multi16Count > 0) rows.push(`<div class="summary-row"><span>Multi 16-ch ×${lr.multi16Count}</span><span>${formatCurrency(lr.chargeMulti16)}</span></div>`);
+    if (rows.length === 0) return '';
+    return `
+      <div class="line-result">
+        <div class="service-level-badge">${lr.serviceLevelName}</div>
+        ${rows.join('')}
+        <div class="summary-row subtotal"><span>Line subtotal</span><span>${formatCurrency(lr.chargeTotal)}</span></div>
+      </div>`;
+  }).filter(Boolean).join('');
+
   container.innerHTML = `
     <div class="summary-section">
-      <div class="service-level-badge">${result.serviceLevelName}</div>
       <h3>Revenue Breakdown</h3>
-      <div class="summary-row">
-        <span>Single-channel pipettes</span>
-        <span>${formatCurrency(result.pipetteChargesSingle)}</span>
-      </div>
-      ${result.pipetteChargesMulti8 > 0 ? `
-      <div class="summary-row">
-        <span>Multi-channel (8-ch)</span>
-        <span>${formatCurrency(result.pipetteChargesMulti8)}</span>
-      </div>` : ''}
-      ${result.pipetteChargesMulti12 > 0 ? `
-      <div class="summary-row">
-        <span>Multi-channel (12-ch)</span>
-        <span>${formatCurrency(result.pipetteChargesMulti12)}</span>
-      </div>` : ''}
-      ${result.pipetteChargesMulti16 > 0 ? `
-      <div class="summary-row">
-        <span>Multi-channel (16-ch)</span>
-        <span>${formatCurrency(result.pipetteChargesMulti16)}</span>
-      </div>` : ''}
+      ${lineRows || '<div class="summary-row"><span>No pipettes entered</span><span>${formatCurrency(0)}</span></div>'}
       <div class="summary-row subtotal">
-        <span>Pipettes subtotal</span>
+        <span>All pipettes</span>
         <span>${formatCurrency(result.pipetteChargesTotal)}</span>
       </div>
       ${result.travelCharge > 0 ? `
@@ -359,7 +397,6 @@ function renderQuoteHistory(quotes) {
       <div class="history-header">
         <strong>${q.customerName || 'Unnamed'}</strong>
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
-        ${q.serviceLevelName ? `<span class="history-badge">${q.serviceLevelName}</span>` : ''}
       </div>
       <div class="history-details">
         <span>${q.totalPipettes} pipettes</span>
