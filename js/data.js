@@ -49,6 +49,7 @@ const DEFAULT_SETTINGS = {
   mileageRatePence: 45,
   travelChargeToCustomer: true,
   travelChargePerMile: 0.45,
+  travelDayBeforeCharge: 150,         // flat charge to customer when travelling day before
 
   // Location & routing
   homePostcode: 'DE75 7UJ',

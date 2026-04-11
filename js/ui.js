@@ -171,6 +171,11 @@ function renderQuoteSummary(result) {
         <span>Accommodation (${result.nights} night${result.nights !== 1 ? 's' : ''} @ ${formatCurrency(result.hotelCostPerNight)})</span>
         <span>${formatCurrency(result.accommodationCharge)}</span>
       </div>` : ''}
+      ${result.travelDayBeforeCharge > 0 ? `
+      <div class="summary-row">
+        <span>Travel day before</span>
+        <span>${formatCurrency(result.travelDayBeforeCharge)}</span>
+      </div>` : ''}
       ${result.londonPremium > 0 ? `
       <div class="summary-row premium">
         <span>London premium</span>
@@ -376,7 +381,7 @@ function populateSettingsForm(settings) {
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
     'labourRatePerHour', 'workingHoursPerDay',
     'secondPersonDayCost', 'secondPersonTimeReduction',
-    'mileageRatePence', 'travelChargePerMile',
+    'mileageRatePence', 'travelChargePerMile', 'travelDayBeforeCharge',
     'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault', 'overnightThresholdMins',
     'discountRegularPercent', 'discountContractPercent',
   ];
@@ -409,6 +414,7 @@ function collectSettingsFromForm() {
     mileageRatePence: num('s_mileageRatePence'),
     travelChargeToCustomer: document.getElementById('s_travelChargeToCustomer').checked,
     travelChargePerMile: num('s_travelChargePerMile'),
+    travelDayBeforeCharge: num('s_travelDayBeforeCharge'),
     homePostcode: document.getElementById('s_homePostcode').value.trim() || 'DE75 7UJ',
     londonPremiumPercent: num('s_londonPremiumPercent'),
     hotelBudgetDefault: num('s_hotelBudgetDefault'),
