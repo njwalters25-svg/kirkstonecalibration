@@ -97,10 +97,31 @@ function calculateQuote(input, settings) {
     travelDayBefore: !!input.travelDayBefore,
   };
 
-  // Days = total working time (travel + cal + return) spread across working days
-  // Travel day before does NOT add a working day — it's evening travel
-  const totalWorkMins = travelOutMins + jobMins + travelReturnMins;
-  const totalDays = Math.ceil(totalWorkMins / workMinsPerDay) || 0;
+  // --- Days calculation ---
+  const overnightStay = !!input.overnightStay;
+
+  let totalDays;
+  if (overnightStay) {
+    // Staying overnight: one round trip, work on site between
+    // Overnight: 1 round trip, job fills working days
+    // Travel time is only on first and last day
+    const totalWorkMins = travelOutMins + jobMins + travelReturnMins;
+    totalDays = Math.ceil(totalWorkMins / workMinsPerDay) || 0;
+  } else {
+    // No overnight: commuting daily, so each day has travel + work + travel
+    // Available work time per day is reduced by travel time
+    const workablePerDay = workMinsPerDay - travelOutMins - travelReturnMins;
+    if (workablePerDay > 0) {
+      totalDays = Math.ceil(jobMins / workablePerDay) || 0;
+    } else {
+      // Travel takes up entire day or more — still need at least 1 day
+      totalDays = jobMins > 0 ? Math.ceil(jobMins / workMinsPerDay) + 1 : 0;
+    }
+  }
+
+  // How many daily commutes (round trips)
+  const commuteTrips = (!overnightStay && totalDays > 0) ? totalDays : 1;
+  result.commuteTrips = commuteTrips;
 
   result.timePlan.totalDays = totalDays;
 
@@ -120,7 +141,6 @@ function calculateQuote(input, settings) {
   result.travelNight = travelNight;
   result.jobNights = jobNights;
 
-  const overnightStay = input.overnightStay;
   const nights = overnightStay ? (input.nights || suggestedNights || 1) : 0;
   const hotelCostPerNight = overnightStay
     ? (input.hotelCost || settings.hotelBudgetDefault)
@@ -133,10 +153,12 @@ function calculateQuote(input, settings) {
   // --- Revenue: Travel charge ---
   const distanceMiles = input.travelDistanceMiles || 0;
   const roundTripMiles = distanceMiles * 2;
+  const totalTripMiles = roundTripMiles * commuteTrips;
   result.roundTripMiles = roundTripMiles;
+  result.totalTripMiles = totalTripMiles;
 
   if (settings.travelChargeToCustomer) {
-    result.travelCharge = roundTripMiles * settings.travelChargePerMile;
+    result.travelCharge = totalTripMiles * settings.travelChargePerMile;
   } else {
     result.travelCharge = 0;
   }
@@ -195,10 +217,11 @@ function calculateQuote(input, settings) {
     (totalMC12 * settings.costMultiChannel12) +
     (totalMC16 * settings.costMultiChannel16);
 
-  result.costTravel = roundTripMiles * (settings.mileageRatePence / 100);
+  result.costTravel = totalTripMiles * (settings.mileageRatePence / 100);
   result.costAccommodation = totalHotelCost;
   result.costLabourCalibration = (calMinutes / 60) * settings.labourRatePerHour;
-  result.costLabourTravel = (travelMinutes / 60) * settings.labourRatePerHour;
+  // Travel labour: one-way time × 2 (return) × number of commute trips
+  result.costLabourTravel = ((travelMinutes * 2 * commuteTrips) / 60) * settings.labourRatePerHour;
 
   // Second person cost: per day on site (not travel days)
   const onSiteDays = Math.ceil(jobMins / workMinsPerDay) || 0;

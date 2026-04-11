@@ -150,7 +150,7 @@ function renderQuoteSummary(result) {
       </div>
       ${result.travelCharge > 0 ? `
       <div class="summary-row">
-        <span>Travel charge (${result.roundTripMiles} mi round trip)</span>
+        <span>Travel charge (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily return trips` : ' round trip'})</span>
         <span>${formatCurrency(result.travelCharge)}</span>
       </div>` : ''}
       ${result.accommodationCharge > 0 && result.travelNight > 0 ? `
@@ -228,7 +228,7 @@ function renderQuoteSummary(result) {
         <span>${formatCurrency(result.costPipettesTotal)}</span>
       </div>
       <div class="summary-row">
-        <span>Mileage (${result.roundTripMiles} mi round trip)</span>
+        <span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily trips` : ' round trip'})</span>
         <span>${formatCurrency(result.costTravel)}</span>
       </div>
       ${result.costAccommodation > 0 && result.travelNight > 0 ? `
@@ -250,7 +250,7 @@ function renderQuoteSummary(result) {
         <span>${formatCurrency(result.costLabourCalibration)}</span>
       </div>
       <div class="summary-row">
-        <span>Labour — travel</span>
+        <span>Labour — travel${result.commuteTrips > 1 ? ` (${result.commuteTrips} days)` : ''}</span>
         <span>${formatCurrency(result.costLabourTravel)}</span>
       </div>
       ${result.costSecondPerson > 0 ? `
