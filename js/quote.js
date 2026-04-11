@@ -121,10 +121,17 @@ function calculateQuote(input, settings) {
 
   // --- Auto-suggest overnight & estimate nights ---
   const threshold = settings.overnightThresholdMins || 90;
-  const needsOvernight = travelMinutes >= threshold || result.timePlan.totalDays > 1;
-  const suggestedNights = result.timePlan.totalDays > 1
-    ? result.timePlan.totalDays - 1
-    : 0;
+  const needsOvernight = travelMinutes >= threshold || result.timePlan.totalDays > 1 || input.travelDayBefore;
+
+  // Nights = days away minus 1 (you sleep between each day)
+  // When travelling day before, you always need at least 1 night (the night you arrive)
+  let suggestedNights = 0;
+  if (result.timePlan.totalDays > 1) {
+    suggestedNights = result.timePlan.totalDays - 1;
+  }
+  if (input.travelDayBefore && suggestedNights < 1) {
+    suggestedNights = 1;
+  }
 
   result.overnightSuggested = needsOvernight;
   result.suggestedNights = suggestedNights;
