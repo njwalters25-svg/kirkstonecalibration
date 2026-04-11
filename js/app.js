@@ -218,7 +218,13 @@ function recalculate() {
   const result = calculateQuote(input, currentSettings);
   renderQuoteSummary(result);
 
-  // Show overnight suggestion
+  // Auto-fill nights from the time plan
+  const nightsEl = document.getElementById('nights');
+  if (result.suggestedNights > 0) {
+    nightsEl.value = result.suggestedNights;
+  }
+
+  // Show overnight suggestion hint if not already ticked
   const hint = document.getElementById('overnightHint');
   if (result.overnightSuggested && !input.overnightStay) {
     hint.textContent = `Travel is ${result.timePlan.travelOutMins} mins one way — overnight stay recommended (${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''})`;
@@ -227,18 +233,9 @@ function recalculate() {
     hint.style.display = 'none';
   }
 
-  if (input.overnightStay && result.suggestedNights > 0) {
-    const nightsEl = document.getElementById('nights');
-    const nightsSuggestion = document.getElementById('nightsSuggestion');
-    if (nightsSuggestion) {
-      if (result.suggestedNights !== parseInt(nightsEl.value)) {
-        nightsSuggestion.textContent = `(${result.timePlan.totalDays} days = ${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''} suggested)`;
-        nightsSuggestion.style.display = 'inline';
-      } else {
-        nightsSuggestion.style.display = 'none';
-      }
-    }
-  }
+  // Hide the separate suggestion span — nights are now auto-filled
+  const nightsSuggestion = document.getElementById('nightsSuggestion');
+  if (nightsSuggestion) nightsSuggestion.style.display = 'none';
 
   // Second person note
   const spNote = document.getElementById('secondPersonNote');
