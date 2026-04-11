@@ -187,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
     wirePipetteLineEvents();
     StorageManager.clearFormState();
+    lastSuggestedNights = null;
     recalculate();
   });
 });
@@ -220,15 +221,25 @@ function wireServiceLevelRemoveButtons() {
   });
 }
 
+let lastSuggestedNights = null;
+
 function recalculate() {
   const input = collectQuoteInputFromForm();
   const result = calculateQuote(input, currentSettings);
-  renderQuoteSummary(result);
 
-  // Auto-fill nights from the time plan
+  // Auto-fill nights only when the suggestion changes (not on every keystroke)
   const nightsEl = document.getElementById('nights');
-  if (result.suggestedNights > 0) {
+  if (result.suggestedNights > 0 && result.suggestedNights !== lastSuggestedNights) {
     nightsEl.value = result.suggestedNights;
+    lastSuggestedNights = result.suggestedNights;
+    // Re-collect input so the summary uses the updated nights
+    const updatedInput = collectQuoteInputFromForm();
+    const updatedResult = calculateQuote(updatedInput, currentSettings);
+    renderQuoteSummary(updatedResult);
+    Object.assign(result, updatedResult);
+    Object.assign(input, updatedInput);
+  } else {
+    renderQuoteSummary(result);
   }
 
   // Show overnight suggestion hint if not already ticked
@@ -239,10 +250,6 @@ function recalculate() {
   } else {
     hint.style.display = 'none';
   }
-
-  // Hide the separate suggestion span — nights are now auto-filled
-  const nightsSuggestion = document.getElementById('nightsSuggestion');
-  if (nightsSuggestion) nightsSuggestion.style.display = 'none';
 
   // Second person note
   const spNote = document.getElementById('secondPersonNote');
