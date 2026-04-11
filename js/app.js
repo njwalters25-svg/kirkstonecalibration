@@ -239,6 +239,15 @@ function recalculate() {
       }
     }
   }
+
+  // Second person note
+  const spNote = document.getElementById('secondPersonNote');
+  if (result.secondPerson && result.secondPersonDays > 0) {
+    spNote.textContent = `2nd person: ${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''} on site (${formatCurrency(result.costSecondPerson)}). Calibration time reduced by ${result.timeReductionPercent}%.`;
+    spNote.style.display = 'block';
+  } else {
+    spNote.style.display = 'none';
+  }
 }
 
 function autoSaveForm() {
@@ -269,6 +278,7 @@ function restoreFormState() {
   setVal('hotelCost', saved.hotelCost);
   setVal('nights', saved.nights);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
+  setChecked('secondPerson', saved.secondPerson);
   setVal('customDiscount', saved.customDiscountPercent);
   setVal('quoteNotes', saved.notes);
 

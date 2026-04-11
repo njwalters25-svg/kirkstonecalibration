@@ -111,6 +111,7 @@ function collectQuoteInputFromForm() {
     hotelCost: parseFloat(document.getElementById('hotelCost').value) || 0,
     nights: parseInt(document.getElementById('nights').value) || 1,
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
+    secondPerson: document.getElementById('secondPerson').checked,
     discountType: document.querySelector('input[name="discountType"]:checked')?.value || 'none',
     customDiscountPercent: parseFloat(document.getElementById('customDiscount').value) || 0,
     notes: document.getElementById('quoteNotes').value.trim(),
@@ -180,9 +181,14 @@ function renderQuoteSummary(result) {
         <span>${formatTime(result.timePlan.travelOutMins)}</span>
       </div>
       <div class="summary-row">
-        <span>Calibration work</span>
+        <span>Calibration work${result.secondPerson ? ' (with 2nd person)' : ''}</span>
         <span>${formatTime(result.timePlan.jobMins)}</span>
       </div>
+      ${result.secondPerson && result.baseJobMins !== result.timePlan.jobMins ? `
+      <div class="summary-row" style="font-size:0.75rem; color:var(--green);">
+        <span>Reduced from ${formatTime(result.baseJobMins)} (-${result.timeReductionPercent}%)</span>
+        <span></span>
+      </div>` : ''}
       <div class="summary-row">
         <span>Travel return</span>
         <span>${formatTime(result.timePlan.travelReturnMins)}</span>
@@ -230,6 +236,11 @@ function renderQuoteSummary(result) {
         <span>Labour — travel</span>
         <span>${formatCurrency(result.costLabourTravel)}</span>
       </div>
+      ${result.costSecondPerson > 0 ? `
+      <div class="summary-row">
+        <span>2nd person (${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''})</span>
+        <span>${formatCurrency(result.costSecondPerson)}</span>
+      </div>` : ''}
       <div class="summary-row total">
         <span>TOTAL COST</span>
         <span>${formatCurrency(result.totalInternalCost)}</span>
@@ -340,7 +351,9 @@ function collectServiceLevelsFromEditor() {
 function populateSettingsForm(settings) {
   const fields = [
     'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
-    'labourRatePerHour', 'workingHoursPerDay', 'mileageRatePence', 'travelChargePerMile',
+    'labourRatePerHour', 'workingHoursPerDay',
+    'secondPersonDayCost', 'secondPersonTimeReduction',
+    'mileageRatePence', 'travelChargePerMile',
     'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault', 'overnightThresholdMins',
     'discountRegularPercent', 'discountContractPercent',
   ];
@@ -368,6 +381,8 @@ function collectSettingsFromForm() {
     costMultiChannel16: num('s_costMultiChannel16'),
     labourRatePerHour: num('s_labourRatePerHour'),
     workingHoursPerDay: num('s_workingHoursPerDay') || 8,
+    secondPersonDayCost: num('s_secondPersonDayCost'),
+    secondPersonTimeReduction: num('s_secondPersonTimeReduction'),
     mileageRatePence: num('s_mileageRatePence'),
     travelChargeToCustomer: document.getElementById('s_travelChargeToCustomer').checked,
     travelChargePerMile: num('s_travelChargePerMile'),

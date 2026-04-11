@@ -63,10 +63,21 @@ function calculateQuote(input, settings) {
   result.pipetteChargesTotal = totalPipetteCharges;
   result.estimatedCalMinutes = totalEstimatedMins;
 
+  // --- Second person ---
+  const secondPerson = !!input.secondPerson;
+  const timeReduction = secondPerson ? (settings.secondPersonTimeReduction || 40) : 0;
+  result.secondPerson = secondPerson;
+  result.timeReductionPercent = timeReduction;
+
   // --- Core time values ---
   const travelMinutes = input.travelTimeMinutes || 0;
   const calMinutes = input.calibrationTimeMinutes || 0;
-  const jobMins = calMinutes || result.estimatedCalMinutes;
+  const baseJobMins = calMinutes || result.estimatedCalMinutes;
+  // Apply second person time reduction to calibration work only
+  const jobMins = secondPerson
+    ? Math.round(baseJobMins * (1 - timeReduction / 100))
+    : baseJobMins;
+  result.baseJobMins = baseJobMins;
   const workMinsPerDay = (settings.workingHoursPerDay || 8) * 60;
 
   // --- Time plan ---
@@ -196,12 +207,20 @@ function calculateQuote(input, settings) {
   result.costLabourCalibration = (calMinutes / 60) * settings.labourRatePerHour;
   result.costLabourTravel = (travelMinutes / 60) * settings.labourRatePerHour;
 
+  // Second person cost: per day on site (not travel days)
+  const onSiteDays = Math.ceil(jobMins / workMinsPerDay) || 0;
+  result.secondPersonDays = secondPerson ? onSiteDays : 0;
+  result.costSecondPerson = secondPerson
+    ? onSiteDays * (settings.secondPersonDayCost || 350)
+    : 0;
+
   result.totalInternalCost =
     result.costPipettesTotal +
     result.costTravel +
     result.costAccommodation +
     result.costLabourCalibration +
-    result.costLabourTravel;
+    result.costLabourTravel +
+    result.costSecondPerson;
 
   // --- Profit ---
   result.profitAmount = result.totalQuotePrice - result.totalInternalCost;

@@ -41,6 +41,10 @@ const DEFAULT_SETTINGS = {
   labourRatePerHour: 35.00,
   workingHoursPerDay: 8,
 
+  // Second person
+  secondPersonDayCost: 350,
+  secondPersonTimeReduction: 40,   // % reduction in calibration time
+
   // Travel
   mileageRatePence: 45,
   travelChargeToCustomer: true,

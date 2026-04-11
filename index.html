@@ -126,6 +126,11 @@
                 <input type="number" id="calibrationTime" min="0" value="0">
               </div>
               <button type="button" id="autoEstimate" class="btn-link">Auto-estimate from pipette count</button>
+              <div class="checkbox-group" style="margin-top:0.75rem;">
+                <input type="checkbox" id="secondPerson">
+                <label for="secondPerson">Second person on job</label>
+              </div>
+              <div id="secondPersonNote" class="info-note" style="display:none; background:#f0fff4; border-color:#9ae6b4; color:#276749;"></div>
             </div>
 
             <!-- Notes -->
@@ -225,6 +230,16 @@
             <label>Working hours per day</label>
             <input type="number" id="s_workingHoursPerDay" step="0.5" min="1" max="24">
             <span class="unit">hrs</span>
+          </div>
+          <div class="setting-row">
+            <label>Second person day cost</label>
+            <input type="number" id="s_secondPersonDayCost" step="10" min="0">
+            <span class="unit">GBP</span>
+          </div>
+          <div class="setting-row">
+            <label>Time reduction with 2nd person</label>
+            <input type="number" id="s_secondPersonTimeReduction" step="5" min="0" max="100">
+            <span class="unit">%</span>
           </div>
         </div>
 
