@@ -153,7 +153,20 @@ function renderQuoteSummary(result) {
         <span>Travel charge (${result.roundTripMiles} mi round trip)</span>
         <span>${formatCurrency(result.travelCharge)}</span>
       </div>` : ''}
-      ${result.accommodationCharge > 0 ? `
+      ${result.accommodationCharge > 0 && result.travelNight > 0 ? `
+      <div class="summary-row">
+        <span>Hotel — travel night (day before)</span>
+        <span>${formatCurrency(result.hotelCostPerNight * result.travelNight)}</span>
+      </div>
+      ${result.jobNights > 0 ? `<div class="summary-row">
+        <span>Hotel — job (${result.jobNights} night${result.jobNights !== 1 ? 's' : ''})</span>
+        <span>${formatCurrency(result.hotelCostPerNight * result.jobNights)}</span>
+      </div>` : ''}
+      <div class="summary-row subtotal">
+        <span>Accommodation total (${result.nights} @ ${formatCurrency(result.hotelCostPerNight)})</span>
+        <span>${formatCurrency(result.accommodationCharge)}</span>
+      </div>` : ''}
+      ${result.accommodationCharge > 0 && result.travelNight === 0 ? `
       <div class="summary-row">
         <span>Accommodation (${result.nights} night${result.nights !== 1 ? 's' : ''} @ ${formatCurrency(result.hotelCostPerNight)})</span>
         <span>${formatCurrency(result.accommodationCharge)}</span>
@@ -208,6 +221,7 @@ function renderQuoteSummary(result) {
         ` : ''}
         ${result.suggestedNights > 0 ? `
         <div class="nights-count">${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''} hotel</div>
+        ${result.travelNight > 0 ? `<div class="nights-detail">1 travel night (day before) ${result.jobNights > 0 ? `+ ${result.jobNights} job night${result.jobNights !== 1 ? 's' : ''}` : ''}</div>` : ''}
         <div class="nights-cost">Est. accommodation: ${formatCurrency(result.suggestedNights * (result.hotelCostPerNight || 0))}</div>
         ` : ''}
       </div>
@@ -223,7 +237,16 @@ function renderQuoteSummary(result) {
         <span>Mileage (${result.roundTripMiles} mi round trip)</span>
         <span>${formatCurrency(result.costTravel)}</span>
       </div>
-      ${result.costAccommodation > 0 ? `
+      ${result.costAccommodation > 0 && result.travelNight > 0 ? `
+      <div class="summary-row">
+        <span>Hotel — travel night</span>
+        <span>${formatCurrency(result.hotelCostPerNight * result.travelNight)}</span>
+      </div>
+      ${result.jobNights > 0 ? `<div class="summary-row">
+        <span>Hotel — job (${result.jobNights} night${result.jobNights !== 1 ? 's' : ''})</span>
+        <span>${formatCurrency(result.hotelCostPerNight * result.jobNights)}</span>
+      </div>` : ''}` : ''}
+      ${result.costAccommodation > 0 && result.travelNight === 0 ? `
       <div class="summary-row">
         <span>Accommodation (${result.nights} night${result.nights !== 1 ? 's' : ''})</span>
         <span>${formatCurrency(result.costAccommodation)}</span>

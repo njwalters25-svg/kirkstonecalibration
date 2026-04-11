@@ -744,6 +744,12 @@ body {
   margin-top: 0.5rem;
 }
 
+.nights-detail {
+  font-size: 0.8rem;
+  color: var(--text);
+  margin-top: 0.15rem;
+}
+
 .nights-cost {
   font-size: 0.8rem;
   color: var(--text-light);
