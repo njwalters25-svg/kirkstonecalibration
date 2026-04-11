@@ -123,14 +123,15 @@ function calculateQuote(input, settings) {
   const threshold = settings.overnightThresholdMins || 90;
   const needsOvernight = travelMinutes >= threshold || result.timePlan.totalDays > 1 || input.travelDayBefore;
 
-  // Nights = total days away minus 1 (you sleep between each day)
-  // When travelling day before, split into: 1 travel night + remaining job nights
+  // Calculate job nights as if NOT travelling day before (travel + work + return in one block)
+  // This keeps job nights stable regardless of travel day before toggle
+  const baseTotalMins = travelOutMins + jobMins + travelReturnMins;
+  const baseTotalDays = Math.ceil(baseTotalMins / workMinsPerDay) || 0;
+  const jobNights = baseTotalDays > 1 ? baseTotalDays - 1 : 0;
+
+  // Travel day before adds one extra night on top
   const travelNight = input.travelDayBefore ? 1 : 0;
-  const totalNightsAway = result.timePlan.totalDays > 1
-    ? result.timePlan.totalDays - 1
-    : 0;
-  const jobNights = Math.max(0, totalNightsAway - travelNight);
-  const suggestedNights = travelNight + jobNights;
+  const suggestedNights = jobNights + travelNight;
 
   result.overnightSuggested = needsOvernight;
   result.suggestedNights = suggestedNights;
