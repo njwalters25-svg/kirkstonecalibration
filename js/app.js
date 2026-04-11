@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     current.push(getDefaultPipetteLine(currentSettings));
     renderPipetteLines(current, currentSettings);
     wirePipetteLineEvents();
-    nightsManuallyEdited = false;
+
     recalculate();
     autoSaveForm();
   });
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = collectQuoteInputFromForm();
     const result = calculateQuote(input, currentSettings);
     document.getElementById('calibrationTime').value = result.estimatedCalMinutes;
-    nightsManuallyEdited = false;
+
     recalculate();
   });
 
@@ -92,10 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Travel day before / second person — reset nights auto-fill when these change
   document.getElementById('travelDayBefore').addEventListener('change', () => {
-    nightsManuallyEdited = false;
+
   });
   document.getElementById('secondPerson').addEventListener('change', () => {
-    nightsManuallyEdited = false;
+
   });
 
   // Overnight toggle
@@ -197,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
     wirePipetteLineEvents();
     StorageManager.clearFormState();
-    nightsManuallyEdited = false;
+
     recalculate();
   });
 });
@@ -211,7 +211,7 @@ function wirePipetteLineEvents() {
       lines.splice(idx, 1);
       renderPipetteLines(lines, currentSettings);
       wirePipetteLineEvents();
-      nightsManuallyEdited = false;
+  
       recalculate();
       autoSaveForm();
     });
@@ -232,37 +232,25 @@ function wireServiceLevelRemoveButtons() {
   });
 }
 
-let nightsManuallyEdited = false;
-
-// Track when user directly edits the nights field
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('nights').addEventListener('input', () => {
-    nightsManuallyEdited = true;
-  });
-});
-
 function recalculate() {
   const input = collectQuoteInputFromForm();
   const result = calculateQuote(input, currentSettings);
 
-  // Auto-fill nights unless user has manually edited the field
+  // Always update nights field to match suggestion
   const nightsEl = document.getElementById('nights');
-  if (result.suggestedNights > 0 && !nightsManuallyEdited) {
+  if (result.suggestedNights > 0 && input.overnightStay) {
     nightsEl.value = result.suggestedNights;
-    // Re-collect and recalculate with updated nights
-    const updatedInput = collectQuoteInputFromForm();
-    const updatedResult = calculateQuote(updatedInput, currentSettings);
-    renderQuoteSummary(updatedResult);
-    Object.assign(result, updatedResult);
-    Object.assign(input, updatedInput);
-  } else {
-    renderQuoteSummary(result);
   }
+
+  // Re-collect and recalculate with the updated nights value
+  const finalInput = collectQuoteInputFromForm();
+  const finalResult = calculateQuote(finalInput, currentSettings);
+  renderQuoteSummary(finalResult);
 
   // Show overnight suggestion hint if not already ticked
   const hint = document.getElementById('overnightHint');
-  if (result.overnightSuggested && !input.overnightStay) {
-    hint.textContent = `Travel is ${result.timePlan.travelOutMins} mins one way — overnight stay recommended (${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''})`;
+  if (finalResult.overnightSuggested && !finalInput.overnightStay) {
+    hint.textContent = `Travel is ${finalResult.timePlan.travelOutMins} mins one way — overnight stay recommended (${finalResult.suggestedNights} night${finalResult.suggestedNights !== 1 ? 's' : ''})`;
     hint.style.display = 'block';
   } else {
     hint.style.display = 'none';
@@ -270,8 +258,8 @@ function recalculate() {
 
   // Second person note
   const spNote = document.getElementById('secondPersonNote');
-  if (result.secondPerson && result.secondPersonDays > 0) {
-    spNote.textContent = `2nd person: ${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''} on site (${formatCurrency(result.costSecondPerson)}). Calibration time reduced by ${result.timeReductionPercent}%.`;
+  if (finalResult.secondPerson && finalResult.secondPersonDays > 0) {
+    spNote.textContent = `2nd person: ${finalResult.secondPersonDays} day${finalResult.secondPersonDays !== 1 ? 's' : ''} on site (${formatCurrency(finalResult.costSecondPerson)}). Calibration time reduced by ${finalResult.timeReductionPercent}%.`;
     spNote.style.display = 'block';
   } else {
     spNote.style.display = 'none';
