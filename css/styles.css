@@ -650,37 +650,63 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0.75rem 1rem;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  margin-bottom: 0.75rem;
   box-shadow: var(--shadow);
 }
 
 .history-header {
-  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .history-header strong {
-  font-size: 0.875rem;
+  font-size: 1rem;
 }
 
 .history-date {
   font-size: 0.75rem;
   color: var(--text-light);
-  margin-left: 0.5rem;
 }
 
 .history-details {
   display: flex;
   gap: 1rem;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
 }
 
 .history-total {
   font-weight: 600;
+}
+
+.history-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.history-summary {
+  margin: 0.75rem 0;
+  padding: 0.75rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.history-notes {
+  font-size: 0.8rem;
+  color: var(--text);
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+  line-height: 1.5;
 }
 
 /* Nights suggestion */

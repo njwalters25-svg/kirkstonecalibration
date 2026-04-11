@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   restoreFormState();
   recalculate();
-  renderQuoteHistory(StorageManager.loadQuoteHistory());
+  renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
 
   // Tab switching
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -181,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
       profitMarginPercent: result.profitMarginPercent,
     };
     StorageManager.saveQuote(saved);
-    renderQuoteHistory(StorageManager.loadQuoteHistory());
+    renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
     showToast('Quote saved');
   });
 
@@ -319,9 +319,128 @@ function restoreFormState() {
 function deleteQuote(id) {
   if (confirm('Delete this saved quote?')) {
     StorageManager.deleteQuote(id);
-    renderQuoteHistory(StorageManager.loadQuoteHistory());
+    renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
     showToast('Quote deleted');
   }
+}
+
+function toggleQuoteDetail(id) {
+  const summaryEl = document.getElementById('history-summary-' + id);
+  if (!summaryEl) return;
+
+  if (summaryEl.style.display === 'none') {
+    // Show: recalculate and render the full summary
+    const quotes = StorageManager.loadQuoteHistory();
+    const q = quotes.find(quote => quote.id === id);
+    if (!q) return;
+    const result = calculateQuote(q, currentSettings);
+    const contentEl = summaryEl.querySelector('.history-summary-content');
+    // Reuse the same summary renderer
+    const tempDiv = document.createElement('div');
+    tempDiv.id = 'quoteSummary';
+    renderQuoteSummary.call(null, result, tempDiv);
+    contentEl.innerHTML = tempDiv.innerHTML || '';
+    // Manually render if renderQuoteSummary uses getElementById
+    const profitClass = getProfitClass(result.profitMarginPercent);
+    const lineRows = result.lineResults.map(lr => {
+      const rows = [];
+      if (lr.singleCount > 0) rows.push(`<div class="summary-row"><span>Single-ch ×${lr.singleCount}</span><span>${formatCurrency(lr.chargeSingle)}</span></div>`);
+      if (lr.multi8Count > 0) rows.push(`<div class="summary-row"><span>Multi 8-ch ×${lr.multi8Count}</span><span>${formatCurrency(lr.chargeMulti8)}</span></div>`);
+      if (lr.multi12Count > 0) rows.push(`<div class="summary-row"><span>Multi 12-ch ×${lr.multi12Count}</span><span>${formatCurrency(lr.chargeMulti12)}</span></div>`);
+      if (lr.multi16Count > 0) rows.push(`<div class="summary-row"><span>Multi 16-ch ×${lr.multi16Count}</span><span>${formatCurrency(lr.chargeMulti16)}</span></div>`);
+      if (rows.length === 0) return '';
+      return `<div class="line-result"><div class="service-level-badge">${lr.serviceLevelName}</div>${rows.join('')}<div class="summary-row subtotal"><span>Line subtotal</span><span>${formatCurrency(lr.chargeTotal)}</span></div></div>`;
+    }).filter(Boolean).join('');
+
+    contentEl.innerHTML = `
+      <div class="summary-section">
+        <h3>Revenue</h3>
+        ${lineRows}
+        <div class="summary-row subtotal"><span>All pipettes</span><span>${formatCurrency(result.pipetteChargesTotal)}</span></div>
+        ${result.travelCharge > 0 ? `<div class="summary-row"><span>Travel</span><span>${formatCurrency(result.travelCharge)}</span></div>` : ''}
+        ${result.accommodationCharge > 0 ? `<div class="summary-row"><span>Accommodation</span><span>${formatCurrency(result.accommodationCharge)}</span></div>` : ''}
+        ${result.londonPremium > 0 ? `<div class="summary-row premium"><span>London premium</span><span>+${formatCurrency(result.londonPremium)}</span></div>` : ''}
+        ${result.discountAmount > 0 ? `<div class="summary-row discount"><span>Discount: ${result.discountLabel}</span><span>-${formatCurrency(result.discountAmount)}</span></div>` : ''}
+        <div class="summary-row total"><span>QUOTE TOTAL</span><span>${formatCurrency(result.totalQuotePrice)}</span></div>
+      </div>
+      <div class="summary-section">
+        <h3>Time Plan</h3>
+        <div class="summary-row"><span>Travel (one way)</span><span>${formatTime(result.timePlan.travelOutMins)}</span></div>
+        <div class="summary-row"><span>Calibration${result.secondPerson ? ' (with 2nd person)' : ''}</span><span>${formatTime(result.timePlan.jobMins)}</span></div>
+        <div class="summary-row subtotal"><span>${result.timePlan.totalDays} day${result.timePlan.totalDays !== 1 ? 's' : ''}${result.suggestedNights > 0 ? `, ${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''}` : ''}</span><span>${formatTime(result.timePlan.totalMins)}</span></div>
+      </div>
+      <div class="summary-section">
+        <h3>Internal Costs</h3>
+        <div class="summary-row"><span>Pipettes</span><span>${formatCurrency(result.costPipettesTotal)}</span></div>
+        <div class="summary-row"><span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` × ${result.commuteTrips} days` : ''})</span><span>${formatCurrency(result.costTravel)}</span></div>
+        ${result.costAccommodation > 0 ? `<div class="summary-row"><span>Accommodation</span><span>${formatCurrency(result.costAccommodation)}</span></div>` : ''}
+        <div class="summary-row"><span>Labour — calibration</span><span>${formatCurrency(result.costLabourCalibration)}</span></div>
+        <div class="summary-row"><span>Labour — travel</span><span>${formatCurrency(result.costLabourTravel)}</span></div>
+        ${result.costSecondPerson > 0 ? `<div class="summary-row"><span>2nd person (${result.secondPersonDays} days)</span><span>${formatCurrency(result.costSecondPerson)}</span></div>` : ''}
+        <div class="summary-row total"><span>TOTAL COST</span><span>${formatCurrency(result.totalInternalCost)}</span></div>
+      </div>
+      <div class="summary-section profit-section ${profitClass}">
+        <div class="profit-amount">${formatCurrency(result.profitAmount)}</div>
+        <div class="profit-margin">${formatPercent(result.profitMarginPercent)} margin</div>
+      </div>
+    `;
+    summaryEl.style.display = 'block';
+  } else {
+    summaryEl.style.display = 'none';
+  }
+}
+
+function loadQuote(id) {
+  const quotes = StorageManager.loadQuoteHistory();
+  const q = quotes.find(quote => quote.id === id);
+  if (!q) return;
+
+  // Load into form using restoreFormState logic
+  const setVal = (elId, val) => {
+    const el = document.getElementById(elId);
+    if (el && val !== undefined && val !== null) el.value = val;
+  };
+  const setChecked = (elId, val) => {
+    const el = document.getElementById(elId);
+    if (el) el.checked = !!val;
+  };
+
+  setVal('customerName', q.customerName);
+  setVal('destinationPostcode', q.destinationPostcode);
+  setVal('travelDistance', q.travelDistanceMiles);
+  setVal('travelTime', q.travelTimeMinutes);
+  setChecked('travelDayBefore', q.travelDayBefore);
+  setChecked('isLondon', q.isLondon);
+  setChecked('overnightStay', q.overnightStay);
+  setVal('hotelCost', q.hotelCost);
+  setVal('nights', q.nights);
+  setVal('calibrationTime', q.calibrationTimeMinutes);
+  setChecked('secondPerson', q.secondPerson);
+  setVal('customDiscount', q.customDiscountPercent);
+  setVal('quoteNotes', q.notes);
+
+  if (q.pipetteLines && q.pipetteLines.length > 0) {
+    renderPipetteLines(q.pipetteLines, currentSettings);
+    wirePipetteLineEvents();
+  }
+
+  if (q.discountType) {
+    const radio = document.querySelector(`input[name="discountType"][value="${q.discountType}"]`);
+    if (radio) radio.checked = true;
+  }
+
+  document.getElementById('hotelFields').style.display = q.overnightStay ? 'block' : 'none';
+  document.getElementById('londonNote').style.display = q.isLondon ? 'block' : 'none';
+  document.getElementById('customDiscountField').style.display = q.discountType === 'custom' ? 'block' : 'none';
+
+  // Switch to quote tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="quotePanel"]').classList.add('active');
+  document.getElementById('quotePanel').classList.add('active');
+
+  recalculate();
+  showToast('Quote loaded');
 }
 
 function showToast(message) {

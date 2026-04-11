@@ -425,7 +425,7 @@ function collectSettingsFromForm() {
 
 // --- Quote history ---
 
-function renderQuoteHistory(quotes) {
+function renderQuoteHistory(quotes, settings) {
   const container = document.getElementById('quoteHistory');
   if (!container) return;
 
@@ -434,19 +434,31 @@ function renderQuoteHistory(quotes) {
     return;
   }
 
-  container.innerHTML = quotes.map(q => `
+  container.innerHTML = quotes.map(q => {
+    // Recalculate the full result to show the complete summary
+    const result = calculateQuote(q, settings);
+
+    return `
     <div class="history-card" data-id="${q.id}">
       <div class="history-header">
         <strong>${q.customerName || 'Unnamed'}</strong>
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
       </div>
-      <div class="history-details">
-        <span>${q.totalPipettes} pipettes</span>
-        <span class="history-total">${formatCurrency(q.totalQuotePrice)}</span>
-        <span class="${getProfitClass(q.profitMarginPercent)}">${formatPercent(q.profitMarginPercent)}</span>
+      <div class="history-summary" id="history-summary-${q.id}" style="display:none;">
+        <div class="history-summary-content"></div>
       </div>
-      ${q.notes ? `<div class="history-notes">${q.notes.length > 80 ? q.notes.substring(0, 80) + '...' : q.notes}</div>` : ''}
-      <button class="btn-small btn-delete" onclick="deleteQuote('${q.id}')">Delete</button>
-    </div>
-  `).join('');
+      <div class="history-details">
+        <span>${result.totalPipettes} pipettes</span>
+        <span>${result.timePlan.totalDays} day${result.timePlan.totalDays !== 1 ? 's' : ''}</span>
+        <span class="history-total">${formatCurrency(result.totalQuotePrice)}</span>
+        <span class="${getProfitClass(result.profitMarginPercent)}">${formatPercent(result.profitMarginPercent)} (${formatCurrency(result.profitAmount)})</span>
+      </div>
+      ${q.notes ? `<div class="history-notes">${q.notes.replace(/\n/g, '<br>')}</div>` : ''}
+      <div class="history-actions">
+        <button class="btn-small" onclick="toggleQuoteDetail('${q.id}')">View details</button>
+        <button class="btn-small" onclick="loadQuote('${q.id}')">Load into form</button>
+        <button class="btn-small btn-delete" onclick="deleteQuote('${q.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
 }
