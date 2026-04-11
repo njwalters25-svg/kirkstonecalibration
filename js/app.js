@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
     current.push(getDefaultPipetteLine(currentSettings));
     renderPipetteLines(current, currentSettings);
     wirePipetteLineEvents();
+    nightsManuallyEdited = false;
     recalculate();
     autoSaveForm();
   });
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const input = collectQuoteInputFromForm();
     const result = calculateQuote(input, currentSettings);
     document.getElementById('calibrationTime').value = result.estimatedCalMinutes;
+    nightsManuallyEdited = false;
     recalculate();
   });
 
@@ -86,6 +88,14 @@ document.addEventListener('DOMContentLoaded', () => {
   // London checkbox
   document.getElementById('isLondon').addEventListener('change', (e) => {
     document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  // Travel day before / second person — reset nights auto-fill when these change
+  document.getElementById('travelDayBefore').addEventListener('change', () => {
+    nightsManuallyEdited = false;
+  });
+  document.getElementById('secondPerson').addEventListener('change', () => {
+    nightsManuallyEdited = false;
   });
 
   // Overnight toggle
@@ -187,7 +197,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
     wirePipetteLineEvents();
     StorageManager.clearFormState();
-    lastSuggestedNights = null;
+    nightsManuallyEdited = false;
     recalculate();
   });
 });
@@ -201,6 +211,7 @@ function wirePipetteLineEvents() {
       lines.splice(idx, 1);
       renderPipetteLines(lines, currentSettings);
       wirePipetteLineEvents();
+      nightsManuallyEdited = false;
       recalculate();
       autoSaveForm();
     });
@@ -221,18 +232,24 @@ function wireServiceLevelRemoveButtons() {
   });
 }
 
-let lastSuggestedNights = null;
+let nightsManuallyEdited = false;
+
+// Track when user directly edits the nights field
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('nights').addEventListener('input', () => {
+    nightsManuallyEdited = true;
+  });
+});
 
 function recalculate() {
   const input = collectQuoteInputFromForm();
   const result = calculateQuote(input, currentSettings);
 
-  // Auto-fill nights only when the suggestion changes (not on every keystroke)
+  // Auto-fill nights unless user has manually edited the field
   const nightsEl = document.getElementById('nights');
-  if (result.suggestedNights > 0 && result.suggestedNights !== lastSuggestedNights) {
+  if (result.suggestedNights > 0 && !nightsManuallyEdited) {
     nightsEl.value = result.suggestedNights;
-    lastSuggestedNights = result.suggestedNights;
-    // Re-collect input so the summary uses the updated nights
+    // Re-collect and recalculate with updated nights
     const updatedInput = collectQuoteInputFromForm();
     const updatedResult = calculateQuote(updatedInput, currentSettings);
     renderQuoteSummary(updatedResult);
