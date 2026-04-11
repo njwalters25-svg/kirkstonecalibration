@@ -95,41 +95,21 @@ function calculateQuote(input, settings) {
     travelDayBefore: !!input.travelDayBefore,
   };
 
-  if (input.travelDayBefore) {
-    const jobDays = Math.ceil(jobMins / workMinsPerDay) || 0;
-    const lastDayJobMins = jobMins - ((jobDays - 1) * workMinsPerDay);
-    const lastDaySpare = workMinsPerDay - lastDayJobMins;
-    const returnFitsInLastDay = travelReturnMins <= lastDaySpare;
+  // Days = total working time (travel + cal + return) spread across working days
+  // Travel day before does NOT add a working day — it's evening travel
+  const totalWorkMins = travelOutMins + jobMins + travelReturnMins;
+  const totalDays = Math.ceil(totalWorkMins / workMinsPerDay) || 0;
 
-    result.timePlan.travelOutDays = 1;
-    result.timePlan.jobDays = jobDays;
-    result.timePlan.travelReturnDays = returnFitsInLastDay ? 0 : 1;
-    result.timePlan.totalDays = 1 + jobDays + (returnFitsInLastDay ? 0 : 1);
-    result.timePlan.returnNote = returnFitsInLastDay
-      ? 'Return travel fits into last job day'
-      : 'Separate return travel day needed';
-  } else {
-    const totalMins = travelOutMins + jobMins + travelReturnMins;
-    const totalDays = Math.ceil(totalMins / workMinsPerDay) || 0;
-
-    result.timePlan.travelOutDays = 0;
-    result.timePlan.jobDays = 0;
-    result.timePlan.travelReturnDays = 0;
-    result.timePlan.totalDays = totalDays;
-    result.timePlan.returnNote = '';
-  }
+  result.timePlan.totalDays = totalDays;
 
   // --- Auto-suggest overnight & estimate nights ---
   const threshold = settings.overnightThresholdMins || 90;
-  const needsOvernight = travelMinutes >= threshold || result.timePlan.totalDays > 1 || input.travelDayBefore;
+  const needsOvernight = travelMinutes >= threshold || totalDays > 1 || input.travelDayBefore;
 
-  // Calculate job nights as if NOT travelling day before (travel + work + return in one block)
-  // This keeps job nights stable regardless of travel day before toggle
-  const baseTotalMins = travelOutMins + jobMins + travelReturnMins;
-  const baseTotalDays = Math.ceil(baseTotalMins / workMinsPerDay) || 0;
-  const jobNights = baseTotalDays > 1 ? baseTotalDays - 1 : 0;
+  // Job nights = days minus 1 (sleep between working days)
+  const jobNights = totalDays > 1 ? totalDays - 1 : 0;
 
-  // Travel day before adds one extra night on top
+  // Travel day before = extra hotel night (evening travel, not a working day)
   const travelNight = input.travelDayBefore ? 1 : 0;
   const suggestedNights = jobNights + travelNight;
 

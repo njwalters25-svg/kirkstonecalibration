@@ -218,12 +218,6 @@ function renderQuoteSummary(result) {
       <div class="time-plan-days">
         <div class="days-count">${result.timePlan.totalDays || '—'} day${result.timePlan.totalDays !== 1 ? 's' : ''}</div>
         <div class="days-detail">Based on ${result.timePlan.workMinsPerDay / 60}hr working day</div>
-        ${result.timePlan.travelDayBefore ? `
-        <div class="days-breakdown">
-          ${result.timePlan.travelOutDays} travel + ${result.timePlan.jobDays} on-site${result.timePlan.travelReturnDays ? ' + 1 return' : ''}
-        </div>
-        ${result.timePlan.returnNote ? `<div class="days-note">${result.timePlan.returnNote}</div>` : ''}
-        ` : ''}
         ${result.suggestedNights > 0 ? `
         <div class="nights-count">${result.suggestedNights} night${result.suggestedNights !== 1 ? 's' : ''} hotel</div>
         ${result.travelNight > 0 ? `<div class="nights-detail">1 travel night (day before) ${result.jobNights > 0 ? `+ ${result.jobNights} job night${result.jobNights !== 1 ? 's' : ''}` : ''}</div>` : ''}
