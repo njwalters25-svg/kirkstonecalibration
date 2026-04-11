@@ -91,6 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Overnight toggle
   document.getElementById('overnightStay').addEventListener('change', (e) => {
     document.getElementById('hotelFields').style.display = e.target.checked ? 'block' : 'none';
+    // Pre-fill hotel cost with budget default if empty
+    if (e.target.checked) {
+      const hotelCostEl = document.getElementById('hotelCost');
+      if (!hotelCostEl.value || parseFloat(hotelCostEl.value) === 0) {
+        hotelCostEl.value = currentSettings.hotelBudgetDefault;
+      }
+    }
   });
 
   // Custom discount toggle
