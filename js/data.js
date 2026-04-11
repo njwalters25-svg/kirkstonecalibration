@@ -15,7 +15,9 @@ const DEFAULT_SETTINGS = {
       chargeMultiChannel12: 55.00,
       chargeMultiChannel16: 65.00,
       minutesPerSingleChannel: 15,
-      minutesPerMultiChannel: 25,
+      minutesPerMultiChannel8: 25,
+      minutesPerMultiChannel12: 30,
+      minutesPerMultiChannel16: 35,
     },
     {
       id: '3r3v',
@@ -27,7 +29,9 @@ const DEFAULT_SETTINGS = {
       chargeMultiChannel12: 72.00,
       chargeMultiChannel16: 85.00,
       minutesPerSingleChannel: 25,
-      minutesPerMultiChannel: 40,
+      minutesPerMultiChannel8: 40,
+      minutesPerMultiChannel12: 50,
+      minutesPerMultiChannel16: 55,
     },
   ],
 

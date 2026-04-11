@@ -323,14 +323,22 @@ function renderServiceLevelsEditor(settings) {
           </div>
         </div>
         <div class="sl-section-label">Time per pipette (minutes)</div>
-        <div class="form-row">
+        <div class="form-row-4">
           <div class="form-group">
-            <label>Single-channel</label>
+            <label>Single-ch</label>
             <input type="number" class="sl-minsSingle" step="1" min="1" value="${sl.minutesPerSingleChannel}">
           </div>
           <div class="form-group">
-            <label>Multi-channel</label>
-            <input type="number" class="sl-minsMulti" step="1" min="1" value="${sl.minutesPerMultiChannel}">
+            <label>Multi 8-ch</label>
+            <input type="number" class="sl-minsMulti8" step="1" min="1" value="${sl.minutesPerMultiChannel8}">
+          </div>
+          <div class="form-group">
+            <label>Multi 12-ch</label>
+            <input type="number" class="sl-minsMulti12" step="1" min="1" value="${sl.minutesPerMultiChannel12}">
+          </div>
+          <div class="form-group">
+            <label>Multi 16-ch</label>
+            <input type="number" class="sl-minsMulti16" step="1" min="1" value="${sl.minutesPerMultiChannel16}">
           </div>
         </div>
       </div>
@@ -358,7 +366,9 @@ function collectServiceLevelsFromEditor() {
       chargeMultiChannel12: parseFloat(card.querySelector('.sl-chargeMulti12').value) || 0,
       chargeMultiChannel16: parseFloat(card.querySelector('.sl-chargeMulti16').value) || 0,
       minutesPerSingleChannel: parseInt(card.querySelector('.sl-minsSingle').value) || 1,
-      minutesPerMultiChannel: parseInt(card.querySelector('.sl-minsMulti').value) || 1,
+      minutesPerMultiChannel8: parseInt(card.querySelector('.sl-minsMulti8').value) || 1,
+      minutesPerMultiChannel12: parseInt(card.querySelector('.sl-minsMulti12').value) || 1,
+      minutesPerMultiChannel16: parseInt(card.querySelector('.sl-minsMulti16').value) || 1,
     };
   });
 }

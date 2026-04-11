@@ -33,8 +33,10 @@ function calculateQuote(input, settings) {
     const chargeTotal = chargeSingle + chargeMulti8 + chargeMulti12 + chargeMulti16;
 
     const minsPerSC = sl ? sl.minutesPerSingleChannel : 0;
-    const minsPerMC = sl ? sl.minutesPerMultiChannel : 0;
-    const estimatedMins = (sc * minsPerSC) + ((mc8 + mc12 + mc16) * minsPerMC);
+    const minsPerMC8 = sl ? (sl.minutesPerMultiChannel8 || sl.minutesPerMultiChannel || 0) : 0;
+    const minsPerMC12 = sl ? (sl.minutesPerMultiChannel12 || sl.minutesPerMultiChannel || 0) : 0;
+    const minsPerMC16 = sl ? (sl.minutesPerMultiChannel16 || sl.minutesPerMultiChannel || 0) : 0;
+    const estimatedMins = (sc * minsPerSC) + (mc8 * minsPerMC8) + (mc12 * minsPerMC12) + (mc16 * minsPerMC16);
 
     result.lineResults.push({
       serviceLevelName: sl ? sl.name : 'Unknown',

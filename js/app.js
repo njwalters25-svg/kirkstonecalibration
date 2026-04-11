@@ -131,7 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
       chargeMultiChannel12: 55,
       chargeMultiChannel16: 65,
       minutesPerSingleChannel: 15,
-      minutesPerMultiChannel: 25,
+      minutesPerMultiChannel8: 25,
+      minutesPerMultiChannel12: 30,
+      minutesPerMultiChannel16: 35,
     });
     currentSettings.serviceLevels = levels;
     renderServiceLevelsEditor(currentSettings);
