@@ -309,13 +309,30 @@ function calculateQuote(input, settings) {
     ? onSiteDays * (settings.secondPersonDayCost || 350)
     : 0;
 
+  // Subsistence (HMRC benchmark rates)
+  const totalDaysAway = totalDays + (travelDayBefore ? 1 : 0);
+  if (overnightStay && totalDaysAway > 0) {
+    result.subsistenceDays = totalDaysAway;
+    result.subsistenceRate = settings.subsistenceOvernightRate || 25;
+    result.costSubsistence = totalDaysAway * result.subsistenceRate;
+  } else if (totalDays > 0) {
+    result.subsistenceDays = totalDays;
+    result.subsistenceRate = settings.subsistenceDayTripRate || 10;
+    result.costSubsistence = totalDays * result.subsistenceRate;
+  } else {
+    result.subsistenceDays = 0;
+    result.subsistenceRate = 0;
+    result.costSubsistence = 0;
+  }
+
   result.totalInternalCost =
     result.costPipettesTotal +
     result.costTravel +
     result.costAccommodation +
     result.costLabourCalibration +
     result.costLabourTravel +
-    result.costSecondPerson;
+    result.costSecondPerson +
+    result.costSubsistence;
 
   // --- Profit ---
   result.profitAmount = result.totalQuotePrice - result.totalInternalCost;

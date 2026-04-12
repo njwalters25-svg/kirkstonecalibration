@@ -68,6 +68,10 @@ const DEFAULT_SETTINGS = {
   chargeAccommodationToCustomer: true,
   overnightThresholdMins: 90,           // auto-suggest overnight if travel exceeds this
 
+  // Subsistence (HMRC benchmark scale rates)
+  subsistenceOvernightRate: 25,   // 24hr / overnight rate per day
+  subsistenceDayTripRate: 10,     // 10hr+ away (two meal) rate per day
+
   // Discounts
   discountRegularPercent: 5,
   discountContractPercent: 10,

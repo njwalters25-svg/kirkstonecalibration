@@ -284,6 +284,11 @@ function renderQuoteSummary(result) {
         <span>2nd person (${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''})</span>
         <span>${formatCurrency(result.costSecondPerson)}</span>
       </div>` : ''}
+      ${result.costSubsistence > 0 ? `
+      <div class="summary-row">
+        <span>Subsistence (${result.subsistenceDays} day${result.subsistenceDays !== 1 ? 's' : ''} @ ${formatCurrency(result.subsistenceRate)}/day)</span>
+        <span>${formatCurrency(result.costSubsistence)}</span>
+      </div>` : ''}
       <div class="summary-row total">
         <span>TOTAL COST</span>
         <span>${formatCurrency(result.totalInternalCost)}</span>
@@ -418,6 +423,7 @@ function populateSettingsForm(settings) {
     'secondPersonDayCost', 'secondPersonTimeReduction',
     'mileageRatePence', 'travelChargePerMile',
     'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault', 'overnightThresholdMins',
+    'subsistenceOvernightRate', 'subsistenceDayTripRate',
     'discountRegularPercent', 'discountContractPercent',
   ];
   fields.forEach(f => {
@@ -455,6 +461,8 @@ function collectSettingsFromForm() {
     hotelBudgetDefault: num('s_hotelBudgetDefault'),
     overnightThresholdMins: num('s_overnightThresholdMins') || 90,
     chargeAccommodationToCustomer: document.getElementById('s_chargeAccommodationToCustomer').checked,
+    subsistenceOvernightRate: num('s_subsistenceOvernightRate'),
+    subsistenceDayTripRate: num('s_subsistenceDayTripRate'),
     discountRegularPercent: num('s_discountRegularPercent'),
     discountContractPercent: num('s_discountContractPercent'),
   };

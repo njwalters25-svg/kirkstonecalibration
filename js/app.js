@@ -520,6 +520,7 @@ function toggleQuoteDetail(id) {
         <div class="summary-row"><span>Labour — calibration</span><span>${formatCurrency(result.costLabourCalibration)}</span></div>
         <div class="summary-row"><span>Labour — travel</span><span>${formatCurrency(result.costLabourTravel)}</span></div>
         ${result.costSecondPerson > 0 ? `<div class="summary-row"><span>2nd person (${result.secondPersonDays} days)</span><span>${formatCurrency(result.costSecondPerson)}</span></div>` : ''}
+        ${result.costSubsistence > 0 ? `<div class="summary-row"><span>Subsistence (${result.subsistenceDays} days)</span><span>${formatCurrency(result.costSubsistence)}</span></div>` : ''}
         <div class="summary-row total"><span>TOTAL COST</span><span>${formatCurrency(result.totalInternalCost)}</span></div>
       </div>
       <div class="summary-section profit-section ${profitClass}">
