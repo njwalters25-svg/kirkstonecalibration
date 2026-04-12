@@ -4,6 +4,7 @@
 
 let currentSettings;
 let isSignedIn = false;
+let currentQuotes = [];
 
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
@@ -15,7 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   restoreFormState();
   recalculate();
-  renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
+  currentQuotes = StorageManager.loadQuoteHistory();
+  renderQuoteHistory(currentQuotes, currentSettings);
 
   // --- Auth UI ---
   document.getElementById('signInBtn').addEventListener('click', async () => {
@@ -448,13 +450,12 @@ function restoreFormState() {
 }
 
 async function refreshQuoteHistory() {
-  let quotes;
   if (isSignedIn) {
-    quotes = await loadQuotesFromFirestore();
+    currentQuotes = await loadQuotesFromFirestore();
   } else {
-    quotes = StorageManager.loadQuoteHistory();
+    currentQuotes = StorageManager.loadQuoteHistory();
   }
-  renderQuoteHistory(quotes, currentSettings);
+  renderQuoteHistory(currentQuotes, currentSettings);
 }
 
 async function deleteQuote(id) {
@@ -472,8 +473,7 @@ function toggleQuoteDetail(id) {
 
   if (summaryEl.style.display === 'none') {
     // Show: recalculate and render the full summary
-    const quotes = StorageManager.loadQuoteHistory();
-    const q = quotes.find(quote => quote.id === id);
+    const q = currentQuotes.find(quote => quote.id === id);
     if (!q) return;
     const result = calculateQuote(q, currentSettings);
     const contentEl = summaryEl.querySelector('.history-summary-content');
@@ -534,8 +534,7 @@ function toggleQuoteDetail(id) {
 }
 
 function loadQuote(id) {
-  const quotes = StorageManager.loadQuoteHistory();
-  const q = quotes.find(quote => quote.id === id);
+  const q = currentQuotes.find(quote => quote.id === id);
   if (!q) return;
 
   // Load into form using restoreFormState logic
