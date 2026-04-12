@@ -76,7 +76,6 @@ function calculateQuote(input, settings) {
   const newJobExtraMins = newJob ? result.totalPipettes * 2 : 0;
   result.newJob = newJob;
   result.newJobExtraMins = newJobExtraMins;
-  result.estimatedCalMinutes += newJobExtraMins;
 
   // --- Second person ---
   const secondPerson = !!input.secondPerson;
@@ -87,7 +86,8 @@ function calculateQuote(input, settings) {
   // --- Core time values ---
   const travelMinutes = input.travelTimeMinutes || 0;
   const calMinutes = input.calibrationTimeMinutes || 0;
-  const baseJobMins = calMinutes || result.estimatedCalMinutes;
+  // New job extra applies on top of either manual or estimated time
+  const baseJobMins = (calMinutes || result.estimatedCalMinutes) + newJobExtraMins;
   // Apply second person time reduction to calibration work only
   const jobMins = secondPerson
     ? Math.round(baseJobMins * (1 - timeReduction / 100))
