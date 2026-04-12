@@ -171,6 +171,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
   });
 
+  // New job checkbox
+  document.getElementById('newJob').addEventListener('change', (e) => {
+    document.getElementById('newJobNote').style.display = e.target.checked ? 'block' : 'none';
+  });
+
   // Travel day before / second person — reset nights auto-fill when these change
   document.getElementById('travelDayBefore').addEventListener('change', () => {
 
@@ -279,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('quoteForm').reset();
     document.getElementById('hotelFields').style.display = 'none';
     document.getElementById('londonNote').style.display = 'none';
+    document.getElementById('newJobNote').style.display = 'none';
     document.getElementById('customDiscountField').style.display = 'none';
     renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
     wirePipetteLineEvents();
@@ -380,6 +386,7 @@ function restoreFormState() {
   setVal('hotelCost', saved.hotelCost);
   setVal('nights', saved.nights);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
+  setChecked('newJob', saved.newJob);
   setChecked('secondPerson', saved.secondPerson);
   setVal('customDiscount', saved.customDiscountPercent);
   setVal('quoteNotes', saved.notes);
@@ -397,6 +404,7 @@ function restoreFormState() {
 
   if (saved.overnightStay) document.getElementById('hotelFields').style.display = 'block';
   if (saved.isLondon) document.getElementById('londonNote').style.display = 'block';
+  if (saved.newJob) document.getElementById('newJobNote').style.display = 'block';
   if (saved.discountType === 'custom') document.getElementById('customDiscountField').style.display = 'block';
 }
 
@@ -510,6 +518,7 @@ function loadQuote(id) {
   setVal('hotelCost', q.hotelCost);
   setVal('nights', q.nights);
   setVal('calibrationTime', q.calibrationTimeMinutes);
+  setChecked('newJob', q.newJob);
   setChecked('secondPerson', q.secondPerson);
   setVal('customDiscount', q.customDiscountPercent);
   setVal('quoteNotes', q.notes);
@@ -526,6 +535,7 @@ function loadQuote(id) {
 
   document.getElementById('hotelFields').style.display = q.overnightStay ? 'block' : 'none';
   document.getElementById('londonNote').style.display = q.isLondon ? 'block' : 'none';
+  document.getElementById('newJobNote').style.display = q.newJob ? 'block' : 'none';
   document.getElementById('customDiscountField').style.display = q.discountType === 'custom' ? 'block' : 'none';
 
   // Switch to quote tab

@@ -65,6 +65,13 @@ function calculateQuote(input, settings) {
   result.pipetteChargesTotal = totalPipetteCharges;
   result.estimatedCalMinutes = totalEstimatedMins;
 
+  // --- New job (extra 2 mins per pipette for system entry) ---
+  const newJob = !!input.newJob;
+  const newJobExtraMins = newJob ? result.totalPipettes * 2 : 0;
+  result.newJob = newJob;
+  result.newJobExtraMins = newJobExtraMins;
+  result.estimatedCalMinutes += newJobExtraMins;
+
   // --- Second person ---
   const secondPerson = !!input.secondPerson;
   const timeReduction = secondPerson ? (settings.secondPersonTimeReduction || 40) : 0;

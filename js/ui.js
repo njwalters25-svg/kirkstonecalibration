@@ -111,6 +111,7 @@ function collectQuoteInputFromForm() {
     hotelCost: parseFloat(document.getElementById('hotelCost').value) || 0,
     nights: parseInt(document.getElementById('nights').value) || 1,
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
+    newJob: document.getElementById('newJob').checked,
     secondPerson: document.getElementById('secondPerson').checked,
     discountType: document.querySelector('input[name="discountType"]:checked')?.value || 'none',
     customDiscountPercent: parseFloat(document.getElementById('customDiscount').value) || 0,
@@ -197,6 +198,11 @@ function renderQuoteSummary(result) {
         <span>Calibration work${result.secondPerson ? ' (with 2nd person)' : ''}</span>
         <span>${formatTime(result.timePlan.jobMins)}</span>
       </div>
+      ${result.newJob && result.newJobExtraMins > 0 ? `
+      <div class="summary-row" style="font-size:0.75rem; color:#1e40af;">
+        <span>Includes +${formatTime(result.newJobExtraMins)} new job setup (${result.totalPipettes} pipettes × 2 min)</span>
+        <span></span>
+      </div>` : ''}
       ${result.secondPerson && result.baseJobMins !== result.timePlan.jobMins ? `
       <div class="summary-row" style="font-size:0.75rem; color:var(--green);">
         <span>Reduced from ${formatTime(result.baseJobMins)} (-${result.timeReductionPercent}%)</span>
