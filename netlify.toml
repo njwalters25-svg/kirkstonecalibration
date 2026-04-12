@@ -2,10 +2,7 @@
   publish = "."
   command = "echo 'Static site — no build needed'"
 
-[build.processing]
-  skip_processing = false
-
-# Firebase API keys are designed to be public (client-side SDK)
-# Security is enforced via Firestore rules and Firebase Auth
+# Firebase API keys are designed to be public in client-side code
+# Security is enforced by Firestore rules and Firebase Auth
 [build.environment]
-  NETLIFY_SKIP_SECRETS_SCAN = "true"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
