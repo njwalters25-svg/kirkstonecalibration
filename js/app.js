@@ -213,10 +213,12 @@ document.addEventListener('DOMContentLoaded', () => {
       readings: 2,
       volumes: 2,
       chargeSingleChannel: 25,
+      chargeMultiChannel6: 40,
       chargeMultiChannel8: 45,
       chargeMultiChannel12: 55,
       chargeMultiChannel16: 65,
       minutesPerSingleChannel: 15,
+      minutesPerMultiChannel6: 22,
       minutesPerMultiChannel8: 25,
       minutesPerMultiChannel12: 30,
       minutesPerMultiChannel16: 35,
@@ -448,6 +450,7 @@ function toggleQuoteDetail(id) {
     const lineRows = result.lineResults.map(lr => {
       const rows = [];
       if (lr.singleCount > 0) rows.push(`<div class="summary-row"><span>Single-ch ×${lr.singleCount}</span><span>${formatCurrency(lr.chargeSingle)}</span></div>`);
+      if (lr.multi6Count > 0) rows.push(`<div class="summary-row"><span>Multi 6-ch ×${lr.multi6Count}</span><span>${formatCurrency(lr.chargeMulti6)}</span></div>`);
       if (lr.multi8Count > 0) rows.push(`<div class="summary-row"><span>Multi 8-ch ×${lr.multi8Count}</span><span>${formatCurrency(lr.chargeMulti8)}</span></div>`);
       if (lr.multi12Count > 0) rows.push(`<div class="summary-row"><span>Multi 12-ch ×${lr.multi12Count}</span><span>${formatCurrency(lr.chargeMulti12)}</span></div>`);
       if (lr.multi16Count > 0) rows.push(`<div class="summary-row"><span>Multi 16-ch ×${lr.multi16Count}</span><span>${formatCurrency(lr.chargeMulti16)}</span></div>`);

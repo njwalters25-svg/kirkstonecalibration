@@ -50,10 +50,14 @@ function renderPipetteLines(lines, settings) {
         </div>
         ${lines.length > 1 ? `<button type="button" class="btn-small btn-delete pl-remove" data-index="${i}">Remove</button>` : ''}
       </div>
-      <div class="form-row-4">
+      <div class="form-row-5">
         <div class="form-group">
           <label>Single-ch</label>
           <input type="number" class="pl-single" min="0" value="${line.singleChannelCount || 0}">
+        </div>
+        <div class="form-group">
+          <label>Multi 6-ch</label>
+          <input type="number" class="pl-multi6" min="0" value="${line.multiChannel6Count || 0}">
         </div>
         <div class="form-group">
           <label>Multi 8-ch</label>
@@ -77,6 +81,7 @@ function collectPipetteLinesFromForm() {
   return Array.from(lineEls).map(el => ({
     serviceLevelId: el.querySelector('.pl-serviceLevel').value,
     singleChannelCount: parseInt(el.querySelector('.pl-single').value) || 0,
+    multiChannel6Count: parseInt(el.querySelector('.pl-multi6').value) || 0,
     multiChannel8Count: parseInt(el.querySelector('.pl-multi8').value) || 0,
     multiChannel12Count: parseInt(el.querySelector('.pl-multi12').value) || 0,
     multiChannel16Count: parseInt(el.querySelector('.pl-multi16').value) || 0,
@@ -88,6 +93,7 @@ function getDefaultPipetteLine(settings) {
   return {
     serviceLevelId: firstLevel ? firstLevel.id : '',
     singleChannelCount: 0,
+    multiChannel6Count: 0,
     multiChannel8Count: 0,
     multiChannel12Count: 0,
     multiChannel16Count: 0,
@@ -129,6 +135,7 @@ function renderQuoteSummary(result) {
   const lineRows = result.lineResults.map(lr => {
     const rows = [];
     if (lr.singleCount > 0) rows.push(`<div class="summary-row"><span>Single-ch ×${lr.singleCount}</span><span>${formatCurrency(lr.chargeSingle)}</span></div>`);
+    if (lr.multi6Count > 0) rows.push(`<div class="summary-row"><span>Multi 6-ch ×${lr.multi6Count}</span><span>${formatCurrency(lr.chargeMulti6)}</span></div>`);
     if (lr.multi8Count > 0) rows.push(`<div class="summary-row"><span>Multi 8-ch ×${lr.multi8Count}</span><span>${formatCurrency(lr.chargeMulti8)}</span></div>`);
     if (lr.multi12Count > 0) rows.push(`<div class="summary-row"><span>Multi 12-ch ×${lr.multi12Count}</span><span>${formatCurrency(lr.chargeMulti12)}</span></div>`);
     if (lr.multi16Count > 0) rows.push(`<div class="summary-row"><span>Multi 16-ch ×${lr.multi16Count}</span><span>${formatCurrency(lr.chargeMulti16)}</span></div>`);
@@ -310,10 +317,14 @@ function renderServiceLevelsEditor(settings) {
       </div>
       <div class="sl-card-body">
         <div class="sl-section-label">Customer charges (GBP per pipette)</div>
-        <div class="form-row-4">
+        <div class="form-row-5">
           <div class="form-group">
             <label>Single-ch</label>
             <input type="number" class="sl-chargeSingle" step="0.50" min="0" value="${sl.chargeSingleChannel}">
+          </div>
+          <div class="form-group">
+            <label>Multi 6-ch</label>
+            <input type="number" class="sl-chargeMulti6" step="0.50" min="0" value="${sl.chargeMultiChannel6 || 0}">
           </div>
           <div class="form-group">
             <label>Multi 8-ch</label>
@@ -329,10 +340,14 @@ function renderServiceLevelsEditor(settings) {
           </div>
         </div>
         <div class="sl-section-label">Time per pipette (minutes)</div>
-        <div class="form-row-4">
+        <div class="form-row-5">
           <div class="form-group">
             <label>Single-ch</label>
             <input type="number" class="sl-minsSingle" step="1" min="1" value="${sl.minutesPerSingleChannel}">
+          </div>
+          <div class="form-group">
+            <label>Multi 6-ch</label>
+            <input type="number" class="sl-minsMulti6" step="1" min="1" value="${sl.minutesPerMultiChannel6 || 1}">
           </div>
           <div class="form-group">
             <label>Multi 8-ch</label>
@@ -368,10 +383,12 @@ function collectServiceLevelsFromEditor() {
       readings,
       volumes,
       chargeSingleChannel: parseFloat(card.querySelector('.sl-chargeSingle').value) || 0,
+      chargeMultiChannel6: parseFloat(card.querySelector('.sl-chargeMulti6').value) || 0,
       chargeMultiChannel8: parseFloat(card.querySelector('.sl-chargeMulti8').value) || 0,
       chargeMultiChannel12: parseFloat(card.querySelector('.sl-chargeMulti12').value) || 0,
       chargeMultiChannel16: parseFloat(card.querySelector('.sl-chargeMulti16').value) || 0,
       minutesPerSingleChannel: parseInt(card.querySelector('.sl-minsSingle').value) || 1,
+      minutesPerMultiChannel6: parseInt(card.querySelector('.sl-minsMulti6').value) || 1,
       minutesPerMultiChannel8: parseInt(card.querySelector('.sl-minsMulti8').value) || 1,
       minutesPerMultiChannel12: parseInt(card.querySelector('.sl-minsMulti12').value) || 1,
       minutesPerMultiChannel16: parseInt(card.querySelector('.sl-minsMulti16').value) || 1,
@@ -383,7 +400,7 @@ function collectServiceLevelsFromEditor() {
 
 function populateSettingsForm(settings) {
   const fields = [
-    'costSingleChannel', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
+    'costSingleChannel', 'costMultiChannel6', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
     'labourRatePerHour', 'workingHoursPerDay',
     'secondPersonDayCost', 'secondPersonTimeReduction',
     'mileageRatePence', 'travelChargePerMile',
@@ -409,6 +426,7 @@ function collectSettingsFromForm() {
   return {
     serviceLevels: collectServiceLevelsFromEditor(),
     costSingleChannel: num('s_costSingleChannel'),
+    costMultiChannel6: num('s_costMultiChannel6'),
     costMultiChannel8: num('s_costMultiChannel8'),
     costMultiChannel12: num('s_costMultiChannel12'),
     costMultiChannel16: num('s_costMultiChannel16'),

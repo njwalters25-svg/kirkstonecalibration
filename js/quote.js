@@ -14,7 +14,7 @@ function calculateQuote(input, settings) {
 
   // --- Process each pipette line ---
   result.lineResults = [];
-  let totalSC = 0, totalMC8 = 0, totalMC12 = 0, totalMC16 = 0;
+  let totalSC = 0, totalMC6 = 0, totalMC8 = 0, totalMC12 = 0, totalMC16 = 0;
   let totalPipetteCharges = 0;
   let totalPipetteCosts = 0;
   let totalEstimatedMins = 0;
@@ -22,29 +22,34 @@ function calculateQuote(input, settings) {
   lines.forEach(line => {
     const sl = getServiceLevel(line.serviceLevelId, settings);
     const sc = line.singleChannelCount || 0;
+    const mc6 = line.multiChannel6Count || 0;
     const mc8 = line.multiChannel8Count || 0;
     const mc12 = line.multiChannel12Count || 0;
     const mc16 = line.multiChannel16Count || 0;
 
     const chargeSingle = sc * (sl ? sl.chargeSingleChannel : 0);
+    const chargeMulti6 = mc6 * (sl ? sl.chargeMultiChannel6 : 0);
     const chargeMulti8 = mc8 * (sl ? sl.chargeMultiChannel8 : 0);
     const chargeMulti12 = mc12 * (sl ? sl.chargeMultiChannel12 : 0);
     const chargeMulti16 = mc16 * (sl ? sl.chargeMultiChannel16 : 0);
-    const chargeTotal = chargeSingle + chargeMulti8 + chargeMulti12 + chargeMulti16;
+    const chargeTotal = chargeSingle + chargeMulti6 + chargeMulti8 + chargeMulti12 + chargeMulti16;
 
     const minsPerSC = sl ? sl.minutesPerSingleChannel : 0;
+    const minsPerMC6 = sl ? (sl.minutesPerMultiChannel6 || sl.minutesPerMultiChannel || 0) : 0;
     const minsPerMC8 = sl ? (sl.minutesPerMultiChannel8 || sl.minutesPerMultiChannel || 0) : 0;
     const minsPerMC12 = sl ? (sl.minutesPerMultiChannel12 || sl.minutesPerMultiChannel || 0) : 0;
     const minsPerMC16 = sl ? (sl.minutesPerMultiChannel16 || sl.minutesPerMultiChannel || 0) : 0;
-    const estimatedMins = (sc * minsPerSC) + (mc8 * minsPerMC8) + (mc12 * minsPerMC12) + (mc16 * minsPerMC16);
+    const estimatedMins = (sc * minsPerSC) + (mc6 * minsPerMC6) + (mc8 * minsPerMC8) + (mc12 * minsPerMC12) + (mc16 * minsPerMC16);
 
     result.lineResults.push({
       serviceLevelName: sl ? sl.name : 'Unknown',
       singleCount: sc,
+      multi6Count: mc6,
       multi8Count: mc8,
       multi12Count: mc12,
       multi16Count: mc16,
       chargeSingle,
+      chargeMulti6,
       chargeMulti8,
       chargeMulti12,
       chargeMulti16,
@@ -53,6 +58,7 @@ function calculateQuote(input, settings) {
     });
 
     totalSC += sc;
+    totalMC6 += mc6;
     totalMC8 += mc8;
     totalMC12 += mc12;
     totalMC16 += mc16;
@@ -60,8 +66,8 @@ function calculateQuote(input, settings) {
     totalEstimatedMins += estimatedMins;
   });
 
-  result.totalPipettes = totalSC + totalMC8 + totalMC12 + totalMC16;
-  result.totalChannels = totalSC + (totalMC8 * 8) + (totalMC12 * 12) + (totalMC16 * 16);
+  result.totalPipettes = totalSC + totalMC6 + totalMC8 + totalMC12 + totalMC16;
+  result.totalChannels = totalSC + (totalMC6 * 6) + (totalMC8 * 8) + (totalMC12 * 12) + (totalMC16 * 16);
   result.pipetteChargesTotal = totalPipetteCharges;
   result.estimatedCalMinutes = totalEstimatedMins;
 
@@ -220,6 +226,7 @@ function calculateQuote(input, settings) {
   // --- Internal costs ---
   result.costPipettesTotal =
     (totalSC * settings.costSingleChannel) +
+    (totalMC6 * settings.costMultiChannel6) +
     (totalMC8 * settings.costMultiChannel8) +
     (totalMC12 * settings.costMultiChannel12) +
     (totalMC16 * settings.costMultiChannel16);
