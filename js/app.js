@@ -28,24 +28,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('signOutBtn').addEventListener('click', async () => {
     await signOut();
-    showToast('Signed out');
   });
 
-  // Auth state listener
+  // Lock screen sign-in button
+  document.getElementById('lockSignInBtn').addEventListener('click', async () => {
+    const lockError = document.getElementById('lockError');
+    lockError.style.display = 'none';
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      lockError.textContent = 'Sign in failed: ' + err.message;
+      lockError.style.display = 'block';
+    }
+  });
+
+  // Auth state listener — controls lock screen
   onAuthStateChanged(async (user) => {
+    const lockScreen = document.getElementById('lockScreen');
+    const appHeader = document.getElementById('appHeader');
+    const appMain = document.getElementById('appMain');
     const signInBtn = document.getElementById('signInBtn');
     const userInfo = document.getElementById('userInfo');
     const userName = document.getElementById('userName');
+    const lockError = document.getElementById('lockError');
 
     if (user) {
       // Check if user is allowed
       if (!(await isUserAllowed(user))) {
         await signOut();
-        showToast('Access denied — your email is not authorised');
+        lockError.textContent = 'Access denied — your email is not authorised.';
+        lockError.style.display = 'block';
         return;
       }
 
       isSignedIn = true;
+
+      // Show app, hide lock screen
+      lockScreen.style.display = 'none';
+      appHeader.style.display = 'flex';
+      appMain.style.display = 'block';
+
       signInBtn.style.display = 'none';
       userInfo.style.display = 'flex';
       userName.textContent = user.displayName || user.email;
@@ -61,18 +83,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Load quotes from Firestore
       await refreshQuoteHistory();
       recalculate();
-      showToast('Signed in as ' + (user.displayName || user.email));
     } else {
       isSignedIn = false;
+
+      // Show lock screen, hide app
+      lockScreen.style.display = 'flex';
+      appHeader.style.display = 'none';
+      appMain.style.display = 'none';
+
       signInBtn.style.display = 'block';
       userInfo.style.display = 'none';
       userName.textContent = '';
-
-      // Fall back to localStorage
-      currentSettings = StorageManager.loadSettings();
-      populateSettingsForm(currentSettings);
-      renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
-      recalculate();
     }
   });
 

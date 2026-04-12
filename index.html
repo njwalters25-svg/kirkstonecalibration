@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <header class="header">
+  <header class="header" id="appHeader" style="display:none;">
     <div>
       <h1>Kirkstone Calibration <span class="subtitle">Quote Tool</span></h1>
     </div>
@@ -28,7 +28,17 @@
     </div>
   </header>
 
-  <main class="main">
+  <!-- Lock screen -->
+  <div id="lockScreen" class="lock-screen">
+    <div class="lock-content">
+      <h1>Kirkstone Calibration</h1>
+      <p>Quote Tool</p>
+      <button id="lockSignInBtn" class="btn btn-primary" style="margin-top:1.5rem;">Sign in with Google</button>
+      <p id="lockError" class="lock-error" style="display:none;"></p>
+    </div>
+  </div>
+
+  <main class="main" style="display:none;" id="appMain">
 
     <!-- ===== PRINT HEADER (only visible in print) ===== -->
     <div class="print-header">

@@ -35,6 +35,37 @@ body {
   font-size: 15px;
 }
 
+/* --- Lock screen --- */
+.lock-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.lock-content {
+  text-align: center;
+  padding: 3rem;
+}
+
+.lock-content h1 {
+  font-size: 2rem;
+  color: var(--primary);
+  margin-bottom: 0.25rem;
+}
+
+.lock-content p {
+  color: var(--text-light);
+  font-size: 1.1rem;
+}
+
+.lock-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+
 /* --- Header --- */
 .header {
   background: var(--primary);
