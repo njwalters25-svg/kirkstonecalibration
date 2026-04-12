@@ -23,13 +23,13 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 async function isUserAllowed(user) {
   try {
     const doc = await db.collection('config').doc('allowedUsers').get();
-    if (!doc.exists) return true; // No restrictions set yet — allow everyone
+    if (!doc.exists) return false; // No allowed-users list found — deny by default
     const data = doc.data();
     const emails = (data.emails || []).map(e => e.toLowerCase());
     return emails.includes(user.email.toLowerCase());
   } catch {
-    // If we can't read the config, allow (first-time setup)
-    return true;
+    // If we can't read the config, deny access to be safe
+    return false;
   }
 }
 
