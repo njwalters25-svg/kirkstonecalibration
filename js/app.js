@@ -387,6 +387,7 @@ function restoreFormState() {
   setChecked('overnightStay', saved.overnightStay);
   setVal('hotelCost', saved.hotelCost);
   setVal('nights', saved.nights);
+  setVal('hotelToWorkTime', saved.hotelToWorkMinutes);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
   setChecked('newJob', saved.newJob);
   setChecked('secondPerson', saved.secondPerson);
@@ -520,6 +521,7 @@ function loadQuote(id) {
   setChecked('overnightStay', q.overnightStay);
   setVal('hotelCost', q.hotelCost);
   setVal('nights', q.nights);
+  setVal('hotelToWorkTime', q.hotelToWorkMinutes);
   setVal('calibrationTime', q.calibrationTimeMinutes);
   setChecked('newJob', q.newJob);
   setChecked('secondPerson', q.secondPerson);

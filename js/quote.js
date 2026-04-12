@@ -99,40 +99,80 @@ function calculateQuote(input, settings) {
   const travelOutMins = travelMinutes;
   const travelReturnMins = travelMinutes;
   const travelTotalMins = travelOutMins + travelReturnMins;
+  const hotelToWorkMins = (!!input.overnightStay) ? (input.hotelToWorkMinutes || 0) : 0;
 
   result.timePlan = {
     travelOutMins,
     travelReturnMins,
     travelTotalMins,
+    hotelToWorkMins,
     jobMins,
-    totalMins: travelTotalMins + jobMins,
+    totalMins: travelTotalMins + jobMins, // updated below for overnight with hotel commute
     workMinsPerDay,
     travelDayBefore: !!input.travelDayBefore,
   };
 
   // --- Days calculation ---
   const overnightStay = !!input.overnightStay;
+  const travelDayBefore = !!input.travelDayBefore;
 
   let totalDays;
-  if (overnightStay) {
-    // Staying overnight: one round trip, work on site between
-    // Overnight: 1 round trip, job fills working days
-    // Travel time is only on first and last day
+  if (overnightStay && hotelToWorkMins > 0) {
+    // Overnight with daily hotel-to-work commute
+    // Each working day loses 2 × hotelToWork to commuting (hotel→work + work→hotel)
+    // except first/last days which differ depending on travel pattern
+    const dailyCommute = hotelToWorkMins * 2;
+    const workablePerDay = workMinsPerDay - dailyCommute;
+
+    if (workablePerDay <= 0) {
+      totalDays = jobMins > 0 ? Math.ceil(jobMins / workMinsPerDay) + 1 : 0;
+    } else if (travelDayBefore) {
+      // Travel day before: home→hotel is separate (not a working day)
+      // Working days: hotel→work→hotel, last day: hotel→work→home
+      // n ≥ (jobMins + travelReturn - hotelToWork) / workablePerDay
+      const totalToSchedule = jobMins + travelReturnMins - hotelToWorkMins;
+      totalDays = Math.ceil(totalToSchedule / workablePerDay) || 0;
+    } else {
+      // No travel day before: day 1 is home→work→hotel
+      // Day 1: available = workMinsPerDay - travelOut - hotelToWork
+      // Middle days: available = workMinsPerDay - 2*hotelToWork
+      // Last day: available = workMinsPerDay - hotelToWork - travelReturn
+      // n ≥ (travelOut + travelReturn - 2*hotelToWork + jobMins) / workablePerDay
+      const totalToSchedule = travelOutMins + travelReturnMins - dailyCommute + jobMins;
+      totalDays = Math.ceil(totalToSchedule / workablePerDay) || 0;
+    }
+
+    // Ensure at least 1 day if there's work
+    if (totalDays < 1 && jobMins > 0) totalDays = 1;
+
+    // Update total time to include hotel commutes
+    // No travel day before: travelOut + (n-1)*2*htw + travelReturn + jobMins (for n≥2), or travelOut+travelReturn+jobMins (n=1)
+    // Travel day before: travelOut + (2n-1)*htw + travelReturn + jobMins (for n≥1)
+    let totalHotelCommuteMins;
+    if (travelDayBefore) {
+      totalHotelCommuteMins = totalDays > 0 ? hotelToWorkMins * (2 * totalDays - 1) : 0;
+    } else {
+      totalHotelCommuteMins = totalDays > 1 ? dailyCommute * (totalDays - 1) : 0;
+    }
+    result.timePlan.totalHotelCommuteMins = totalHotelCommuteMins;
+    result.timePlan.totalMins = travelOutMins + travelReturnMins + jobMins + totalHotelCommuteMins;
+  } else if (overnightStay) {
+    // Overnight but no hotel-to-work time specified — original logic
     const totalWorkMins = travelOutMins + jobMins + travelReturnMins;
     totalDays = Math.ceil(totalWorkMins / workMinsPerDay) || 0;
+    result.timePlan.totalHotelCommuteMins = 0;
   } else {
-    // No overnight: commuting daily, so each day has travel + work + travel
-    // Available work time per day is reduced by travel time
+    // No overnight: commuting daily from home
     const workablePerDay = workMinsPerDay - travelOutMins - travelReturnMins;
     if (workablePerDay > 0) {
       totalDays = Math.ceil(jobMins / workablePerDay) || 0;
     } else {
-      // Travel takes up entire day or more — still need at least 1 day
       totalDays = jobMins > 0 ? Math.ceil(jobMins / workMinsPerDay) + 1 : 0;
     }
+    result.timePlan.totalHotelCommuteMins = 0;
   }
 
-  // How many daily commutes (round trips)
+  // How many daily commutes (round trips from home — for mileage)
   const commuteTrips = (!overnightStay && totalDays > 0) ? totalDays : 1;
   result.commuteTrips = commuteTrips;
 

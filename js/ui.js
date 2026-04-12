@@ -116,6 +116,7 @@ function collectQuoteInputFromForm() {
     overnightStay: document.getElementById('overnightStay').checked,
     hotelCost: parseFloat(document.getElementById('hotelCost').value) || 0,
     nights: parseInt(document.getElementById('nights').value) || 1,
+    hotelToWorkMinutes: parseInt(document.getElementById('hotelToWorkTime').value) || 0,
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
     newJob: document.getElementById('newJob').checked,
     secondPerson: document.getElementById('secondPerson').checked,
@@ -198,9 +199,14 @@ function renderQuoteSummary(result) {
     <div class="summary-section time-plan-section">
       <h3>Time Plan</h3>
       <div class="summary-row">
-        <span>Travel out (one way)</span>
+        <span>Travel out${result.timePlan.travelDayBefore ? ' (day before → hotel)' : ' (one way)'}</span>
         <span>${formatTime(result.timePlan.travelOutMins)}</span>
       </div>
+      ${result.timePlan.totalHotelCommuteMins > 0 ? `
+      <div class="summary-row">
+        <span>Hotel ↔ work commute (${formatTime(result.timePlan.hotelToWorkMins)} each way × ${result.timePlan.totalDays} day${result.timePlan.totalDays !== 1 ? 's' : ''})</span>
+        <span>${formatTime(result.timePlan.totalHotelCommuteMins)}</span>
+      </div>` : ''}
       <div class="summary-row">
         <span>Calibration work${result.secondPerson ? ' (with 2nd person)' : ''}</span>
         <span>${formatTime(result.timePlan.jobMins)}</span>
@@ -216,7 +222,7 @@ function renderQuoteSummary(result) {
         <span></span>
       </div>` : ''}
       <div class="summary-row">
-        <span>Travel return</span>
+        <span>Travel return (home)</span>
         <span>${formatTime(result.timePlan.travelReturnMins)}</span>
       </div>
       <div class="summary-row subtotal">
