@@ -36,53 +36,39 @@ function getCurrentUser() {
   return auth.currentUser;
 }
 
-// --- Firestore: Quotes ---
+// --- Firestore: Quotes (shared between all users) ---
 
-function getUserQuotesRef() {
-  const user = getCurrentUser();
-  if (!user) return null;
-  return db.collection('users').doc(user.uid).collection('quotes');
+function getQuotesRef() {
+  return db.collection('quotes');
 }
 
 async function saveQuoteToFirestore(quote) {
-  const ref = getUserQuotesRef();
-  if (!ref) return;
-  await ref.doc(quote.id).set(quote);
+  const user = getCurrentUser();
+  if (!user) return;
+  // Tag with who saved it
+  quote.savedBy = user.displayName || user.email;
+  await getQuotesRef().doc(quote.id).set(quote);
 }
 
 async function loadQuotesFromFirestore() {
-  const ref = getUserQuotesRef();
-  if (!ref) return [];
-  const snapshot = await ref.orderBy('createdAt', 'desc').get();
+  const snapshot = await getQuotesRef().orderBy('createdAt', 'desc').get();
   return snapshot.docs.map(doc => doc.data());
 }
 
 async function deleteQuoteFromFirestore(id) {
-  const ref = getUserQuotesRef();
-  if (!ref) return;
-  await ref.doc(id).delete();
+  await getQuotesRef().doc(id).delete();
 }
 
-// --- Firestore: Settings ---
-
-function getUserSettingsRef() {
-  const user = getCurrentUser();
-  if (!user) return null;
-  return db.collection('users').doc(user.uid);
-}
+// --- Firestore: Settings (shared) ---
 
 async function saveSettingsToFirestore(settings) {
-  const ref = getUserSettingsRef();
-  if (!ref) return;
-  await ref.set({ settings }, { merge: true });
+  await db.collection('config').doc('settings').set(settings);
 }
 
 async function loadSettingsFromFirestore() {
-  const ref = getUserSettingsRef();
-  if (!ref) return null;
-  const doc = await ref.get();
-  if (doc.exists && doc.data().settings) {
-    return doc.data().settings;
+  const doc = await db.collection('config').doc('settings').get();
+  if (doc.exists) {
+    return doc.data();
   }
   return null;
 }

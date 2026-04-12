@@ -715,6 +715,12 @@ body {
   color: var(--text-light);
 }
 
+.history-saved-by {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  font-style: italic;
+}
+
 .history-details {
   display: flex;
   gap: 1rem;

@@ -443,6 +443,7 @@ function renderQuoteHistory(quotes, settings) {
       <div class="history-header">
         <strong>${q.customerName || 'Unnamed'}</strong>
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
+        ${q.savedBy ? `<span class="history-saved-by">by ${q.savedBy}</span>` : ''}
       </div>
       <div class="history-summary" id="history-summary-${q.id}" style="display:none;">
         <div class="history-summary-content"></div>
