@@ -38,6 +38,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const userName = document.getElementById('userName');
 
     if (user) {
+      // Check if user is allowed
+      if (!(await isUserAllowed(user))) {
+        await signOut();
+        showToast('Access denied — your email is not authorised');
+        return;
+      }
+
       isSignedIn = true;
       signInBtn.style.display = 'none';
       userInfo.style.display = 'flex';
