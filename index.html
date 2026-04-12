@@ -12,11 +12,20 @@
     <div>
       <h1>Kirkstone Calibration <span class="subtitle">Quote Tool</span></h1>
     </div>
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="quotePanel">New Quote</button>
-      <button class="tab-btn" data-tab="settingsPanel">Settings</button>
-      <button class="tab-btn" data-tab="historyPanel">History</button>
-    </nav>
+    <div class="header-right">
+      <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="quotePanel">New Quote</button>
+        <button class="tab-btn" data-tab="settingsPanel">Settings</button>
+        <button class="tab-btn" data-tab="historyPanel">History</button>
+      </nav>
+      <div id="authArea" class="auth-area">
+        <button id="signInBtn" class="btn-auth" style="display:none;">Sign in</button>
+        <div id="userInfo" class="user-info" style="display:none;">
+          <span id="userName"></span>
+          <button id="signOutBtn" class="btn-auth-small">Sign out</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main class="main">
@@ -332,8 +341,14 @@
   <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <!-- Scripts (dependency order) -->
+  <!-- Firebase SDK (compat for no-bundler) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <!-- App scripts (dependency order) -->
   <script src="js/data.js"></script>
+  <script src="js/firebase.js"></script>
   <script src="js/routing.js"></script>
   <script src="js/quote.js"></script>
   <script src="js/ui.js"></script>

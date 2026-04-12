@@ -3,6 +3,7 @@
 // ============================================================
 
 let currentSettings;
+let isSignedIn = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
@@ -15,6 +16,58 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreFormState();
   recalculate();
   renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
+
+  // --- Auth UI ---
+  document.getElementById('signInBtn').addEventListener('click', async () => {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      showToast('Sign in failed: ' + err.message);
+    }
+  });
+
+  document.getElementById('signOutBtn').addEventListener('click', async () => {
+    await signOut();
+    showToast('Signed out');
+  });
+
+  // Auth state listener
+  onAuthStateChanged(async (user) => {
+    const signInBtn = document.getElementById('signInBtn');
+    const userInfo = document.getElementById('userInfo');
+    const userName = document.getElementById('userName');
+
+    if (user) {
+      isSignedIn = true;
+      signInBtn.style.display = 'none';
+      userInfo.style.display = 'flex';
+      userName.textContent = user.displayName || user.email;
+
+      // Load settings from Firestore
+      const cloudSettings = await loadSettingsFromFirestore();
+      if (cloudSettings) {
+        currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
+        if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
+        populateSettingsForm(currentSettings);
+      }
+
+      // Load quotes from Firestore
+      await refreshQuoteHistory();
+      recalculate();
+      showToast('Signed in as ' + (user.displayName || user.email));
+    } else {
+      isSignedIn = false;
+      signInBtn.style.display = 'block';
+      userInfo.style.display = 'none';
+      userName.textContent = '';
+
+      // Fall back to localStorage
+      currentSettings = StorageManager.loadSettings();
+      populateSettingsForm(currentSettings);
+      renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
+      recalculate();
+    }
+  });
 
   // Tab switching
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -143,9 +196,10 @@ document.addEventListener('DOMContentLoaded', () => {
   wireServiceLevelRemoveButtons();
 
   // Settings save
-  document.getElementById('saveSettings').addEventListener('click', () => {
+  document.getElementById('saveSettings').addEventListener('click', async () => {
     currentSettings = collectSettingsFromForm();
     StorageManager.saveSettings(currentSettings);
+    if (isSignedIn) await saveSettingsToFirestore(currentSettings);
     // Re-render pipette lines to update service level dropdowns
     const currentLines = collectPipetteLinesFromForm();
     renderPipetteLines(currentLines, currentSettings);
@@ -155,9 +209,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Settings reset
-  document.getElementById('resetSettings').addEventListener('click', () => {
+  document.getElementById('resetSettings').addEventListener('click', async () => {
     if (confirm('Reset all settings to defaults?')) {
       currentSettings = StorageManager.resetSettings();
+      if (isSignedIn) await saveSettingsToFirestore(currentSettings);
       populateSettingsForm(currentSettings);
       wireServiceLevelRemoveButtons();
       const currentLines = collectPipetteLinesFromForm();
@@ -169,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Save quote
-  document.getElementById('saveQuote').addEventListener('click', () => {
+  document.getElementById('saveQuote').addEventListener('click', async () => {
     const input = collectQuoteInputFromForm();
     const result = calculateQuote(input, currentSettings);
     const saved = {
@@ -181,7 +236,8 @@ document.addEventListener('DOMContentLoaded', () => {
       profitMarginPercent: result.profitMarginPercent,
     };
     StorageManager.saveQuote(saved);
-    renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
+    if (isSignedIn) await saveQuoteToFirestore(saved);
+    await refreshQuoteHistory();
     showToast('Quote saved');
   });
 
@@ -316,10 +372,21 @@ function restoreFormState() {
   if (saved.discountType === 'custom') document.getElementById('customDiscountField').style.display = 'block';
 }
 
-function deleteQuote(id) {
+async function refreshQuoteHistory() {
+  let quotes;
+  if (isSignedIn) {
+    quotes = await loadQuotesFromFirestore();
+  } else {
+    quotes = StorageManager.loadQuoteHistory();
+  }
+  renderQuoteHistory(quotes, currentSettings);
+}
+
+async function deleteQuote(id) {
   if (confirm('Delete this saved quote?')) {
     StorageManager.deleteQuote(id);
-    renderQuoteHistory(StorageManager.loadQuoteHistory(), currentSettings);
+    if (isSignedIn) await deleteQuoteFromFirestore(id);
+    await refreshQuoteHistory();
     showToast('Quote deleted');
   }
 }

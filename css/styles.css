@@ -61,6 +61,50 @@ body {
   font-weight: 400;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.auth-area {
+  display: flex;
+  align-items: center;
+}
+
+.btn-auth {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.4);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.btn-auth:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+.btn-auth-small {
+  background: transparent;
+  color: rgba(255,255,255,0.7);
+  border: none;
+  cursor: pointer;
+  font-size: 0.7rem;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: rgba(255,255,255,0.85);
+  font-size: 0.8rem;
+}
+
 .tab-nav {
   display: flex;
   gap: 0.25rem;
