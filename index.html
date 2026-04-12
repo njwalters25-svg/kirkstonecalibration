@@ -133,9 +133,25 @@
                     <span id="nightsSuggestion" class="nights-suggestion" style="display:none"></span>
                   </div>
                 </div>
-                <div class="form-group" style="margin-top:0.5rem;">
-                  <label for="hotelToWorkTime">Hotel to work travel time (minutes)</label>
-                  <input type="number" id="hotelToWorkTime" min="0" value="0">
+                <div class="form-row" style="margin-top:0.5rem;">
+                  <div class="form-group">
+                    <label for="hotelPostcode">Hotel postcode</label>
+                    <input type="text" id="hotelPostcode" placeholder="e.g. WD17 1HP">
+                  </div>
+                  <div class="form-group" style="display:flex; align-items:flex-end;">
+                    <button type="button" id="calcHotelRoute" class="btn btn-secondary" style="width:100%;">Hotel → work route</button>
+                  </div>
+                </div>
+                <div id="hotelRouteStatus" class="route-status"></div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="hotelToWorkDistance">Hotel to work (miles)</label>
+                    <input type="number" id="hotelToWorkDistance" min="0" value="0" step="0.1">
+                  </div>
+                  <div class="form-group">
+                    <label for="hotelToWorkTime">Hotel to work (mins)</label>
+                    <input type="number" id="hotelToWorkTime" min="0" value="0">
+                  </div>
                 </div>
                 <div id="hotelEstimate" class="hotel-estimate"></div>
               </div>

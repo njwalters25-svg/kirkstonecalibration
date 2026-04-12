@@ -171,6 +171,40 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('londonNote').style.display = e.target.checked ? 'block' : 'none';
   });
 
+  // Calculate hotel → work route
+  document.getElementById('calcHotelRoute').addEventListener('click', async () => {
+    const hotelPC = document.getElementById('hotelPostcode').value.trim();
+    const destPC = document.getElementById('destinationPostcode').value.trim();
+    const statusEl = document.getElementById('hotelRouteStatus');
+
+    if (!hotelPC) {
+      statusEl.textContent = 'Please enter a hotel postcode.';
+      statusEl.className = 'route-status route-error';
+      return;
+    }
+    if (!destPC) {
+      statusEl.textContent = 'Please enter a destination postcode first (in the Travel section).';
+      statusEl.className = 'route-status route-error';
+      return;
+    }
+
+    statusEl.textContent = 'Calculating route...';
+    statusEl.className = 'route-status route-loading';
+
+    try {
+      const route = await calculateRoute(hotelPC, destPC);
+      document.getElementById('hotelToWorkDistance').value = route.distanceMiles;
+      document.getElementById('hotelToWorkTime').value = route.durationMinutes;
+      statusEl.textContent = `${route.from} → ${route.to}: ${route.distanceMiles} miles, ~${route.durationMinutes} mins`;
+      statusEl.className = 'route-status route-success';
+      recalculate();
+      autoSaveForm();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.className = 'route-status route-error';
+    }
+  });
+
   // New job checkbox
   document.getElementById('newJob').addEventListener('change', (e) => {
     document.getElementById('newJobNote').style.display = e.target.checked ? 'block' : 'none';
@@ -387,6 +421,8 @@ function restoreFormState() {
   setChecked('overnightStay', saved.overnightStay);
   setVal('hotelCost', saved.hotelCost);
   setVal('nights', saved.nights);
+  setVal('hotelPostcode', saved.hotelPostcode);
+  setVal('hotelToWorkDistance', saved.hotelToWorkDistanceMiles);
   setVal('hotelToWorkTime', saved.hotelToWorkMinutes);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
   setChecked('newJob', saved.newJob);
@@ -521,6 +557,8 @@ function loadQuote(id) {
   setChecked('overnightStay', q.overnightStay);
   setVal('hotelCost', q.hotelCost);
   setVal('nights', q.nights);
+  setVal('hotelPostcode', q.hotelPostcode);
+  setVal('hotelToWorkDistance', q.hotelToWorkDistanceMiles);
   setVal('hotelToWorkTime', q.hotelToWorkMinutes);
   setVal('calibrationTime', q.calibrationTimeMinutes);
   setChecked('newJob', q.newJob);

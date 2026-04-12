@@ -116,6 +116,8 @@ function collectQuoteInputFromForm() {
     overnightStay: document.getElementById('overnightStay').checked,
     hotelCost: parseFloat(document.getElementById('hotelCost').value) || 0,
     nights: parseInt(document.getElementById('nights').value) || 1,
+    hotelPostcode: document.getElementById('hotelPostcode').value.trim(),
+    hotelToWorkDistanceMiles: parseFloat(document.getElementById('hotelToWorkDistance').value) || 0,
     hotelToWorkMinutes: parseInt(document.getElementById('hotelToWorkTime').value) || 0,
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
     newJob: document.getElementById('newJob').checked,
@@ -250,6 +252,11 @@ function renderQuoteSummary(result) {
         <span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily trips` : ' round trip'})</span>
         <span>${formatCurrency(result.costTravel)}</span>
       </div>
+      ${result.hotelCommuteTotalMiles > 0 ? `
+      <div class="summary-row" style="font-size:0.75rem; color:var(--muted);">
+        <span>Includes ${result.hotelCommuteTotalMiles} mi hotel ↔ work commute</span>
+        <span></span>
+      </div>` : ''}
       ${result.costAccommodation > 0 && result.travelNight > 0 ? `
       <div class="summary-row">
         <span>Hotel — travel night</span>
