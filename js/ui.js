@@ -143,7 +143,7 @@ function renderQuoteSummary(result) {
   container.innerHTML = `
     <div class="summary-section">
       <h3>Revenue Breakdown</h3>
-      ${lineRows || '<div class="summary-row"><span>No pipettes entered</span><span>${formatCurrency(0)}</span></div>'}
+      ${lineRows || `<div class="summary-row"><span>No pipettes entered</span><span>${formatCurrency(0)}</span></div>`}
       <div class="summary-row subtotal">
         <span>All pipettes</span>
         <span>${formatCurrency(result.pipetteChargesTotal)}</span>
