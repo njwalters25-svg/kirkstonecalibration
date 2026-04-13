@@ -302,11 +302,10 @@ function calculateQuote(input, settings) {
   const hotelCommuteTotalMins = result.timePlan.totalHotelCommuteMins || 0;
   result.costLabourTravel = ((homeTravelTotalMins + hotelCommuteTotalMins) / 60) * settings.labourRatePerHour;
 
-  // Second person cost: per day on site (not travel days)
-  const onSiteDays = Math.ceil(jobMins / workMinsPerDay) || 0;
-  result.secondPersonDays = secondPerson ? onSiteDays : 0;
+  // Second person cost: per working day on site
+  result.secondPersonDays = secondPerson ? totalDays : 0;
   result.costSecondPerson = secondPerson
-    ? onSiteDays * (settings.secondPersonDayCost || 350)
+    ? totalDays * (settings.secondPersonDayCost || 350)
     : 0;
 
   // Subsistence (HMRC benchmark rates)
