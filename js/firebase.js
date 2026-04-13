@@ -35,9 +35,21 @@ async function isUserAllowed(user) {
 
 // --- Auth ---
 
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 function signInWithGoogle() {
+  if (isMobile()) {
+    return auth.signInWithRedirect(googleProvider);
+  }
   return auth.signInWithPopup(googleProvider);
 }
+
+// Handle redirect result on page load (for mobile sign-in)
+auth.getRedirectResult().catch(() => {
+  // Silently ignore — redirect result errors are non-critical
+});
 
 function signOut() {
   return auth.signOut();
