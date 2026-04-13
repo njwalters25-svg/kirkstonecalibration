@@ -119,6 +119,8 @@ function collectQuoteInputFromForm() {
     hotelPostcode: document.getElementById('hotelPostcode').value.trim(),
     hotelToWorkDistanceMiles: parseFloat(document.getElementById('hotelToWorkDistance').value) || 0,
     hotelToWorkMinutes: parseInt(document.getElementById('hotelToWorkTime').value) || 0,
+    returnHome: document.getElementById('returnHome').checked,
+    returnHomeTrips: parseInt(document.getElementById('returnHomeTrips').value) || 1,
     calibrationTimeMinutes: parseInt(document.getElementById('calibrationTime').value) || 0,
     newJob: document.getElementById('newJob').checked,
     secondPerson: document.getElementById('secondPerson').checked,
@@ -227,6 +229,11 @@ function renderQuoteSummary(result) {
         <span>Travel return (home)</span>
         <span>${formatTime(result.timePlan.travelReturnMins)}</span>
       </div>
+      ${result.returnHomeTrips > 0 ? `
+      <div class="summary-row">
+        <span>Return home mid-job (${result.returnHomeTrips} trip${result.returnHomeTrips !== 1 ? 's' : ''} × ${formatTime(result.timePlan.travelTotalMins)})</span>
+        <span>${formatTime(result.returnHomeTimeMins)}</span>
+      </div>` : ''}
       <div class="summary-row subtotal">
         <span>Total time</span>
         <span>${formatTime(result.timePlan.totalMins)}</span>
@@ -252,9 +259,9 @@ function renderQuoteSummary(result) {
         <span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily trips` : ' round trip'})</span>
         <span>${formatCurrency(result.costTravel)}</span>
       </div>
-      ${result.hotelCommuteTotalMiles > 0 ? `
+      ${result.hotelCommuteTotalMiles > 0 || result.returnHomeMiles > 0 ? `
       <div class="summary-row" style="font-size:0.75rem; color:var(--muted);">
-        <span>Includes ${result.hotelCommuteTotalMiles} mi hotel ↔ work commute</span>
+        <span>Includes${result.hotelCommuteTotalMiles > 0 ? ` ${result.hotelCommuteTotalMiles} mi hotel commute` : ''}${result.hotelCommuteTotalMiles > 0 && result.returnHomeMiles > 0 ? ' + ' : ''}${result.returnHomeMiles > 0 ? `${result.returnHomeMiles} mi return home` : ''}</span>
         <span></span>
       </div>` : ''}
       ${result.costAccommodation > 0 && result.travelNight > 0 ? `

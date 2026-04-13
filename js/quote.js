@@ -228,7 +228,20 @@ function calculateQuote(input, settings) {
   result.hotelToWorkDistanceMiles = hotelToWorkDistanceMiles;
   result.hotelCommuteTotalMiles = Math.round(hotelCommuteTotalMiles * 10) / 10;
 
-  const totalTripMiles = homeTripMiles + hotelCommuteTotalMiles;
+  // Return home mid-job (extra round trips home during overnight stays)
+  const returnHomeTrips = (overnightStay && input.returnHome) ? (input.returnHomeTrips || 1) : 0;
+  const returnHomeMiles = returnHomeTrips * roundTripMiles;
+  const returnHomeTimeMins = returnHomeTrips * travelTotalMins;
+  result.returnHomeTrips = returnHomeTrips;
+  result.returnHomeMiles = Math.round(returnHomeMiles * 10) / 10;
+  result.returnHomeTimeMins = returnHomeTimeMins;
+
+  // Add return home time to time plan total
+  if (returnHomeTimeMins > 0) {
+    result.timePlan.totalMins += returnHomeTimeMins;
+  }
+
+  const totalTripMiles = homeTripMiles + hotelCommuteTotalMiles + returnHomeMiles;
   result.roundTripMiles = roundTripMiles;
   result.homeTripMiles = homeTripMiles;
   result.totalTripMiles = Math.round(totalTripMiles * 10) / 10;
@@ -297,10 +310,10 @@ function calculateQuote(input, settings) {
   result.costTravel = totalTripMiles * (settings.mileageRatePence / 100);
   result.costAccommodation = totalHotelCost;
   result.costLabourCalibration = (calMinutes / 60) * settings.labourRatePerHour;
-  // Travel labour: home travel + hotel commute travel
+  // Travel labour: home travel + hotel commute travel + return home trips
   const homeTravelTotalMins = travelMinutes * 2 * commuteTrips;
   const hotelCommuteTotalMins = result.timePlan.totalHotelCommuteMins || 0;
-  result.costLabourTravel = ((homeTravelTotalMins + hotelCommuteTotalMins) / 60) * settings.labourRatePerHour;
+  result.costLabourTravel = ((homeTravelTotalMins + hotelCommuteTotalMins + returnHomeTimeMins) / 60) * settings.labourRatePerHour;
 
   // Second person cost: per working day on site
   result.secondPersonDays = secondPerson ? totalDays : 0;

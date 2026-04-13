@@ -207,6 +207,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Return home mid-job checkbox
+  document.getElementById('returnHome').addEventListener('change', (e) => {
+    document.getElementById('returnHomeFields').style.display = e.target.checked ? 'block' : 'none';
+  });
+
   // New job checkbox
   document.getElementById('newJob').addEventListener('change', (e) => {
     document.getElementById('newJobNote').style.display = e.target.checked ? 'block' : 'none';
@@ -321,6 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('clearForm').addEventListener('click', () => {
     document.getElementById('quoteForm').reset();
     document.getElementById('hotelFields').style.display = 'none';
+    document.getElementById('returnHomeFields').style.display = 'none';
     document.getElementById('londonNote').style.display = 'none';
     document.getElementById('newJobNote').style.display = 'none';
     document.getElementById('customDiscountField').style.display = 'none';
@@ -426,6 +432,8 @@ function restoreFormState() {
   setVal('hotelPostcode', saved.hotelPostcode);
   setVal('hotelToWorkDistance', saved.hotelToWorkDistanceMiles);
   setVal('hotelToWorkTime', saved.hotelToWorkMinutes);
+  setChecked('returnHome', saved.returnHome);
+  setVal('returnHomeTrips', saved.returnHomeTrips);
   setVal('calibrationTime', saved.calibrationTimeMinutes);
   setChecked('newJob', saved.newJob);
   setChecked('secondPerson', saved.secondPerson);
@@ -444,6 +452,7 @@ function restoreFormState() {
   }
 
   if (saved.overnightStay) document.getElementById('hotelFields').style.display = 'block';
+  if (saved.returnHome) document.getElementById('returnHomeFields').style.display = 'block';
   if (saved.isLondon) document.getElementById('londonNote').style.display = 'block';
   if (saved.newJob) document.getElementById('newJobNote').style.display = 'block';
   if (saved.discountType === 'custom') document.getElementById('customDiscountField').style.display = 'block';
@@ -560,6 +569,8 @@ function loadQuote(id) {
   setVal('hotelPostcode', q.hotelPostcode);
   setVal('hotelToWorkDistance', q.hotelToWorkDistanceMiles);
   setVal('hotelToWorkTime', q.hotelToWorkMinutes);
+  setChecked('returnHome', q.returnHome);
+  setVal('returnHomeTrips', q.returnHomeTrips);
   setVal('calibrationTime', q.calibrationTimeMinutes);
   setChecked('newJob', q.newJob);
   setChecked('secondPerson', q.secondPerson);
@@ -577,6 +588,7 @@ function loadQuote(id) {
   }
 
   document.getElementById('hotelFields').style.display = q.overnightStay ? 'block' : 'none';
+  document.getElementById('returnHomeFields').style.display = q.returnHome ? 'block' : 'none';
   document.getElementById('londonNote').style.display = q.isLondon ? 'block' : 'none';
   document.getElementById('newJobNote').style.display = q.newJob ? 'block' : 'none';
   document.getElementById('customDiscountField').style.display = q.discountType === 'custom' ? 'block' : 'none';
