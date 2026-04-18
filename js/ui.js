@@ -107,6 +107,7 @@ function collectQuoteInputFromForm() {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
+    customerAddress: document.getElementById('customerAddress').value.trim(),
     pipetteLines: collectPipetteLinesFromForm(),
     destinationPostcode: document.getElementById('destinationPostcode').value.trim(),
     travelDistanceMiles: parseFloat(document.getElementById('travelDistance').value) || 0,

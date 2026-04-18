@@ -668,6 +668,7 @@ function generateCustomerQuoteWindow(result, input) {
   const fmt = v => formatCurrency(v);
 
   const customerName = input.customerName || 'Customer';
+  const customerAddrLines = (input.customerAddress || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `<div>${esc(l)}</div>`).join('');
   const quoteRef = 'KC-' + (input.id || 'XXXXXXXX').slice(0, 8).toUpperCase();
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -818,6 +819,7 @@ function generateCustomerQuoteWindow(result, input) {
     <div>
       <div class="doc-field-label">Prepared for</div>
       <div class="doc-customer">${esc(customerName)}</div>
+      ${customerAddrLines ? `<div style="font-size:9pt;color:#4a5568;line-height:1.8;margin-top:.35rem;">${customerAddrLines}</div>` : ''}
     </div>
     <div>
       <table class="ref-table">
