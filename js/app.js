@@ -5,6 +5,7 @@
 let currentSettings;
 let isSignedIn = false;
 let currentQuotes = [];
+let currentCustomers = [];
 let currentLogoDataUrl = null;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,6 +38,18 @@ document.addEventListener('DOMContentLoaded', () => {
   recalculate();
   currentQuotes = StorageManager.loadQuoteHistory();
   renderQuoteHistory(currentQuotes, currentSettings);
+
+  // Load customers from localStorage and wire autofill
+  currentCustomers = StorageManager.loadCustomers();
+  updateCustomerDatalist();
+
+  document.getElementById('customerName').addEventListener('input', function () {
+    const name = this.value.trim().toLowerCase();
+    const match = currentCustomers.find(c => c.name.toLowerCase() === name);
+    if (match) {
+      document.getElementById('customerAddress').value = match.address || '';
+    }
+  });
 
   // --- Auth UI ---
   document.getElementById('signInBtn').addEventListener('click', async () => {
@@ -103,6 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Load quotes from Firestore
       await refreshQuoteHistory();
+
+      // Load customers from Firestore
+      const cloudCustomers = await loadCustomersFromFirestore();
+      if (cloudCustomers.length > 0) {
+        currentCustomers = cloudCustomers;
+        StorageManager.saveCustomers(currentCustomers);
+      }
+      updateCustomerDatalist();
       recalculate();
     } else {
       isSignedIn = false;
@@ -332,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     StorageManager.saveQuote(saved);
     if (isSignedIn) await saveQuoteToFirestore(saved);
+    await upsertCustomer(input.customerName, input.customerAddress);
     await refreshQuoteHistory();
     showToast('Quote saved');
   });
@@ -648,6 +670,26 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function updateCustomerDatalist() {
+  const list = document.getElementById('customerList');
+  if (!list) return;
+  list.innerHTML = currentCustomers.map(c => `<option value="${c.name.replace(/"/g, '&quot;')}"></option>`).join('');
+}
+
+async function upsertCustomer(name, address) {
+  if (!name) return;
+  const existing = currentCustomers.find(c => c.name.toLowerCase() === name.toLowerCase());
+  const customer = {
+    id: existing ? existing.id : crypto.randomUUID(),
+    name,
+    address: address || (existing ? existing.address : ''),
+    updatedAt: new Date().toISOString(),
+  };
+  currentCustomers = StorageManager.upsertCustomer(customer);
+  updateCustomerDatalist();
+  if (isSignedIn) await saveCustomerToFirestore(customer);
 }
 
 function showLogoPreview(dataUrl) {

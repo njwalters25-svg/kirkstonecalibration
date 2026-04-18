@@ -86,6 +86,23 @@ async function deleteQuoteFromFirestore(id) {
   await getQuotesRef().doc(id).delete();
 }
 
+// --- Firestore: Customers ---
+
+function getCustomersRef() {
+  return db.collection('customers');
+}
+
+async function saveCustomerToFirestore(customer) {
+  const user = getCurrentUser();
+  if (!user) return;
+  await getCustomersRef().doc(customer.id).set(customer);
+}
+
+async function loadCustomersFromFirestore() {
+  const snapshot = await getCustomersRef().orderBy('name').get();
+  return snapshot.docs.map(doc => doc.data());
+}
+
 // --- Firestore: Settings (shared) ---
 
 async function saveSettingsToFirestore(settings) {

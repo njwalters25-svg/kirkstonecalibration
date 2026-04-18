@@ -165,4 +165,25 @@ const StorageManager = {
   clearLogo() {
     localStorage.removeItem(this._prefix + 'logo');
   },
+
+  loadCustomers() {
+    try {
+      const raw = localStorage.getItem(this._prefix + 'customers');
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  },
+
+  saveCustomers(customers) {
+    localStorage.setItem(this._prefix + 'customers', JSON.stringify(customers));
+  },
+
+  upsertCustomer(customer) {
+    const customers = this.loadCustomers();
+    const idx = customers.findIndex(c => c.id === customer.id);
+    if (idx >= 0) customers[idx] = customer;
+    else customers.push(customer);
+    customers.sort((a, b) => a.name.localeCompare(b.name));
+    this.saveCustomers(customers);
+    return customers;
+  },
 };
