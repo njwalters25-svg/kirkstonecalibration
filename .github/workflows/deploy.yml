@@ -9,10 +9,19 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy via cPanel Git Version Control
+      - name: Pull latest from GitHub
         run: |
           curl -s -X POST \
             "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/update" \
             -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
             --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
+            --insecure
+
+      - name: Deploy HEAD commit
+        run: |
+          curl -s -X POST \
+            "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/deploy" \
+            -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
+            --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
+            --data-urlencode "branch=main" \
             --insecure
