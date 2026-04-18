@@ -38,11 +38,8 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-function signInWithGoogle() {
-  if (isMobile()) {
-    return auth.signInWithRedirect(googleProvider);
-  }
-  return auth.signInWithPopup(googleProvider);
+function signInAnonymously() {
+  return auth.signInAnonymously();
 }
 
 // Handle redirect result on page load (for mobile sign-in)

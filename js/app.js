@@ -51,101 +51,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Auth UI ---
-  document.getElementById('signInBtn').addEventListener('click', async () => {
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      showToast('Sign in failed: ' + err.message);
+  // Sign in anonymously to enable Firestore access
+  signInAnonymously().then(async () => {
+    isSignedIn = true;
+
+    // Load settings from Firestore
+    const cloudSettings = await loadSettingsFromFirestore();
+    if (cloudSettings) {
+      currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
+      if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
+      populateSettingsForm(currentSettings);
     }
-  });
 
-  document.getElementById('signOutBtn').addEventListener('click', async () => {
-    await signOut();
-  });
+    // Load quotes from Firestore
+    await refreshQuoteHistory();
 
-  // Lock screen sign-in button
-  document.getElementById('lockSignInBtn').addEventListener('click', async () => {
-    const lockError = document.getElementById('lockError');
-    lockError.style.display = 'none';
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      lockError.textContent = 'Sign in failed: ' + err.message;
-      lockError.style.display = 'block';
+    // Load customers from Firestore
+    const cloudCustomers = await loadCustomersFromFirestore();
+    if (cloudCustomers.length > 0) {
+      currentCustomers = cloudCustomers;
+      StorageManager.saveCustomers(currentCustomers);
     }
-  });
-
-  // Auth state listener — controls lock screen
-  onAuthStateChanged(async (user) => {
-    const lockScreen = document.getElementById('lockScreen');
-    const appHeader = document.getElementById('appHeader');
-    const appMain = document.getElementById('appMain');
-    const signInBtn = document.getElementById('signInBtn');
-    const userInfo = document.getElementById('userInfo');
-    const userName = document.getElementById('userName');
-    const lockError = document.getElementById('lockError');
-
-    if (user) {
-      // Check if user is allowed
-      let allowed = false;
-      try {
-        allowed = await isUserAllowed(user);
-      } catch (err) {
-        await signOut();
-        lockError.textContent = 'Sign-in error: ' + err.message;
-        lockError.style.display = 'block';
-        return;
-      }
-      if (!allowed) {
-        await signOut();
-        lockError.textContent = 'Access denied — ' + user.email + ' is not authorised.';
-        lockError.style.display = 'block';
-        return;
-      }
-
-      isSignedIn = true;
-
-      // Show app, hide lock screen
-      lockScreen.style.display = 'none';
-      appHeader.style.display = 'flex';
-      appMain.style.display = 'block';
-
-      signInBtn.style.display = 'none';
-      userInfo.style.display = 'flex';
-      userName.textContent = user.displayName || user.email;
-
-      // Load settings from Firestore
-      const cloudSettings = await loadSettingsFromFirestore();
-      if (cloudSettings) {
-        currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
-        if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
-        populateSettingsForm(currentSettings);
-      }
-
-      // Load quotes from Firestore
-      await refreshQuoteHistory();
-
-      // Load customers from Firestore
-      const cloudCustomers = await loadCustomersFromFirestore();
-      if (cloudCustomers.length > 0) {
-        currentCustomers = cloudCustomers;
-        StorageManager.saveCustomers(currentCustomers);
-      }
-      updateCustomerDatalist();
-      recalculate();
-    } else {
-      isSignedIn = false;
-
-      // Show lock screen, hide app
-      lockScreen.style.display = 'flex';
-      appHeader.style.display = 'none';
-      appMain.style.display = 'none';
-
-      signInBtn.style.display = 'block';
-      userInfo.style.display = 'none';
-      userName.textContent = '';
-    }
+    updateCustomerDatalist();
+    recalculate();
+  }).catch(() => {
+    // Firestore unavailable — app still works from localStorage
   });
 
   // Tab switching

@@ -8,7 +8,7 @@
 </head>
 <body>
 
-  <header class="header" id="appHeader" style="display:none;">
+  <header class="header" id="appHeader">
     <div>
       <h1>Kirkstone Calibration <span class="subtitle">Quote Tool</span></h1>
     </div>
@@ -18,27 +18,10 @@
         <button class="tab-btn" data-tab="settingsPanel">Settings</button>
         <button class="tab-btn" data-tab="historyPanel">History</button>
       </nav>
-      <div id="authArea" class="auth-area">
-        <button id="signInBtn" class="btn-auth" style="display:none;">Sign in</button>
-        <div id="userInfo" class="user-info" style="display:none;">
-          <span id="userName"></span>
-          <button id="signOutBtn" class="btn-auth-small">Sign out</button>
-        </div>
-      </div>
     </div>
   </header>
 
-  <!-- Lock screen -->
-  <div id="lockScreen" class="lock-screen">
-    <div class="lock-content">
-      <h1>Kirkstone Calibration</h1>
-      <p>Quote Tool</p>
-      <button id="lockSignInBtn" class="btn btn-primary" style="margin-top:1.5rem;">Sign in with Google</button>
-      <p id="lockError" class="lock-error" style="display:none;"></p>
-    </div>
-  </div>
-
-  <main class="main" style="display:none;" id="appMain">
+  <main class="main" id="appMain">
 
     <!-- ===== PRINT HEADER (only visible in print) ===== -->
     <div class="print-header">
