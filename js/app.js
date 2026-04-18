@@ -715,9 +715,14 @@ function generateCustomerQuoteWindow(result, input) {
     }
   });
 
-  // Extra rows
+  // VAT calculation
+  const vatExempt = !!input.vatExempt;
+  const vatAmount = vatExempt ? 0 : result.totalQuotePrice * 0.20;
+  const grandTotal = result.totalQuotePrice + vatAmount;
+
+  // Extra rows (travel, accommodation, London — discount moved to summary)
   let extraRows = '';
-  const hasExtras = result.travelCharge > 0 || result.accommodationCharge > 0 || result.londonPremium > 0 || result.discountAmount > 0;
+  const hasExtras = result.travelCharge > 0 || result.accommodationCharge > 0 || result.londonPremium > 0;
 
   if (result.travelCharge > 0) {
     extraRows += `<tr><td>Travel — mileage (${result.totalTripMiles} miles)</td><td>—</td><td>—</td><td>${fmt(result.travelCharge)}</td></tr>`;
@@ -727,9 +732,6 @@ function generateCustomerQuoteWindow(result, input) {
   }
   if (result.londonPremium > 0) {
     extraRows += `<tr class="row-premium"><td>London area supplement (${settings.londonPremiumPercent}%)</td><td>—</td><td>—</td><td>+${fmt(result.londonPremium)}</td></tr>`;
-  }
-  if (result.discountAmount > 0) {
-    extraRows += `<tr class="row-discount"><td>Discount — ${esc(result.discountLabel)}</td><td>—</td><td>—</td><td>−${fmt(result.discountAmount)}</td></tr>`;
   }
 
   const subtotalRow = (hasExtras && itemRows)
@@ -768,11 +770,15 @@ function generateCustomerQuoteWindow(result, input) {
     .row-subtotal td{padding:.5rem 1rem;font-size:9.5pt;}
     .row-premium td{color:#975a16;}
     .row-discount td{color:#276749;}
+    .row-summary-label{background:#4a5568!important;color:white;font-weight:600;}
+    .row-summary-label td{padding:.65rem 1rem;font-size:10pt;}
+    .row-summary-label td:not(:first-child){text-align:right;}
     .row-total{background:#1a365d!important;color:white;font-weight:700;}
     .row-total td{padding:.85rem 1rem;font-size:1rem;}
     .row-total td:not(:first-child){text-align:right;}
     .doc-terms{padding:1.5rem 2.5rem 2rem;border-top:1px solid #e2e8f0;}
     .doc-terms p{font-size:8.5pt;color:#718096;line-height:1.7;margin-bottom:.2rem;}
+    .doc-disclaimer{margin:1.5rem 2.5rem;padding:1rem 1.25rem;border:2px solid #1a202c;font-size:10pt;text-align:center;line-height:1.6;}
     @media print{
       body{background:white;}
       .toolbar{display:none!important;}
@@ -834,15 +840,30 @@ function generateCustomerQuoteWindow(result, input) {
       ${itemRows}
       ${subtotalRow}
       ${extraRows}
+      <tr class="row-summary-label">
+        <td colspan="3">Sub Total</td>
+        <td>${fmt(result.subtotalBeforeDiscount)}</td>
+      </tr>
+      <tr class="row-summary-label">
+        <td colspan="3">VAT @20%</td>
+        <td>${vatExempt ? 'N/A' : fmt(vatAmount)}</td>
+      </tr>
+      <tr class="row-summary-label">
+        <td colspan="3">Discount</td>
+        <td>${result.discountAmount > 0 ? '−' + fmt(result.discountAmount) : 'N/A'}</td>
+      </tr>
       <tr class="row-total">
-        <td colspan="3">Total (excl. VAT)</td>
-        <td>${fmt(result.totalQuotePrice)}</td>
+        <td colspan="3">Total${vatExempt ? ' (excl. VAT)' : ''}</td>
+        <td>${fmt(grandTotal)}</td>
       </tr>
     </tbody>
   </table>
+  <div class="doc-disclaimer">
+    This is a quotation on the goods named, subject to the conditions noted: Service and calibration of pipettes, any parts needed will be charge at extra cost, any part costing £25 or more will be quoted before fitting
+  </div>
   <div class="doc-terms">
     <p>This quotation is valid for ${validDays} days from the date of issue.</p>
-    <p>All prices are exclusive of VAT, which will be charged at the prevailing rate.</p>
+    ${vatExempt ? '<p>VAT has not been applied to this quotation — customer confirmed VAT exempt.</p>' : '<p>All prices are exclusive of VAT. VAT at 20% is included in the total above.</p>'}
     <p>Calibration certificates will be issued on completion of work.</p>
   </div>
 </div>

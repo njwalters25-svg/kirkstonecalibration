@@ -126,6 +126,7 @@ function collectQuoteInputFromForm() {
     secondPerson: document.getElementById('secondPerson').checked,
     discountType: document.querySelector('input[name="discountType"]:checked')?.value || 'none',
     customDiscountPercent: parseFloat(document.getElementById('customDiscount').value) || 0,
+    vatExempt: document.getElementById('vatExempt').checked,
     notes: document.getElementById('quoteNotes').value.trim(),
   };
 }
