@@ -11,7 +11,23 @@ document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
   currentLogoDataUrl = StorageManager.loadLogo();
-  showLogoPreview(currentLogoDataUrl);
+  if (currentLogoDataUrl) {
+    showLogoPreview(currentLogoDataUrl);
+  } else {
+    // Try the committed asset as the default logo
+    fetch('assets/logo.png').then(r => {
+      if (!r.ok) return;
+      return r.blob();
+    }).then(blob => {
+      if (!blob) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        currentLogoDataUrl = e.target.result;
+        showLogoPreview(currentLogoDataUrl);
+      };
+      reader.readAsDataURL(blob);
+    }).catch(() => {});
+  }
 
   // Initialise with one pipette line
   renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
