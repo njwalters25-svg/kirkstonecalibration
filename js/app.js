@@ -780,7 +780,6 @@ function generateCustomerQuoteWindow(result, input) {
     table.items thead th{padding:.6rem 1rem;font-size:8pt;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
     table.items thead th:not(:first-child){text-align:right;}
     table.items tbody tr{border-bottom:1px solid #e2e8f0;}
-    table.items tbody tr:nth-child(even){background:#f9fafb;}
     table.items td{padding:.65rem 1rem;vertical-align:top;font-size:10pt;}
     table.items td:not(:first-child){text-align:right;white-space:nowrap;}
     .row-subtotal{background:#f0f4f8!important;font-weight:500;color:#4a5568;}
