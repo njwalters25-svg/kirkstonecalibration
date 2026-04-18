@@ -5,10 +5,13 @@
 let currentSettings;
 let isSignedIn = false;
 let currentQuotes = [];
+let currentLogoDataUrl = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
+  currentLogoDataUrl = StorageManager.loadLogo();
+  showLogoPreview(currentLogoDataUrl);
 
   // Initialise with one pipette line
   renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
@@ -322,6 +325,27 @@ document.addEventListener('DOMContentLoaded', () => {
     window.print();
   });
 
+  // Generate customer quote
+  document.getElementById('generateCustomerQuote').addEventListener('click', () => {
+    const input = collectQuoteInputFromForm();
+    const result = calculateQuote(input, currentSettings);
+    generateCustomerQuoteWindow(result, input);
+  });
+
+  // Logo upload
+  document.getElementById('logoUpload').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      currentLogoDataUrl = evt.target.result;
+      StorageManager.saveLogo(currentLogoDataUrl);
+      showLogoPreview(currentLogoDataUrl);
+      showToast('Logo saved');
+    };
+    reader.readAsDataURL(file);
+  });
+
   // Clear form
   document.getElementById('clearForm').addEventListener('click', () => {
     document.getElementById('quoteForm').reset();
@@ -608,4 +632,229 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+function showLogoPreview(dataUrl) {
+  const preview = document.getElementById('logoPreview');
+  if (!preview) return;
+  if (dataUrl) {
+    preview.innerHTML = `
+      <img src="${dataUrl}" style="max-height:60px; max-width:200px; object-fit:contain; border:1px solid #e2e8f0; border-radius:4px; padding:4px; display:block;">
+      <button type="button" id="clearLogoBtn" class="btn-link" style="margin-top:0.25rem; font-size:0.75rem; color:#9b2c2c;">Remove logo</button>`;
+    document.getElementById('clearLogoBtn').addEventListener('click', () => {
+      currentLogoDataUrl = null;
+      StorageManager.clearLogo();
+      const logoInput = document.getElementById('logoUpload');
+      if (logoInput) logoInput.value = '';
+      showLogoPreview(null);
+      showToast('Logo removed');
+    });
+  } else {
+    preview.innerHTML = '<span style="font-size:0.75rem; color:#718096;">No logo uploaded.</span>';
+  }
+}
+
+function openCustomerQuoteFromHistory(id) {
+  const q = currentQuotes.find(quote => quote.id === id);
+  if (!q) return;
+  const result = calculateQuote(q, currentSettings);
+  generateCustomerQuoteWindow(result, q);
+}
+
+function generateCustomerQuoteWindow(result, input) {
+  const settings = currentSettings;
+  const logoDataUrl = currentLogoDataUrl;
+  const esc = str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const fmt = v => formatCurrency(v);
+
+  const customerName = input.customerName || 'Customer';
+  const quoteRef = 'KC-' + (input.id || 'XXXXXXXX').slice(0, 8).toUpperCase();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  const validDays = settings.quoteValidDays || 30;
+  const validUntil = new Date(now.getTime() + validDays * 24 * 60 * 60 * 1000);
+  const validStr = validUntil.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const companyName = settings.companyName || 'Kirkstone Calibration';
+  const logoHtml = logoDataUrl
+    ? `<img src="${logoDataUrl}" alt="Logo" style="max-height:75px; max-width:220px; object-fit:contain; display:block; margin-bottom:0.4rem;">`
+    : '';
+
+  const addrLines = (settings.companyAddress || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `<div>${esc(l)}</div>`).join('');
+  const contactLines = [
+    settings.companyPhone ? `Tel: ${esc(settings.companyPhone)}` : '',
+    settings.companyEmail ? `Email: ${esc(settings.companyEmail)}` : '',
+    settings.companyWebsite ? esc(settings.companyWebsite) : '',
+    settings.vatNumber ? `VAT No: ${esc(settings.vatNumber)}` : '',
+  ].filter(Boolean).map(l => `<div>${l}</div>`).join('');
+
+  // Line item rows
+  let itemRows = '';
+  result.lineResults.forEach(lr => {
+    const sl = esc(lr.serviceLevelName);
+    const sub = `<small style="display:block;font-size:9pt;color:#718096;margin-top:2px;">${sl}</small>`;
+    if (lr.singleCount > 0) {
+      const u = fmt(lr.chargeSingle / lr.singleCount);
+      itemRows += `<tr><td>Single-channel pipette calibration${sub}</td><td>${lr.singleCount}</td><td>${u}</td><td>${fmt(lr.chargeSingle)}</td></tr>`;
+    }
+    if (lr.multi6Count > 0) {
+      const u = fmt(lr.chargeMulti6 / lr.multi6Count);
+      itemRows += `<tr><td>Multi-channel (6-ch) pipette calibration${sub}</td><td>${lr.multi6Count}</td><td>${u}</td><td>${fmt(lr.chargeMulti6)}</td></tr>`;
+    }
+    if (lr.multi8Count > 0) {
+      const u = fmt(lr.chargeMulti8 / lr.multi8Count);
+      itemRows += `<tr><td>Multi-channel (8-ch) pipette calibration${sub}</td><td>${lr.multi8Count}</td><td>${u}</td><td>${fmt(lr.chargeMulti8)}</td></tr>`;
+    }
+    if (lr.multi12Count > 0) {
+      const u = fmt(lr.chargeMulti12 / lr.multi12Count);
+      itemRows += `<tr><td>Multi-channel (12-ch) pipette calibration${sub}</td><td>${lr.multi12Count}</td><td>${u}</td><td>${fmt(lr.chargeMulti12)}</td></tr>`;
+    }
+    if (lr.multi16Count > 0) {
+      const u = fmt(lr.chargeMulti16 / lr.multi16Count);
+      itemRows += `<tr><td>Multi-channel (16-ch) pipette calibration${sub}</td><td>${lr.multi16Count}</td><td>${u}</td><td>${fmt(lr.chargeMulti16)}</td></tr>`;
+    }
+  });
+
+  // Extra rows
+  let extraRows = '';
+  const hasExtras = result.travelCharge > 0 || result.accommodationCharge > 0 || result.londonPremium > 0 || result.discountAmount > 0;
+
+  if (result.travelCharge > 0) {
+    extraRows += `<tr><td>Travel — mileage (${result.totalTripMiles} miles)</td><td>—</td><td>—</td><td>${fmt(result.travelCharge)}</td></tr>`;
+  }
+  if (result.accommodationCharge > 0) {
+    extraRows += `<tr><td>Accommodation — ${result.nights} night${result.nights !== 1 ? 's' : ''} @ ${fmt(result.hotelCostPerNight)}/night</td><td>${result.nights}</td><td>${fmt(result.hotelCostPerNight)}</td><td>${fmt(result.accommodationCharge)}</td></tr>`;
+  }
+  if (result.londonPremium > 0) {
+    extraRows += `<tr class="row-premium"><td>London area supplement (${settings.londonPremiumPercent}%)</td><td>—</td><td>—</td><td>+${fmt(result.londonPremium)}</td></tr>`;
+  }
+  if (result.discountAmount > 0) {
+    extraRows += `<tr class="row-discount"><td>Discount — ${esc(result.discountLabel)}</td><td>—</td><td>—</td><td>−${fmt(result.discountAmount)}</td></tr>`;
+  }
+
+  const subtotalRow = (hasExtras && itemRows)
+    ? `<tr class="row-subtotal"><td colspan="3">Calibration subtotal</td><td>${fmt(result.pipetteChargesTotal)}</td></tr>`
+    : '';
+
+  const css = `
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background:#edf2f7;color:#1a202c;font-size:11pt;}
+    .toolbar{background:#1a365d;color:white;padding:.65rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
+    .toolbar-title{font-size:.9rem;font-weight:600;opacity:.9;}
+    .toolbar-btns{display:flex;gap:.5rem;}
+    .btn-p{background:white;color:#1a365d;border:none;padding:.4rem 1rem;border-radius:5px;font-size:.85rem;font-weight:600;cursor:pointer;}
+    .btn-p:hover{background:#ebf8ff;}
+    .btn-c{background:transparent;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.3);padding:.4rem .75rem;border-radius:5px;font-size:.85rem;cursor:pointer;}
+    .page{max-width:820px;margin:1.5rem auto 3rem;background:white;box-shadow:0 4px 30px rgba(0,0,0,.15);}
+    .doc-header{display:flex;justify-content:space-between;align-items:flex-start;padding:2.5rem 2.5rem 1.5rem;border-bottom:3px solid #1a365d;gap:1rem;}
+    .doc-company-name{font-size:1.25rem;font-weight:700;color:#1a365d;margin-top:.2rem;}
+    .doc-contact{text-align:right;font-size:9pt;color:#4a5568;line-height:1.8;}
+    .doc-title{padding:1.1rem 2.5rem;font-size:1.4rem;font-weight:700;color:#1a365d;letter-spacing:.1em;background:#f7fafc;border-bottom:1px solid #e2e8f0;}
+    .doc-meta{display:flex;justify-content:space-between;align-items:flex-start;padding:1.25rem 2.5rem 1rem;gap:1rem;}
+    .doc-field-label{font-size:7.5pt;text-transform:uppercase;letter-spacing:.08em;color:#718096;font-weight:600;margin-bottom:.3rem;}
+    .doc-customer{font-size:1.1rem;font-weight:600;color:#1a365d;}
+    .ref-table{border-collapse:collapse;font-size:9.5pt;}
+    .ref-table td{padding:.2rem 0 .2rem 1rem;}
+    .ref-label{color:#718096;font-size:8.5pt;white-space:nowrap;}
+    table.items{width:100%;border-collapse:collapse;}
+    table.items thead tr{background:#1a365d;color:white;}
+    table.items thead th{padding:.6rem 1rem;font-size:8pt;font-weight:600;letter-spacing:.04em;text-transform:uppercase;}
+    table.items thead th:not(:first-child){text-align:right;}
+    table.items tbody tr{border-bottom:1px solid #e2e8f0;}
+    table.items tbody tr:nth-child(even){background:#f9fafb;}
+    table.items td{padding:.65rem 1rem;vertical-align:top;font-size:10pt;}
+    table.items td:not(:first-child){text-align:right;white-space:nowrap;}
+    .row-subtotal{background:#f0f4f8!important;font-weight:500;color:#4a5568;}
+    .row-subtotal td{padding:.5rem 1rem;font-size:9.5pt;}
+    .row-premium td{color:#975a16;}
+    .row-discount td{color:#276749;}
+    .row-total{background:#1a365d!important;color:white;font-weight:700;}
+    .row-total td{padding:.85rem 1rem;font-size:1rem;}
+    .row-total td:not(:first-child){text-align:right;}
+    .doc-terms{padding:1.5rem 2.5rem 2rem;border-top:1px solid #e2e8f0;}
+    .doc-terms p{font-size:8.5pt;color:#718096;line-height:1.7;margin-bottom:.2rem;}
+    @media print{
+      body{background:white;}
+      .toolbar{display:none!important;}
+      .page{margin:0;box-shadow:none;max-width:100%;}
+      @page{margin:1.5cm;size:A4 portrait;}
+    }
+  `;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Quote — ${esc(customerName)} — ${quoteRef}</title>
+<style>${css}</style>
+</head>
+<body>
+<div class="toolbar">
+  <span class="toolbar-title">Customer Quote Preview — ${esc(customerName)}</span>
+  <div class="toolbar-btns">
+    <button class="btn-p" onclick="window.print()">Print / Save as PDF</button>
+    <button class="btn-c" onclick="window.close()">✕ Close</button>
+  </div>
+</div>
+<div class="page">
+  <div class="doc-header">
+    <div>
+      ${logoHtml}
+      <div class="doc-company-name">${esc(companyName)}</div>
+    </div>
+    <div class="doc-contact">
+      ${addrLines}${contactLines}
+    </div>
+  </div>
+  <div class="doc-title">QUOTATION</div>
+  <div class="doc-meta">
+    <div>
+      <div class="doc-field-label">Prepared for</div>
+      <div class="doc-customer">${esc(customerName)}</div>
+    </div>
+    <div>
+      <table class="ref-table">
+        <tr><td class="ref-label">Date:</td><td>${dateStr}</td></tr>
+        <tr><td class="ref-label">Quote Ref:</td><td><strong>${quoteRef}</strong></td></tr>
+        <tr><td class="ref-label">Valid Until:</td><td>${validStr}</td></tr>
+      </table>
+    </div>
+  </div>
+  <table class="items">
+    <thead>
+      <tr>
+        <th style="width:52%;text-align:left">Description</th>
+        <th style="width:8%">Qty</th>
+        <th style="width:18%">Unit Price</th>
+        <th style="width:22%">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${itemRows}
+      ${subtotalRow}
+      ${extraRows}
+      <tr class="row-total">
+        <td colspan="3">Total (excl. VAT)</td>
+        <td>${fmt(result.totalQuotePrice)}</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="doc-terms">
+    <p>This quotation is valid for ${validDays} days from the date of issue.</p>
+    <p>All prices are exclusive of VAT, which will be charged at the prevailing rate.</p>
+    <p>Calibration certificates will be issued on completion of work.</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (!w) {
+    showToast('Pop-up blocked — please allow pop-ups for this site');
+    return;
+  }
+  w.document.write(html);
+  w.document.close();
+  w.focus();
 }

@@ -550,8 +550,18 @@ body {
 }
 
 .btn-small:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-small.btn-delete:hover {
   border-color: var(--red);
   color: var(--red);
+}
+
+.btn-small.btn-quote {
+  color: var(--accent);
+  border-color: var(--accent);
 }
 
 .btn-link {
@@ -719,6 +729,31 @@ body {
   margin-top: 1.5rem;
   display: flex;
   gap: 0.75rem;
+}
+
+/* Company details grid within settings */
+.cq-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.5rem;
+}
+
+.cq-settings-grid .form-group {
+  margin-bottom: 0;
+}
+
+.cq-settings-grid .form-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-light);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 600px) {
+  .cq-settings-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* --- Quote history --- */

@@ -432,6 +432,7 @@ function populateSettingsForm(settings) {
     'homePostcode', 'londonPremiumPercent', 'hotelBudgetDefault', 'overnightThresholdMins',
     'subsistenceOvernightRate', 'subsistenceDayTripRate',
     'discountRegularPercent', 'discountContractPercent',
+    'companyName', 'companyAddress', 'companyPhone', 'companyEmail', 'companyWebsite', 'vatNumber', 'quoteValidDays',
   ];
   fields.forEach(f => {
     const el = document.getElementById('s_' + f);
@@ -449,6 +450,7 @@ function populateSettingsForm(settings) {
 
 function collectSettingsFromForm() {
   const num = id => parseFloat(document.getElementById(id).value) || 0;
+  const str = id => document.getElementById(id)?.value || '';
   return {
     serviceLevels: collectServiceLevelsFromEditor(),
     costSingleChannel: num('s_costSingleChannel'),
@@ -472,6 +474,13 @@ function collectSettingsFromForm() {
     subsistenceDayTripRate: num('s_subsistenceDayTripRate'),
     discountRegularPercent: num('s_discountRegularPercent'),
     discountContractPercent: num('s_discountContractPercent'),
+    companyName: str('s_companyName').trim() || 'Kirkstone Calibration',
+    companyAddress: str('s_companyAddress'),
+    companyPhone: str('s_companyPhone').trim(),
+    companyEmail: str('s_companyEmail').trim(),
+    companyWebsite: str('s_companyWebsite').trim(),
+    vatNumber: str('s_vatNumber').trim(),
+    quoteValidDays: parseInt(str('s_quoteValidDays')) || 30,
   };
 }
 
@@ -510,6 +519,7 @@ function renderQuoteHistory(quotes, settings) {
       <div class="history-actions">
         <button class="btn-small" onclick="toggleQuoteDetail('${q.id}')">View details</button>
         <button class="btn-small" onclick="loadQuote('${q.id}')">Load into form</button>
+        <button class="btn-small btn-quote" onclick="openCustomerQuoteFromHistory('${q.id}')">Customer Quote</button>
         <button class="btn-small btn-delete" onclick="deleteQuote('${q.id}')">Delete</button>
       </div>
     </div>`;

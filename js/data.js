@@ -75,6 +75,15 @@ const DEFAULT_SETTINGS = {
   // Discounts
   discountRegularPercent: 5,
   discountContractPercent: 10,
+
+  // Company info (for customer-facing quotes)
+  companyName: 'Kirkstone Calibration',
+  companyAddress: '',
+  companyPhone: '',
+  companyEmail: '',
+  companyWebsite: '',
+  vatNumber: '',
+  quoteValidDays: 30,
 };
 
 const StorageManager = {
@@ -143,5 +152,17 @@ const StorageManager = {
 
   clearFormState() {
     sessionStorage.removeItem(this._prefix + 'form');
-  }
+  },
+
+  saveLogo(dataUrl) {
+    try { localStorage.setItem(this._prefix + 'logo', dataUrl); } catch {}
+  },
+
+  loadLogo() {
+    try { return localStorage.getItem(this._prefix + 'logo') || null; } catch { return null; }
+  },
+
+  clearLogo() {
+    localStorage.removeItem(this._prefix + 'logo');
+  },
 };

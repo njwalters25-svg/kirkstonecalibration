@@ -225,6 +225,7 @@
             <div id="quoteSummary"></div>
             <div class="actions-bar">
               <button id="saveQuote" class="btn btn-primary">Save Quote</button>
+              <button id="generateCustomerQuote" class="btn btn-secondary">Customer Quote</button>
               <button id="printQuote" class="btn btn-secondary">Print / PDF</button>
               <button id="clearForm" class="btn btn-secondary">Clear Form</button>
             </div>
@@ -387,6 +388,47 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- Company details for customer quotes -->
+      <div class="settings-card settings-full-width" style="margin-top:1.5rem;">
+        <h3>Company Details (Customer Quotes)</h3>
+        <p class="settings-hint">These details appear on customer-facing quote documents.</p>
+        <div class="cq-settings-grid">
+          <div class="form-group">
+            <label for="s_companyName">Company name</label>
+            <input type="text" id="s_companyName" placeholder="Kirkstone Calibration">
+          </div>
+          <div class="form-group">
+            <label for="s_companyPhone">Telephone</label>
+            <input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890">
+          </div>
+          <div class="form-group">
+            <label for="s_companyEmail">Email</label>
+            <input type="text" id="s_companyEmail" placeholder="e.g. info@example.com">
+          </div>
+          <div class="form-group">
+            <label for="s_companyWebsite">Website</label>
+            <input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com">
+          </div>
+          <div class="form-group">
+            <label for="s_vatNumber">VAT number (optional)</label>
+            <input type="text" id="s_vatNumber" placeholder="e.g. GB123456789">
+          </div>
+          <div class="form-group">
+            <label for="s_quoteValidDays">Quote valid for (days)</label>
+            <input type="number" id="s_quoteValidDays" min="1" step="1" value="30">
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="s_companyAddress">Address</label>
+            <textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label for="logoUpload">Company logo</label>
+            <input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif">
+            <div id="logoPreview" style="margin-top:0.5rem;"></div>
+          </div>
+        </div>
       </div>
 
       <div class="settings-actions">
