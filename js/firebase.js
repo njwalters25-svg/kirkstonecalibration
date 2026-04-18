@@ -22,7 +22,7 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 async function isUserAllowed(user) {
   try {
-    const doc = await db.collection('config').doc('allowedUsers').get();
+    const doc = await db.collection('config').doc('allowedusers').get();
     if (!doc.exists) return false;
     const data = doc.data();
     const emails = (data.emails || []).map(e => e.toLowerCase());
