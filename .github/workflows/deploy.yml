@@ -1,0 +1,18 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via cPanel Git Version Control
+        run: |
+          curl -s -X POST \
+            "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/update" \
+            -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
+            --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
+            --insecure
