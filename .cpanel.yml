@@ -1,0 +1,5 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/simpxlow/quotes.kirkstonecalibration.co.uk
+    - /bin/cp -r . $DEPLOYPATH
