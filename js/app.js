@@ -88,9 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (user) {
       // Check if user is allowed
-      if (!(await isUserAllowed(user))) {
+      let allowed = false;
+      try {
+        allowed = await isUserAllowed(user);
+      } catch (err) {
         await signOut();
-        lockError.textContent = 'Access denied — your email is not authorised.';
+        lockError.textContent = 'Sign-in error: ' + err.message;
+        lockError.style.display = 'block';
+        return;
+      }
+      if (!allowed) {
+        await signOut();
+        lockError.textContent = 'Access denied — ' + user.email + ' is not authorised.';
         lockError.style.display = 'block';
         return;
       }
