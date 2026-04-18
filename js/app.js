@@ -787,8 +787,8 @@ function generateCustomerQuoteWindow(result, input) {
     .row-subtotal td{padding:.5rem 1rem;font-size:9.5pt;}
     .row-premium td{color:#975a16;}
     .row-discount td{color:#276749;}
-    .row-summary-label{background:#4a5568!important;color:white;font-weight:600;}
-    .row-summary-label td{padding:.65rem 1rem;font-size:10pt;}
+    .row-summary-label{background:#f7fafc!important;color:#1a202c;font-weight:600;}
+    .row-summary-label td{padding:.65rem 1rem;font-size:10pt;border-top:2px solid #e2e8f0;}
     .row-summary-label td:not(:first-child){text-align:right;}
     .row-total{background:#1a365d!important;color:white;font-weight:700;}
     .row-total td{padding:.85rem 1rem;font-size:1rem;}
