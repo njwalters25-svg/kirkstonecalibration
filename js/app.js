@@ -868,12 +868,10 @@ function generateCustomerQuoteWindow(result, input) {
 </body>
 </html>`;
 
-  const w = window.open('', '_blank');
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
   if (!w) {
     showToast('Pop-up blocked — please allow pop-ups for this site');
-    return;
   }
-  w.document.write(html);
-  w.document.close();
-  w.focus();
 }
