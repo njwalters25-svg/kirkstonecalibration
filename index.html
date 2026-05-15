@@ -61,6 +61,19 @@
                 <label for="customerName">Customer Name</label>
                 <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd">
               </div>
+              <div class="form-row" style="margin-top:0.25rem;">
+                <div class="form-group">
+                  <label for="refPrefix">Customer code</label>
+                  <input type="text" id="refPrefix" placeholder="e.g. SYGDC" list="refPrefixList" maxlength="10" autocomplete="off">
+                  <datalist id="refPrefixList"></datalist>
+                  <span class="field-hint">Letters &amp; numbers, no spaces — used to build the reference</span>
+                </div>
+                <div class="form-group">
+                  <label>Quote reference</label>
+                  <div id="refDisplay" class="ref-display ref-display-empty">Enter a customer code</div>
+                  <input type="hidden" id="refNumber">
+                </div>
+              </div>
             </div>
 
             <!-- Pipettes (line items) -->

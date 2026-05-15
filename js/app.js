@@ -7,6 +7,46 @@ let isSignedIn = false;
 let currentQuotes = [];
 let currentLogoDataUrl = null;
 
+function getNextRefNumber(prefix, quotes) {
+  const upper = prefix.toUpperCase();
+  const matching = quotes.filter(q => q.refPrefix === upper && Number.isInteger(q.refNumber));
+  if (matching.length === 0) return 100;
+  return Math.max(...matching.map(q => q.refNumber)) + 1;
+}
+
+function updateRefDisplay(prefix) {
+  const displayEl = document.getElementById('refDisplay');
+  const numberEl = document.getElementById('refNumber');
+  if (!prefix) {
+    displayEl.textContent = 'Enter a customer code';
+    displayEl.className = 'ref-display ref-display-empty';
+    numberEl.value = '';
+    return;
+  }
+  const num = getNextRefNumber(prefix, currentQuotes);
+  numberEl.value = num;
+  displayEl.textContent = 'KC' + prefix + num + 'Q';
+  displayEl.className = 'ref-display';
+}
+
+function restoreRefFields(refPrefix, refNumber) {
+  const prefixEl = document.getElementById('refPrefix');
+  const displayEl = document.getElementById('refDisplay');
+  const numberEl = document.getElementById('refNumber');
+  prefixEl.value = refPrefix || '';
+  if (refPrefix && refNumber) {
+    numberEl.value = refNumber;
+    displayEl.textContent = 'KC' + refPrefix + refNumber + 'Q';
+    displayEl.className = 'ref-display';
+  } else if (refPrefix) {
+    updateRefDisplay(refPrefix);
+  } else {
+    displayEl.textContent = 'Enter a customer code';
+    displayEl.className = 'ref-display ref-display-empty';
+    numberEl.value = '';
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
@@ -110,6 +150,14 @@ document.addEventListener('DOMContentLoaded', () => {
       btn.classList.add('active');
       document.getElementById(btn.dataset.tab).classList.add('active');
     });
+  });
+
+  // Reference prefix — uppercase, auto-calculate next number
+  document.getElementById('refPrefix').addEventListener('input', (e) => {
+    const clean = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    e.target.value = clean;
+    updateRefDisplay(clean);
+    autoSaveForm();
   });
 
   // Live recalculation on any form change
@@ -354,6 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('londonNote').style.display = 'none';
     document.getElementById('newJobNote').style.display = 'none';
     document.getElementById('customDiscountField').style.display = 'none';
+    const refDisplayEl = document.getElementById('refDisplay');
+    refDisplayEl.textContent = 'Enter a customer code';
+    refDisplayEl.className = 'ref-display ref-display-empty';
     renderPipetteLines([getDefaultPipetteLine(currentSettings)], currentSettings);
     wirePipetteLineEvents();
     StorageManager.clearFormState();
@@ -445,6 +496,7 @@ function restoreFormState() {
   };
 
   setVal('customerName', saved.customerName);
+  restoreRefFields(saved.refPrefix, saved.refNumber);
   setVal('destinationPostcode', saved.destinationPostcode);
   setVal('travelDistance', saved.travelDistanceMiles);
   setVal('travelTime', saved.travelTimeMinutes);
@@ -582,6 +634,7 @@ function loadQuote(id) {
   };
 
   setVal('customerName', q.customerName);
+  restoreRefFields(q.refPrefix, q.refNumber);
   setVal('destinationPostcode', q.destinationPostcode);
   setVal('travelDistance', q.travelDistanceMiles);
   setVal('travelTime', q.travelTimeMinutes);
@@ -668,7 +721,9 @@ function generateCustomerQuoteWindow(result, input) {
   const fmt = v => formatCurrency(v);
 
   const customerName = input.customerName || 'Customer';
-  const quoteRef = 'KC-' + (input.id || 'XXXXXXXX').slice(0, 8).toUpperCase();
+  const quoteRef = (input.refPrefix && input.refNumber)
+    ? ('KC' + input.refPrefix + input.refNumber + 'Q')
+    : ('KC-' + (input.id || 'XXXXXXXX').slice(0, 8).toUpperCase());
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
   const validDays = settings.quoteValidDays || 30;

@@ -714,6 +714,51 @@ body {
   margin-bottom: 0.75rem;
 }
 
+/* --- Reference display --- */
+.ref-display {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--primary);
+  padding: 0.45rem 0.625rem;
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  border-radius: var(--radius);
+  letter-spacing: 0.04em;
+  min-height: 2.2rem;
+  display: flex;
+  align-items: center;
+}
+
+.ref-display.ref-display-empty {
+  color: var(--text-light);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  background: var(--bg);
+  border-color: var(--border);
+  letter-spacing: 0;
+}
+
+.ref-badge {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #ebf8ff;
+  border: 1px solid #bee3f8;
+  color: var(--accent);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text-light);
+  margin-top: 0.2rem;
+}
+
 /* --- History badge --- */
 .history-badge {
   font-size: 0.7rem;

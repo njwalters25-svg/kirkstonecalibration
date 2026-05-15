@@ -107,6 +107,8 @@ function collectQuoteInputFromForm() {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
+    refPrefix: document.getElementById('refPrefix').value.trim().toUpperCase(),
+    refNumber: parseInt(document.getElementById('refNumber').value) || null,
     pipetteLines: collectPipetteLinesFromForm(),
     destinationPostcode: document.getElementById('destinationPostcode').value.trim(),
     travelDistanceMiles: parseFloat(document.getElementById('travelDistance').value) || 0,
@@ -484,6 +486,27 @@ function collectSettingsFromForm() {
   };
 }
 
+// --- Reference number helpers ---
+
+function populateRefPrefixDatalist(quotes) {
+  const datalist = document.getElementById('refPrefixList');
+  if (!datalist) return;
+  const seen = new Set();
+  const options = [];
+  quotes.forEach(q => {
+    if (q.refPrefix && !seen.has(q.refPrefix)) {
+      seen.add(q.refPrefix);
+      options.push(`<option value="${q.refPrefix}">`);
+    }
+  });
+  datalist.innerHTML = options.join('');
+}
+
+function buildRefCode(prefix, number, isQuote = true) {
+  if (!prefix || !number) return '';
+  return 'KC' + prefix.toUpperCase() + number + (isQuote ? 'Q' : '');
+}
+
 // --- Quote history ---
 
 function renderQuoteHistory(quotes, settings) {
@@ -495,14 +518,18 @@ function renderQuoteHistory(quotes, settings) {
     return;
   }
 
+  populateRefPrefixDatalist(quotes);
+
   container.innerHTML = quotes.map(q => {
     // Recalculate the full result to show the complete summary
     const result = calculateQuote(q, settings);
+    const refCode = buildRefCode(q.refPrefix, q.refNumber, true);
 
     return `
     <div class="history-card" data-id="${q.id}">
       <div class="history-header">
         <strong>${q.customerName || 'Unnamed'}</strong>
+        ${refCode ? `<span class="ref-badge">${refCode}</span>` : ''}
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
         ${q.savedBy ? `<span class="history-saved-by">by ${q.savedBy}</span>` : ''}
       </div>
