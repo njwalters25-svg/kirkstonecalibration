@@ -152,6 +152,31 @@ const StorageManager = {
     this.saveQuoteHistory(quotes);
   },
 
+  loadJobs() {
+    try {
+      const raw = localStorage.getItem(this._prefix + 'jobs');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  saveJobs(jobs) {
+    localStorage.setItem(this._prefix + 'jobs', JSON.stringify(jobs));
+  },
+
+  saveJob(job) {
+    const jobs = this.loadJobs();
+    const index = jobs.findIndex(j => j.id === job.id);
+    if (index >= 0) jobs[index] = job;
+    else jobs.unshift(job);
+    this.saveJobs(jobs);
+  },
+
+  deleteJob(id) {
+    this.saveJobs(this.loadJobs().filter(j => j.id !== id));
+  },
+
   saveFormState(formData) {
     sessionStorage.setItem(this._prefix + 'form', JSON.stringify(formData));
   },

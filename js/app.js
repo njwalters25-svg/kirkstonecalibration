@@ -6,6 +6,7 @@ let currentSettings;
 let isSignedIn = false;
 let currentQuotes = [];
 let currentCustomers = [];
+let currentJobs = [];
 let currentLogoDataUrl = null;
 let activeQuoteSettingsSnapshot = null;
 let loadedQuoteId = null;
@@ -161,6 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
   recalculate();
   currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
   renderQuoteHistory(currentQuotes, currentSettings);
+  currentJobs = StorageManager.loadJobs();
+  renderJobSheets(currentJobs);
 
   // Load customers from localStorage and wire autofill
   currentCustomers = StorageManager.loadCustomers();
@@ -188,6 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load quotes from Firestore
     await refreshQuoteHistory();
+
+    // Load job sheets from Firestore
+    await refreshJobSheets();
 
     // Load customers from Firestore
     const cloudCustomers = await loadCustomersFromFirestore();
@@ -641,6 +647,205 @@ async function refreshQuoteHistory() {
   currentQuotes = ensureQuoteSettingsSnapshots(rawQuotes);
   await backfillMissingQuoteSettingsSnapshots(rawQuotes, currentQuotes);
   renderQuoteHistory(currentQuotes, currentSettings);
+}
+
+async function refreshJobSheets() {
+  if (isSignedIn) {
+    currentJobs = await loadJobsFromFirestore();
+  } else {
+    currentJobs = StorageManager.loadJobs();
+  }
+  renderJobSheets(currentJobs);
+}
+
+function getJobById(id) {
+  return currentJobs.find(job => job.id === id);
+}
+
+async function persistJob(job, toastMessage) {
+  job.updatedAt = new Date().toISOString();
+  StorageManager.saveJob(job);
+  if (isSignedIn) await saveJobToFirestore(job);
+  currentJobs = StorageManager.loadJobs();
+  if (isSignedIn && !isLocalPreviewMode) currentJobs = await loadJobsFromFirestore();
+  renderJobSheets(currentJobs);
+  if (toastMessage) showToast(toastMessage);
+}
+
+async function createJobSheetFromQuote(id) {
+  const quote = currentQuotes.find(q => q.id === id);
+  if (!quote) return;
+  const existing = currentJobs.find(job => job.quoteId === quote.id);
+  if (existing && !confirm('A job sheet already exists for this quote. Create another one?')) return;
+
+  const quoteSettings = getSettingsForQuote(quote);
+  const ref = buildRefCode(quote.refPrefix, quote.refNumber, true);
+  const job = {
+    id: crypto.randomUUID(),
+    quoteId: quote.id,
+    quoteRef: ref,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'open',
+    customerName: quote.customerName || '',
+    customerAddress: quote.customerAddress || '',
+    proposedDate: quote.proposedDate || '',
+    settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings),
+    quoteSnapshot: { ...quote, settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings) },
+    plannedLines: quote.pipetteLines || [],
+    actualEntries: [],
+    poNumber: '',
+    invoiceNumber: '',
+    workCarriedOut: '',
+    costs: {
+      hotel: 0,
+      food: 0,
+      fuel: 0,
+      stickers: 0,
+      parts: 0,
+      shipping: 0,
+      other: 0,
+      mileageMiles: 0,
+    },
+    notes: '',
+  };
+  await persistJob(job, 'Job sheet created');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="jobsPanel"]').classList.add('active');
+  document.getElementById('jobsPanel').classList.add('active');
+}
+
+function updateJobField(jobId, field, value) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  job[field] = value;
+}
+
+function addJobEntry(jobId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  const firstLevel = job.settingsSnapshot?.serviceLevels?.[0]?.id || '';
+  job.actualEntries = job.actualEntries || [];
+  job.actualEntries.push({
+    id: crypto.randomUUID(),
+    date: '',
+    serviceLevelId: firstLevel,
+    singleChannelCount: 0,
+    multiChannel6Count: 0,
+    multiChannel8Count: 0,
+    multiChannel12Count: 0,
+    multiChannel16Count: 0,
+  });
+  renderJobSheets(currentJobs);
+}
+
+function updateJobEntry(jobId, entryId, field, value) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  const entry = (job.actualEntries || []).find(e => e.id === entryId);
+  if (!entry) return;
+  entry[field] = field === 'date' || field === 'serviceLevelId'
+    ? value
+    : (parseInt(value) || 0);
+  renderJobSheets(currentJobs);
+}
+
+function deleteJobEntry(jobId, entryId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  job.actualEntries = (job.actualEntries || []).filter(e => e.id !== entryId);
+  renderJobSheets(currentJobs);
+}
+
+function updateJobCost(jobId, field, value) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  job.costs = job.costs || {};
+  job.costs[field] = parseFloat(value) || 0;
+  renderJobSheets(currentJobs);
+}
+
+function updateJobNotes(jobId, value) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  job.notes = value;
+}
+
+async function saveJobSheet(jobId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  await persistJob(job, 'Job sheet saved');
+}
+
+async function deleteJobSheet(jobId) {
+  if (!confirm('Delete this job sheet?')) return;
+  StorageManager.deleteJob(jobId);
+  if (isSignedIn) await deleteJobFromFirestore(jobId);
+  await refreshJobSheets();
+  showToast('Job sheet deleted');
+}
+
+function exportJobSheetCsv(jobId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  const calc = calculateJobSheet(job);
+  const csvRows = [];
+  const add = row => csvRows.push(row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
+
+  add(['Job Sheet']);
+  add(['Customer', job.customerName]);
+  add(['Address', job.customerAddress]);
+  add(['Quote reference', job.quoteRef]);
+  add(['Proposed date', formatProposedDate(job.proposedDate)]);
+  add(['PO number', job.poNumber || '']);
+  add(['Invoice number', job.invoiceNumber || '']);
+  add(['Days on site', calc.actualDays]);
+  add([]);
+  add(['Planned', 'Single', '6ch', '8ch', '12ch', '16ch', 'Total']);
+  add(['', calc.plannedTotals.single, calc.plannedTotals.multi6, calc.plannedTotals.multi8, calc.plannedTotals.multi12, calc.plannedTotals.multi16, calc.plannedCount]);
+  add(['Actual', calc.actualTotals.single, calc.actualTotals.multi6, calc.actualTotals.multi8, calc.actualTotals.multi12, calc.actualTotals.multi16, calc.actualCount]);
+  add(['Remaining', calc.remainingTotals.single, calc.remainingTotals.multi6, calc.remainingTotals.multi8, calc.remainingTotals.multi12, calc.remainingTotals.multi16, sumTotals(calc.remainingTotals)]);
+  add([]);
+  add(['Actual pipettes by day']);
+  add(['Date', 'Service level', 'Single', '6ch', '8ch', '12ch', '16ch']);
+  (job.actualEntries || []).forEach(entry => {
+    const sl = getServiceLevel(entry.serviceLevelId, job.settingsSnapshot || DEFAULT_SETTINGS);
+    add([entry.date, sl?.name || entry.serviceLevelId, entry.singleChannelCount || 0, entry.multiChannel6Count || 0, entry.multiChannel8Count || 0, entry.multiChannel12Count || 0, entry.multiChannel16Count || 0]);
+  });
+  add([]);
+  add(['Costs']);
+  add(['Hotel', job.costs?.hotel || 0]);
+  add(['Food', job.costs?.food || 0]);
+  add(['Fuel', job.costs?.fuel || 0]);
+  add(['Sticker cost', job.costs?.stickers || 0]);
+  add(['Parts', job.costs?.parts || 0]);
+  add(['Shipping', job.costs?.shipping || 0]);
+  add(['Other', job.costs?.other || 0]);
+  add(['Mileage miles', job.costs?.mileageMiles || 0]);
+  add(['Mileage cost @ 55p', calc.mileageCost]);
+  add(['Total costs', calc.totalCosts]);
+  add([]);
+  add(['Invoice amount inc VAT', calc.revenueIncVat]);
+  add(['Invoice amount exc VAT', calc.actualRevenue]);
+  add(['VAT amount', calc.vatAmount]);
+  add(['Profit', calc.profit]);
+  add(['Tax @40%', calc.taxAt40]);
+  add(['Profit after tax', calc.profitAfterTax]);
+  add(['Profit per day', calc.profitPerDay]);
+  add([]);
+  add(['Work carried out', job.workCarriedOut || '']);
+  add(['Notes', job.notes || '']);
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${(job.customerName || 'job-sheet').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')}-job-sheet.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function deleteQuote(id) {

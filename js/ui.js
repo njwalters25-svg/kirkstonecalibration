@@ -539,6 +539,210 @@ function buildRefCode(prefix, number, isQuote = true) {
   return 'KC' + prefix.toUpperCase() + number + (isQuote ? 'Q' : '');
 }
 
+function getEmptyPipetteTotals() {
+  return { single: 0, multi6: 0, multi8: 0, multi12: 0, multi16: 0 };
+}
+
+function addLineToTotals(totals, line) {
+  totals.single += line.singleChannelCount || 0;
+  totals.multi6 += line.multiChannel6Count || 0;
+  totals.multi8 += line.multiChannel8Count || 0;
+  totals.multi12 += line.multiChannel12Count || 0;
+  totals.multi16 += line.multiChannel16Count || 0;
+}
+
+function sumTotals(totals) {
+  return totals.single + totals.multi6 + totals.multi8 + totals.multi12 + totals.multi16;
+}
+
+function getJobPlannedTotals(job) {
+  const totals = getEmptyPipetteTotals();
+  (job.plannedLines || []).forEach(line => addLineToTotals(totals, line));
+  return totals;
+}
+
+function getJobActualTotals(job) {
+  const totals = getEmptyPipetteTotals();
+  (job.actualEntries || []).forEach(entry => addLineToTotals(totals, entry));
+  return totals;
+}
+
+function calculateJobSheet(job) {
+  const roundMoney = value => Math.round((value + Number.EPSILON) * 100) / 100;
+  const settings = typeof getSettingsForQuote === 'function'
+    ? getSettingsForQuote(job.quoteSnapshot || {}, job.settingsSnapshot || DEFAULT_SETTINGS)
+    : (job.settingsSnapshot || DEFAULT_SETTINGS);
+  const plannedTotals = getJobPlannedTotals(job);
+  const actualTotals = getJobActualTotals(job);
+  const remainingTotals = {
+    single: plannedTotals.single - actualTotals.single,
+    multi6: plannedTotals.multi6 - actualTotals.multi6,
+    multi8: plannedTotals.multi8 - actualTotals.multi8,
+    multi12: plannedTotals.multi12 - actualTotals.multi12,
+    multi16: plannedTotals.multi16 - actualTotals.multi16,
+  };
+
+  let actualRevenue = 0;
+  (job.actualEntries || []).forEach(entry => {
+    const sl = getServiceLevel(entry.serviceLevelId, settings);
+    actualRevenue += (entry.singleChannelCount || 0) * (sl?.chargeSingleChannel || 0);
+    actualRevenue += (entry.multiChannel6Count || 0) * (sl?.chargeMultiChannel6 || 0);
+    actualRevenue += (entry.multiChannel8Count || 0) * (sl?.chargeMultiChannel8 || 0);
+    actualRevenue += (entry.multiChannel12Count || 0) * (sl?.chargeMultiChannel12 || 0);
+    actualRevenue += (entry.multiChannel16Count || 0) * (sl?.chargeMultiChannel16 || 0);
+  });
+
+  const costs = job.costs || {};
+  const mileageCost = (parseFloat(costs.mileageMiles) || 0) * 0.55;
+  const otherCosts =
+    (parseFloat(costs.hotel) || 0) +
+    (parseFloat(costs.food) || 0) +
+    (parseFloat(costs.fuel) || 0) +
+    (parseFloat(costs.stickers) || 0) +
+    (parseFloat(costs.parts) || 0) +
+    (parseFloat(costs.shipping) || 0) +
+    (parseFloat(costs.other) || 0);
+  const totalCosts = mileageCost + otherCosts;
+  const profit = actualRevenue - totalCosts;
+  const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
+  const revenueIncVat = actualRevenue + vatAmount;
+  const taxAt40 = Math.max(profit, 0) * 0.40;
+  const profitAfterTax = profit - taxAt40;
+  const actualDays = new Set((job.actualEntries || []).map(entry => entry.date).filter(Boolean)).size;
+  return {
+    plannedTotals,
+    actualTotals,
+    remainingTotals,
+    plannedCount: sumTotals(plannedTotals),
+    actualCount: sumTotals(actualTotals),
+    actualRevenue: roundMoney(actualRevenue),
+    vatAmount: roundMoney(vatAmount),
+    revenueIncVat: roundMoney(revenueIncVat),
+    mileageCost: roundMoney(mileageCost),
+    totalCosts: roundMoney(totalCosts),
+    profit: roundMoney(profit),
+    taxAt40: roundMoney(taxAt40),
+    profitAfterTax: roundMoney(profitAfterTax),
+    actualDays,
+    profitPerDay: roundMoney(actualDays > 0 ? profit / actualDays : profit),
+  };
+}
+
+function renderMiniTotals(title, totals) {
+  return `
+    <div class="job-mini-table">
+      <strong>${escapeHtml(title)}</strong>
+      <span>Single ${totals.single}</span>
+      <span>6ch ${totals.multi6}</span>
+      <span>8ch ${totals.multi8}</span>
+      <span>12ch ${totals.multi12}</span>
+      <span>16ch ${totals.multi16}</span>
+    </div>`;
+}
+
+function renderJobSheets(jobs) {
+  const container = document.getElementById('jobSheets');
+  if (!container) return;
+  if (!jobs || jobs.length === 0) {
+    container.innerHTML = '<p class="empty-state">No job sheets yet. Create one from a saved quote.</p>';
+    return;
+  }
+
+  container.innerHTML = jobs.map(job => {
+    const calc = calculateJobSheet(job);
+    const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
+    return `
+      <div class="job-card" data-id="${escapeHtml(job.id)}">
+        <div class="history-header">
+          <strong>${escapeHtml(job.customerName || 'Unnamed job')}</strong>
+          ${ref ? `<span class="ref-badge">${escapeHtml(ref)}</span>` : ''}
+          ${job.proposedDate ? `<span class="history-date">Proposed ${escapeHtml(formatProposedDate(job.proposedDate))}</span>` : ''}
+          <span class="history-date">${escapeHtml(job.status || 'open')}</span>
+        </div>
+        <div class="job-summary-grid">
+          ${renderMiniTotals('Planned', calc.plannedTotals)}
+          ${renderMiniTotals('Actual', calc.actualTotals)}
+          ${renderMiniTotals('Remaining', calc.remainingTotals)}
+          <div class="job-kpis">
+            <span>Actual days <strong>${calc.actualDays}</strong></span>
+            <span>Actual revenue <strong>${formatCurrency(calc.actualRevenue)}</strong></span>
+            <span>Costs <strong>${formatCurrency(calc.totalCosts)}</strong></span>
+            <span>Profit <strong>${formatCurrency(calc.profit)}</strong></span>
+          </div>
+        </div>
+        <div class="job-meta-grid">
+          <div class="form-group">
+            <label>PO number</label>
+            <input type="text" value="${escapeHtml(job.poNumber || '')}" onchange="updateJobField('${escapeJsString(job.id)}','poNumber',this.value)">
+          </div>
+          <div class="form-group">
+            <label>Invoice number</label>
+            <input type="text" value="${escapeHtml(job.invoiceNumber || '')}" onchange="updateJobField('${escapeJsString(job.id)}','invoiceNumber',this.value)">
+          </div>
+        </div>
+        <div class="job-editor">
+          <h3>Actual pipettes by day</h3>
+          <div class="job-entry-list">
+            ${(job.actualEntries || []).map(entry => renderJobEntryRow(job, entry)).join('')}
+          </div>
+          <button class="btn-small" onclick="addJobEntry('${escapeJsString(job.id)}')">Add day / service row</button>
+
+          <h3>Costs</h3>
+          <div class="job-cost-grid">
+            ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel)}
+            ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
+            ${renderJobCostInput(job.id, 'fuel', 'Fuel', job.costs?.fuel)}
+            ${renderJobCostInput(job.id, 'stickers', 'Sticker cost', job.costs?.stickers)}
+            ${renderJobCostInput(job.id, 'parts', 'Parts', job.costs?.parts)}
+            ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
+            ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
+            ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
+          </div>
+          <div class="field-hint">Mileage cost uses 55p per mile.</div>
+          <div class="form-group" style="margin-top:0.75rem;">
+            <label>Work carried out</label>
+            <textarea class="job-notes" data-job-id="${escapeHtml(job.id)}" rows="3" onchange="updateJobField('${escapeJsString(job.id)}','workCarriedOut',this.value)">${escapeHtml(job.workCarriedOut || '')}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Job notes</label>
+            <textarea class="job-notes" data-job-id="${escapeHtml(job.id)}" rows="3" onchange="updateJobNotes('${escapeJsString(job.id)}', this.value)">${escapeHtml(job.notes || '')}</textarea>
+          </div>
+        </div>
+        <div class="history-actions">
+          <button class="btn-small btn-quote" onclick="saveJobSheet('${escapeJsString(job.id)}')">Save Job Sheet</button>
+          <button class="btn-small" onclick="exportJobSheetCsv('${escapeJsString(job.id)}')">Export CSV</button>
+          <button class="btn-small btn-delete" onclick="deleteJobSheet('${escapeJsString(job.id)}')">Delete</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderJobEntryRow(job, entry) {
+  const settings = job.settingsSnapshot || DEFAULT_SETTINGS;
+  const options = (settings.serviceLevels || []).map(sl =>
+    `<option value="${escapeHtml(sl.id)}" ${sl.id === entry.serviceLevelId ? 'selected' : ''}>${escapeHtml(sl.name)}</option>`
+  ).join('');
+  return `
+    <div class="job-entry-row" data-entry-id="${escapeHtml(entry.id)}">
+      <input type="date" value="${escapeHtml(entry.date || '')}" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','date',this.value)">
+      <select onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','serviceLevelId',this.value)">${options}</select>
+      <input type="number" min="0" value="${entry.singleChannelCount || 0}" placeholder="Single" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','singleChannelCount',this.value)">
+      <input type="number" min="0" value="${entry.multiChannel6Count || 0}" placeholder="6ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel6Count',this.value)">
+      <input type="number" min="0" value="${entry.multiChannel8Count || 0}" placeholder="8ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel8Count',this.value)">
+      <input type="number" min="0" value="${entry.multiChannel12Count || 0}" placeholder="12ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel12Count',this.value)">
+      <input type="number" min="0" value="${entry.multiChannel16Count || 0}" placeholder="16ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel16Count',this.value)">
+      <button class="btn-small btn-delete" onclick="deleteJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}')">Remove</button>
+    </div>`;
+}
+
+function renderJobCostInput(jobId, field, label, value) {
+  return `
+    <div class="form-group">
+      <label>${escapeHtml(label)}</label>
+      <input type="number" min="0" step="0.01" value="${value || 0}" onchange="updateJobCost('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+    </div>`;
+}
+
 // --- Quote history ---
 
 function renderQuoteHistory(quotes, settings) {
@@ -580,6 +784,7 @@ function renderQuoteHistory(quotes, settings) {
       <div class="history-actions">
         <button class="btn-small" onclick="toggleQuoteDetail('${escapeJsString(q.id)}')">View details</button>
         <button class="btn-small" onclick="loadQuote('${escapeJsString(q.id)}')">Load into form</button>
+        <button class="btn-small btn-quote" onclick="createJobSheetFromQuote('${escapeJsString(q.id)}')">Create Job Sheet</button>
         <button class="btn-small btn-quote" onclick="openCustomerQuoteFromHistory('${escapeJsString(q.id)}')">Customer Quote</button>
         <button class="btn-small btn-delete" onclick="deleteQuote('${escapeJsString(q.id)}')">Delete</button>
       </div>

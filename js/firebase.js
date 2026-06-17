@@ -129,9 +129,26 @@ async function updateQuoteSettingsSnapshotInFirestore(id, settingsSnapshot) {
   await getQuotesRef().doc(id).set({ settingsSnapshot }, { merge: true });
 }
 
-async function updateQuoteInFirestore(quote) {
-  if (isLocalPreviewMode || !quote.id) return;
-  await getQuotesRef().doc(quote.id).set(quote, { merge: true });
+// --- Firestore: Jobs ---
+
+function getJobsRef() {
+  return db.collection('jobs');
+}
+
+async function saveJobToFirestore(job) {
+  if (isLocalPreviewMode || !job.id) return;
+  await getJobsRef().doc(job.id).set(job, { merge: true });
+}
+
+async function loadJobsFromFirestore() {
+  if (isLocalPreviewMode) return StorageManager.loadJobs();
+  const snapshot = await getJobsRef().orderBy('updatedAt', 'desc').get();
+  return snapshot.docs.map(doc => doc.data());
+}
+
+async function deleteJobFromFirestore(id) {
+  if (isLocalPreviewMode || !id) return;
+  await getJobsRef().doc(id).delete();
 }
 
 // --- Firestore: Customers ---
