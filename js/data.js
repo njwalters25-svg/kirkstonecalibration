@@ -125,16 +125,31 @@ const StorageManager = {
     }
   },
 
+  saveQuoteHistory(quotes) {
+    localStorage.setItem(this._prefix + 'quotes', JSON.stringify(quotes));
+  },
+
   saveQuote(quote) {
     const quotes = this.loadQuoteHistory();
     quotes.unshift(quote);
-    localStorage.setItem(this._prefix + 'quotes', JSON.stringify(quotes));
+    this.saveQuoteHistory(quotes);
+  },
+
+  updateQuote(quote) {
+    const quotes = this.loadQuoteHistory();
+    const index = quotes.findIndex(q => q.id === quote.id);
+    if (index >= 0) {
+      quotes[index] = quote;
+    } else {
+      quotes.unshift(quote);
+    }
+    this.saveQuoteHistory(quotes);
   },
 
   deleteQuote(id) {
     let quotes = this.loadQuoteHistory();
     quotes = quotes.filter(q => q.id !== id);
-    localStorage.setItem(this._prefix + 'quotes', JSON.stringify(quotes));
+    this.saveQuoteHistory(quotes);
   },
 
   saveFormState(formData) {

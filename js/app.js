@@ -6,6 +6,89 @@ let currentSettings;
 let isSignedIn = false;
 let currentQuotes = [];
 let currentLogoDataUrl = null;
+let activeQuoteSettingsSnapshot = null;
+let loadedQuoteId = null;
+
+function cloneSettings(settings) {
+  return JSON.parse(JSON.stringify(settings));
+}
+
+function normaliseSettingsSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  const merged = { ...DEFAULT_SETTINGS, ...snapshot };
+  merged.serviceLevels = Array.isArray(snapshot.serviceLevels) && snapshot.serviceLevels.length > 0
+    ? snapshot.serviceLevels
+    : cloneSettings(DEFAULT_SETTINGS).serviceLevels;
+  return merged;
+}
+
+function createQuoteSettingsSnapshot(settings) {
+  return cloneSettings(settings || currentSettings || DEFAULT_SETTINGS);
+}
+
+function getSettingsForQuote(quote, fallbackSettings = currentSettings) {
+  return normaliseSettingsSnapshot(quote?.settingsSnapshot) || fallbackSettings;
+}
+
+function getCalculationSettings() {
+  return normaliseSettingsSnapshot(activeQuoteSettingsSnapshot) || currentSettings;
+}
+
+function startFreshQuotePricing() {
+  activeQuoteSettingsSnapshot = null;
+  loadedQuoteId = null;
+  updateLoadedQuoteActions();
+  if (currentSettings) populateSettingsForm(currentSettings);
+}
+
+function updateLoadedQuoteActions() {
+  const updateBtn = document.getElementById('updateSavedQuote');
+  if (!updateBtn) return;
+  updateBtn.style.display = loadedQuoteId ? 'inline-block' : 'none';
+}
+
+function buildSavedQuoteFromForm(id, createdAt, settingsSnapshot) {
+  const input = collectQuoteInputFromForm();
+  const snapshot = createQuoteSettingsSnapshot(settingsSnapshot || getCalculationSettings());
+  const result = calculateQuote(input, snapshot);
+  return {
+    ...input,
+    id: id || input.id,
+    createdAt: createdAt || input.createdAt,
+    settingsSnapshot: snapshot,
+    totalPipettes: result.totalPipettes,
+    totalQuotePrice: result.totalQuotePrice,
+    totalInternalCost: result.totalInternalCost,
+    profitAmount: result.profitAmount,
+    profitMarginPercent: result.profitMarginPercent,
+  };
+}
+
+function ensureQuoteSettingsSnapshots(quotes) {
+  return quotes.map(quote => {
+    if (quote.settingsSnapshot) return quote;
+    return {
+      ...quote,
+      settingsSnapshot: createQuoteSettingsSnapshot(currentSettings),
+    };
+  });
+}
+
+async function backfillMissingQuoteSettingsSnapshots(rawQuotes, quotesWithSnapshots) {
+  const missing = rawQuotes
+    .map((quote, index) => ({ quote, updated: quotesWithSnapshots[index] }))
+    .filter(({ quote, updated }) => !quote.settingsSnapshot && updated.settingsSnapshot);
+
+  if (missing.length === 0) return;
+
+  if (isSignedIn && !isLocalPreviewMode) {
+    await Promise.all(missing.map(({ updated }) =>
+      updateQuoteSettingsSnapshotInFirestore(updated.id, updated.settingsSnapshot)
+    ));
+  } else {
+    StorageManager.saveQuoteHistory(quotesWithSnapshots);
+  }
+}
 
 function getNextRefNumber(prefix, quotes) {
   const upper = prefix.toUpperCase();
@@ -25,7 +108,7 @@ function updateRefDisplay(prefix) {
   }
   const num = getNextRefNumber(prefix, currentQuotes);
   numberEl.value = num;
-  displayEl.textContent = 'KC' + prefix + num + 'Q';
+  displayEl.textContent = buildRefCode(prefix, num, true);
   displayEl.className = 'ref-display';
 }
 
@@ -36,7 +119,7 @@ function restoreRefFields(refPrefix, refNumber) {
   prefixEl.value = refPrefix || '';
   if (refPrefix && refNumber) {
     numberEl.value = refNumber;
-    displayEl.textContent = 'KC' + refPrefix + refNumber + 'Q';
+    displayEl.textContent = buildRefCode(refPrefix, refNumber, true);
     displayEl.className = 'ref-display';
   } else if (refPrefix) {
     updateRefDisplay(refPrefix);
@@ -59,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   restoreFormState();
   recalculate();
-  currentQuotes = StorageManager.loadQuoteHistory();
+  currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
   renderQuoteHistory(currentQuotes, currentSettings);
 
   // --- Auth UI ---
@@ -173,8 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Add pipette line
   document.getElementById('addPipetteLine').addEventListener('click', () => {
     const current = collectPipetteLinesFromForm();
-    current.push(getDefaultPipetteLine(currentSettings));
-    renderPipetteLines(current, currentSettings);
+    const settings = getCalculationSettings();
+    current.push(getDefaultPipetteLine(settings));
+    renderPipetteLines(current, settings);
     wirePipetteLineEvents();
 
     recalculate();
@@ -184,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Auto-estimate calibration time button
   document.getElementById('autoEstimate').addEventListener('click', () => {
     const input = collectQuoteInputFromForm();
-    const result = calculateQuote(input, currentSettings);
+    const result = calculateQuote(input, getCalculationSettings());
     document.getElementById('calibrationTime').value = result.estimatedCalMinutes;
 
     recalculate();
@@ -283,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.checked) {
       const hotelCostEl = document.getElementById('hotelCost');
       if (!hotelCostEl.value || parseFloat(hotelCostEl.value) === 0) {
-        hotelCostEl.value = currentSettings.hotelBudgetDefault;
+        hotelCostEl.value = getCalculationSettings().hotelBudgetDefault;
       }
     }
   });
@@ -324,48 +408,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Settings save
   document.getElementById('saveSettings').addEventListener('click', async () => {
-    currentSettings = collectSettingsFromForm();
-    StorageManager.saveSettings(currentSettings);
-    if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+    if (loadedQuoteId) {
+      activeQuoteSettingsSnapshot = createQuoteSettingsSnapshot(collectSettingsFromForm());
+    } else {
+      currentSettings = collectSettingsFromForm();
+      StorageManager.saveSettings(currentSettings);
+      if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+    }
     // Re-render pipette lines to update service level dropdowns
     const currentLines = collectPipetteLinesFromForm();
-    renderPipetteLines(currentLines, currentSettings);
+    renderPipetteLines(currentLines, getCalculationSettings());
     wirePipetteLineEvents();
     recalculate();
-    showToast('Settings saved');
+    autoSaveForm();
+    showToast(loadedQuoteId ? 'Loaded quote prices updated' : 'Settings saved');
   });
 
-  // Settings reset
-  document.getElementById('resetSettings').addEventListener('click', async () => {
-    if (confirm('Reset all settings to defaults?')) {
-      currentSettings = StorageManager.resetSettings();
-      if (isSignedIn) await saveSettingsToFirestore(currentSettings);
-      populateSettingsForm(currentSettings);
-      wireServiceLevelRemoveButtons();
+  document.getElementById('setDefaultSettings').addEventListener('click', async () => {
+    const defaults = collectSettingsFromForm();
+    currentSettings = defaults;
+    StorageManager.saveSettings(currentSettings);
+    if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+
+    if (!loadedQuoteId) {
       const currentLines = collectPipetteLinesFromForm();
       renderPipetteLines(currentLines, currentSettings);
       wirePipetteLineEvents();
       recalculate();
-      showToast('Settings reset to defaults');
+      autoSaveForm();
+    }
+
+    showToast('Default settings saved for new quotes');
+  });
+
+  // Settings reset
+  document.getElementById('resetSettings').addEventListener('click', async () => {
+    const message = loadedQuoteId
+      ? 'Reset this loaded quote’s prices to defaults?'
+      : 'Reset all settings to defaults?';
+    if (confirm(message)) {
+      if (loadedQuoteId) {
+        activeQuoteSettingsSnapshot = createQuoteSettingsSnapshot(DEFAULT_SETTINGS);
+        populateSettingsForm(activeQuoteSettingsSnapshot);
+      } else {
+        currentSettings = StorageManager.resetSettings();
+        if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+        populateSettingsForm(currentSettings);
+      }
+      wireServiceLevelRemoveButtons();
+      const currentLines = collectPipetteLinesFromForm();
+      renderPipetteLines(currentLines, getCalculationSettings());
+      wirePipetteLineEvents();
+      recalculate();
+      autoSaveForm();
+      showToast(loadedQuoteId ? 'Loaded quote prices reset' : 'Settings reset to defaults');
     }
   });
 
   // Save quote
   document.getElementById('saveQuote').addEventListener('click', async () => {
-    const input = collectQuoteInputFromForm();
-    const result = calculateQuote(input, currentSettings);
-    const saved = {
-      ...input,
-      totalPipettes: result.totalPipettes,
-      totalQuotePrice: result.totalQuotePrice,
-      totalInternalCost: result.totalInternalCost,
-      profitAmount: result.profitAmount,
-      profitMarginPercent: result.profitMarginPercent,
-    };
+    const saved = buildSavedQuoteFromForm(null, null, getCalculationSettings());
     StorageManager.saveQuote(saved);
     if (isSignedIn) await saveQuoteToFirestore(saved);
     await refreshQuoteHistory();
     showToast('Quote saved');
+  });
+
+  document.getElementById('updateSavedQuote').addEventListener('click', async () => {
+    if (!loadedQuoteId) return;
+    const original = currentQuotes.find(q => q.id === loadedQuoteId);
+    if (!original) return;
+    const updated = {
+      ...original,
+      ...buildSavedQuoteFromForm(original.id, original.createdAt, getCalculationSettings()),
+      savedBy: original.savedBy,
+    };
+    StorageManager.updateQuote(updated);
+    if (isSignedIn) await updateQuoteInFirestore(updated);
+    await refreshQuoteHistory();
+    showToast('Saved quote updated');
   });
 
   // Print
@@ -376,8 +497,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Generate customer quote
   document.getElementById('generateCustomerQuote').addEventListener('click', () => {
     const input = collectQuoteInputFromForm();
-    const result = calculateQuote(input, currentSettings);
-    generateCustomerQuoteWindow(result, input);
+    const quoteSettings = getCalculationSettings();
+    const result = calculateQuote(input, quoteSettings);
+    generateCustomerQuoteWindow(result, input, quoteSettings);
   });
 
   // Logo upload
@@ -396,6 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Clear form
   document.getElementById('clearForm').addEventListener('click', () => {
+    startFreshQuotePricing();
     document.getElementById('quoteForm').reset();
     document.getElementById('hotelFields').style.display = 'none';
     document.getElementById('returnHomeFields').style.display = 'none';
@@ -420,7 +543,7 @@ function wirePipetteLineEvents() {
       if (lines.length <= 1) return;
       const idx = parseInt(btn.dataset.index);
       lines.splice(idx, 1);
-      renderPipetteLines(lines, currentSettings);
+      renderPipetteLines(lines, getCalculationSettings());
       wirePipetteLineEvents();
   
       recalculate();
@@ -444,8 +567,9 @@ function wireServiceLevelRemoveButtons() {
 }
 
 function recalculate() {
+  const settings = getCalculationSettings();
   const input = collectQuoteInputFromForm();
-  const result = calculateQuote(input, currentSettings);
+  const result = calculateQuote(input, settings);
 
   // Always update nights field to match suggestion
   const nightsEl = document.getElementById('nights');
@@ -455,7 +579,7 @@ function recalculate() {
 
   // Re-collect and recalculate with the updated nights value
   const finalInput = collectQuoteInputFromForm();
-  const finalResult = calculateQuote(finalInput, currentSettings);
+  const finalResult = calculateQuote(finalInput, settings);
   renderQuoteSummary(finalResult);
 
   // Show overnight suggestion hint if not already ticked
@@ -479,12 +603,17 @@ function recalculate() {
 
 function autoSaveForm() {
   const input = collectQuoteInputFromForm();
+  if (activeQuoteSettingsSnapshot) {
+    input.settingsSnapshot = createQuoteSettingsSnapshot(activeQuoteSettingsSnapshot);
+  }
   StorageManager.saveFormState(input);
 }
 
 function restoreFormState() {
   const saved = StorageManager.loadFormState();
   if (!saved) return;
+  activeQuoteSettingsSnapshot = normaliseSettingsSnapshot(saved.settingsSnapshot);
+  const settings = getCalculationSettings();
 
   const setVal = (id, val) => {
     const el = document.getElementById(id);
@@ -496,6 +625,7 @@ function restoreFormState() {
   };
 
   setVal('customerName', saved.customerName);
+  setVal('proposedDate', saved.proposedDate);
   restoreRefFields(saved.refPrefix, saved.refNumber);
   setVal('destinationPostcode', saved.destinationPostcode);
   setVal('travelDistance', saved.travelDistanceMiles);
@@ -518,7 +648,7 @@ function restoreFormState() {
 
   // Restore pipette lines
   if (saved.pipetteLines && saved.pipetteLines.length > 0) {
-    renderPipetteLines(saved.pipetteLines, currentSettings);
+    renderPipetteLines(saved.pipetteLines, settings);
     wirePipetteLineEvents();
   }
 
@@ -535,11 +665,14 @@ function restoreFormState() {
 }
 
 async function refreshQuoteHistory() {
+  let rawQuotes;
   if (isSignedIn) {
-    currentQuotes = await loadQuotesFromFirestore();
+    rawQuotes = await loadQuotesFromFirestore();
   } else {
-    currentQuotes = StorageManager.loadQuoteHistory();
+    rawQuotes = StorageManager.loadQuoteHistory();
   }
+  currentQuotes = ensureQuoteSettingsSnapshots(rawQuotes);
+  await backfillMissingQuoteSettingsSnapshots(rawQuotes, currentQuotes);
   renderQuoteHistory(currentQuotes, currentSettings);
 }
 
@@ -560,7 +693,7 @@ function toggleQuoteDetail(id) {
     // Show: recalculate and render the full summary
     const q = currentQuotes.find(quote => quote.id === id);
     if (!q) return;
-    const result = calculateQuote(q, currentSettings);
+    const result = calculateQuote(q, getSettingsForQuote(q));
     const contentEl = summaryEl.querySelector('.history-summary-content');
     // Reuse the same summary renderer
     const tempDiv = document.createElement('div');
@@ -577,7 +710,7 @@ function toggleQuoteDetail(id) {
       if (lr.multi12Count > 0) rows.push(`<div class="summary-row"><span>Multi 12-ch ×${lr.multi12Count}</span><span>${formatCurrency(lr.chargeMulti12)}</span></div>`);
       if (lr.multi16Count > 0) rows.push(`<div class="summary-row"><span>Multi 16-ch ×${lr.multi16Count}</span><span>${formatCurrency(lr.chargeMulti16)}</span></div>`);
       if (rows.length === 0) return '';
-      return `<div class="line-result"><div class="service-level-badge">${lr.serviceLevelName}</div>${rows.join('')}<div class="summary-row subtotal"><span>Line subtotal</span><span>${formatCurrency(lr.chargeTotal)}</span></div></div>`;
+      return `<div class="line-result"><div class="service-level-badge">${escapeHtml(lr.serviceLevelName)}</div>${rows.join('')}<div class="summary-row subtotal"><span>Line subtotal</span><span>${formatCurrency(lr.chargeTotal)}</span></div></div>`;
     }).filter(Boolean).join('');
 
     contentEl.innerHTML = `
@@ -622,6 +755,12 @@ function toggleQuoteDetail(id) {
 function loadQuote(id) {
   const q = currentQuotes.find(quote => quote.id === id);
   if (!q) return;
+  loadedQuoteId = q.id;
+  activeQuoteSettingsSnapshot = normaliseSettingsSnapshot(q.settingsSnapshot);
+  const quoteSettings = getCalculationSettings();
+  populateSettingsForm(quoteSettings);
+  wireServiceLevelRemoveButtons();
+  updateLoadedQuoteActions();
 
   // Load into form using restoreFormState logic
   const setVal = (elId, val) => {
@@ -634,6 +773,7 @@ function loadQuote(id) {
   };
 
   setVal('customerName', q.customerName);
+  setVal('proposedDate', q.proposedDate);
   restoreRefFields(q.refPrefix, q.refNumber);
   setVal('destinationPostcode', q.destinationPostcode);
   setVal('travelDistance', q.travelDistanceMiles);
@@ -655,7 +795,7 @@ function loadQuote(id) {
   setVal('quoteNotes', q.notes);
 
   if (q.pipetteLines && q.pipetteLines.length > 0) {
-    renderPipetteLines(q.pipetteLines, currentSettings);
+    renderPipetteLines(q.pipetteLines, quoteSettings);
     wirePipetteLineEvents();
   }
 
@@ -677,7 +817,7 @@ function loadQuote(id) {
   document.getElementById('quotePanel').classList.add('active');
 
   recalculate();
-  showToast('Quote loaded');
+  showToast('Quote loaded — edit Settings to repair its saved prices');
 }
 
 function showToast(message) {
@@ -692,7 +832,7 @@ function showLogoPreview(dataUrl) {
   if (!preview) return;
   if (dataUrl) {
     preview.innerHTML = `
-      <img src="${dataUrl}" style="max-height:60px; max-width:200px; object-fit:contain; border:1px solid #e2e8f0; border-radius:4px; padding:4px; display:block;">
+      <img src="${escapeHtml(dataUrl)}" style="max-height:60px; max-width:200px; object-fit:contain; border:1px solid #e2e8f0; border-radius:4px; padding:4px; display:block;">
       <button type="button" id="clearLogoBtn" class="btn-link" style="margin-top:0.25rem; font-size:0.75rem; color:#9b2c2c;">Remove logo</button>`;
     document.getElementById('clearLogoBtn').addEventListener('click', () => {
       currentLogoDataUrl = null;
@@ -710,19 +850,21 @@ function showLogoPreview(dataUrl) {
 function openCustomerQuoteFromHistory(id) {
   const q = currentQuotes.find(quote => quote.id === id);
   if (!q) return;
-  const result = calculateQuote(q, currentSettings);
-  generateCustomerQuoteWindow(result, q);
+  const quoteSettings = getSettingsForQuote(q);
+  const result = calculateQuote(q, quoteSettings);
+  generateCustomerQuoteWindow(result, q, quoteSettings);
 }
 
-function generateCustomerQuoteWindow(result, input) {
-  const settings = currentSettings;
+function generateCustomerQuoteWindow(result, input, quoteSettings = currentSettings) {
+  const settings = quoteSettings;
   const logoDataUrl = currentLogoDataUrl;
   const esc = str => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const fmt = v => formatCurrency(v);
 
   const customerName = input.customerName || 'Customer';
+  const proposedDate = formatProposedDate(input.proposedDate);
   const quoteRef = (input.refPrefix && input.refNumber)
-    ? ('KC' + input.refPrefix + input.refNumber + 'Q')
+    ? buildRefCode(input.refPrefix, input.refNumber, true)
     : ('KC-' + (input.id || 'XXXXXXXX').slice(0, 8).toUpperCase());
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -732,7 +874,7 @@ function generateCustomerQuoteWindow(result, input) {
 
   const companyName = settings.companyName || 'Kirkstone Calibration';
   const logoHtml = logoDataUrl
-    ? `<img src="${logoDataUrl}" alt="Logo" style="max-height:75px; max-width:220px; object-fit:contain; display:block; margin-bottom:0.4rem;">`
+    ? `<img src="${esc(logoDataUrl)}" alt="Logo" style="max-height:75px; max-width:220px; object-fit:contain; display:block; margin-bottom:0.4rem;">`
     : '';
 
   const addrLines = (settings.companyAddress || '').split('\n').map(l => l.trim()).filter(Boolean).map(l => `<div>${esc(l)}</div>`).join('');
@@ -841,7 +983,7 @@ function generateCustomerQuoteWindow(result, input) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Quote — ${esc(customerName)} — ${quoteRef}</title>
+<title>Quote — ${esc(customerName)} — ${esc(quoteRef)}</title>
 <style>${css}</style>
 </head>
 <body>
@@ -871,7 +1013,8 @@ function generateCustomerQuoteWindow(result, input) {
     <div>
       <table class="ref-table">
         <tr><td class="ref-label">Date:</td><td>${dateStr}</td></tr>
-        <tr><td class="ref-label">Quote Ref:</td><td><strong>${quoteRef}</strong></td></tr>
+        <tr><td class="ref-label">Quote Ref:</td><td><strong>${esc(quoteRef)}</strong></td></tr>
+        ${proposedDate ? `<tr><td class="ref-label">Proposed:</td><td>${esc(proposedDate)}</td></tr>` : ''}
         <tr><td class="ref-label">Valid Until:</td><td>${validStr}</td></tr>
       </table>
     </div>

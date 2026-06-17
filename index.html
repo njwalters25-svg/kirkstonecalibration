@@ -61,6 +61,11 @@
                 <label for="customerName">Customer Name</label>
                 <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd">
               </div>
+              <div class="form-group">
+                <label for="proposedDate">Proposed date</label>
+                <input type="month" id="proposedDate">
+                <span class="field-hint">Month and year the work is being quoted for</span>
+              </div>
               <div class="form-row" style="margin-top:0.25rem;">
                 <div class="form-group">
                   <label for="refPrefix">Customer code</label>
@@ -238,6 +243,7 @@
             <div id="quoteSummary"></div>
             <div class="actions-bar">
               <button id="saveQuote" class="btn btn-primary">Save Quote</button>
+              <button id="updateSavedQuote" class="btn btn-primary" style="display:none;">Update Saved Quote</button>
               <button id="generateCustomerQuote" class="btn btn-secondary">Customer Quote</button>
               <button id="printQuote" class="btn btn-secondary">Print / PDF</button>
               <button id="clearForm" class="btn btn-secondary">Clear Form</button>
@@ -446,6 +452,7 @@
 
       <div class="settings-actions">
         <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+        <button id="setDefaultSettings" class="btn btn-secondary">Set as Default</button>
         <button id="resetSettings" class="btn btn-danger">Reset to Defaults</button>
       </div>
     </section>
