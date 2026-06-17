@@ -25,6 +25,35 @@ function formatTime(minutes) {
   return `${hrs}h ${mins}m`;
 }
 
+function formatProposedDate(value) {
+  if (!value) return '';
+  const match = String(value).match(/^(\d{4})-(\d{2})$/);
+  if (!match) return String(value);
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatMultilineText(value) {
+  return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function escapeJsString(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/\r/g, '\\r')
+    .replace(/\n/g, '\\n');
+}
+
 function getProfitClass(margin) {
   if (margin >= 20) return 'profit-good';
   if (margin >= 10) return 'profit-ok';
@@ -35,7 +64,7 @@ function getProfitClass(margin) {
 
 function buildServiceLevelOptions(settings, selectedId) {
   return settings.serviceLevels.map(sl =>
-    `<option value="${sl.id}" ${sl.id === selectedId ? 'selected' : ''}>${sl.name}</option>`
+    `<option value="${escapeHtml(sl.id)}" ${sl.id === selectedId ? 'selected' : ''}>${escapeHtml(sl.name)}</option>`
   ).join('');
 }
 
@@ -108,6 +137,9 @@ function collectQuoteInputFromForm() {
     createdAt: new Date().toISOString(),
     customerName: document.getElementById('customerName').value.trim(),
     customerAddress: document.getElementById('customerAddress').value.trim(),
+    proposedDate: document.getElementById('proposedDate').value,
+    refPrefix: document.getElementById('refPrefix').value.trim().toUpperCase(),
+    refNumber: parseInt(document.getElementById('refNumber').value) || null,
     pipetteLines: collectPipetteLinesFromForm(),
     destinationPostcode: document.getElementById('destinationPostcode').value.trim(),
     travelDistanceMiles: parseFloat(document.getElementById('travelDistance').value) || 0,
@@ -149,7 +181,7 @@ function renderQuoteSummary(result) {
     if (rows.length === 0) return '';
     return `
       <div class="line-result">
-        <div class="service-level-badge">${lr.serviceLevelName}</div>
+        <div class="service-level-badge">${escapeHtml(lr.serviceLevelName)}</div>
         ${rows.join('')}
         <div class="summary-row subtotal"><span>Line subtotal</span><span>${formatCurrency(lr.chargeTotal)}</span></div>
       </div>`;
@@ -313,7 +345,7 @@ function renderQuoteSummary(result) {
     ${result.notes ? `
     <div class="summary-section notes-section">
       <h3>Notes</h3>
-      <p class="notes-text">${result.notes.replace(/\n/g, '<br>')}</p>
+      <p class="notes-text">${formatMultilineText(result.notes)}</p>
     </div>` : ''}
   `;
 }
@@ -330,7 +362,7 @@ function renderServiceLevelsEditor(settings) {
         <div class="form-row">
           <div class="form-group">
             <label>Name</label>
-            <input type="text" class="sl-name" value="${sl.name}">
+            <input type="text" class="sl-name" value="${escapeHtml(sl.name)}">
           </div>
           <div class="form-group">
             <label>Readings</label>
@@ -486,6 +518,27 @@ function collectSettingsFromForm() {
   };
 }
 
+// --- Reference number helpers ---
+
+function populateRefPrefixDatalist(quotes) {
+  const datalist = document.getElementById('refPrefixList');
+  if (!datalist) return;
+  const seen = new Set();
+  const options = [];
+  quotes.forEach(q => {
+    if (q.refPrefix && !seen.has(q.refPrefix)) {
+      seen.add(q.refPrefix);
+      options.push(`<option value="${escapeHtml(q.refPrefix)}">`);
+    }
+  });
+  datalist.innerHTML = options.join('');
+}
+
+function buildRefCode(prefix, number, isQuote = true) {
+  if (!prefix || !number) return '';
+  return 'KC' + prefix.toUpperCase() + number + (isQuote ? 'Q' : '');
+}
+
 // --- Quote history ---
 
 function renderQuoteHistory(quotes, settings) {
@@ -499,16 +552,22 @@ function renderQuoteHistory(quotes, settings) {
 
   container.innerHTML = quotes.map(q => {
     // Recalculate the full result to show the complete summary
-    const result = calculateQuote(q, settings);
+    const quoteSettings = typeof getSettingsForQuote === 'function'
+      ? getSettingsForQuote(q, settings)
+      : settings;
+    const result = calculateQuote(q, quoteSettings);
+    const refCode = buildRefCode(q.refPrefix, q.refNumber, true);
 
     return `
-    <div class="history-card" data-id="${q.id}">
+    <div class="history-card" data-id="${escapeHtml(q.id)}">
       <div class="history-header">
-        <strong>${q.customerName || 'Unnamed'}</strong>
+        <strong>${escapeHtml(q.customerName || 'Unnamed')}</strong>
+        ${refCode ? `<span class="ref-badge">${escapeHtml(refCode)}</span>` : ''}
+        ${q.proposedDate ? `<span class="history-date">Proposed ${escapeHtml(formatProposedDate(q.proposedDate))}</span>` : ''}
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
-        ${q.savedBy ? `<span class="history-saved-by">by ${q.savedBy}</span>` : ''}
+        ${q.savedBy ? `<span class="history-saved-by">by ${escapeHtml(q.savedBy)}</span>` : ''}
       </div>
-      <div class="history-summary" id="history-summary-${q.id}" style="display:none;">
+      <div class="history-summary" id="history-summary-${escapeHtml(q.id)}" style="display:none;">
         <div class="history-summary-content"></div>
       </div>
       <div class="history-details">
@@ -517,12 +576,12 @@ function renderQuoteHistory(quotes, settings) {
         <span class="history-total">${formatCurrency(result.totalQuotePrice)}</span>
         <span class="${getProfitClass(result.profitMarginPercent)}">${formatPercent(result.profitMarginPercent)} (${formatCurrency(result.profitAmount)})</span>
       </div>
-      ${q.notes ? `<div class="history-notes">${q.notes.replace(/\n/g, '<br>')}</div>` : ''}
+      ${q.notes ? `<div class="history-notes">${formatMultilineText(q.notes)}</div>` : ''}
       <div class="history-actions">
-        <button class="btn-small" onclick="toggleQuoteDetail('${q.id}')">View details</button>
-        <button class="btn-small" onclick="loadQuote('${q.id}')">Load into form</button>
-        <button class="btn-small btn-quote" onclick="openCustomerQuoteFromHistory('${q.id}')">Customer Quote</button>
-        <button class="btn-small btn-delete" onclick="deleteQuote('${q.id}')">Delete</button>
+        <button class="btn-small" onclick="toggleQuoteDetail('${escapeJsString(q.id)}')">View details</button>
+        <button class="btn-small" onclick="loadQuote('${escapeJsString(q.id)}')">Load into form</button>
+        <button class="btn-small btn-quote" onclick="openCustomerQuoteFromHistory('${escapeJsString(q.id)}')">Customer Quote</button>
+        <button class="btn-small btn-delete" onclick="deleteQuote('${escapeJsString(q.id)}')">Delete</button>
       </div>
     </div>`;
   }).join('');

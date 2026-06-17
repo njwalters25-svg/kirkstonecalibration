@@ -49,6 +49,24 @@
                 <label for="customerAddress">Customer Address <span style="font-weight:400;color:#718096;">(optional — shown on quote)</span></label>
                 <textarea id="customerAddress" rows="3" placeholder="e.g. 12 Science Park&#10;Cambridge&#10;CB4 0WA"></textarea>
               </div>
+              <div class="form-group">
+                <label for="proposedDate">Proposed date</label>
+                <input type="month" id="proposedDate">
+                <span class="field-hint">Month and year the work is being quoted for</span>
+              </div>
+              <div class="form-row" style="margin-top:0.25rem;">
+                <div class="form-group">
+                  <label for="refPrefix">Customer code</label>
+                  <input type="text" id="refPrefix" placeholder="e.g. SYGDC" list="refPrefixList" maxlength="10" autocomplete="off">
+                  <datalist id="refPrefixList"></datalist>
+                  <span class="field-hint">Letters &amp; numbers, no spaces — used to build the reference</span>
+                </div>
+                <div class="form-group">
+                  <label>Quote reference</label>
+                  <div id="refDisplay" class="ref-display ref-display-empty">Enter a customer code</div>
+                  <input type="hidden" id="refNumber">
+                </div>
+              </div>
             </div>
 
             <!-- Pipettes (line items) -->
@@ -222,6 +240,7 @@
             <div id="quoteSummary"></div>
             <div class="actions-bar">
               <button id="saveQuote" class="btn btn-primary">Save Quote</button>
+              <button id="updateSavedQuote" class="btn btn-primary" style="display:none;">Update Saved Quote</button>
               <button id="generateCustomerQuote" class="btn btn-secondary">Customer Quote</button>
               <button id="printQuote" class="btn btn-secondary">Print / PDF</button>
               <button id="clearForm" class="btn btn-secondary">Clear Form</button>
@@ -430,6 +449,7 @@
 
       <div class="settings-actions">
         <button id="saveSettings" class="btn btn-primary">Save Settings</button>
+        <button id="setDefaultSettings" class="btn btn-secondary">Set as Default</button>
         <button id="resetSettings" class="btn btn-danger">Reset to Defaults</button>
       </div>
     </section>
