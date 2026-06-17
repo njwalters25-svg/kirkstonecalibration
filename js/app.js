@@ -21,6 +21,9 @@ function normaliseSettingsSnapshot(snapshot) {
   merged.serviceLevels = Array.isArray(snapshot.serviceLevels) && snapshot.serviceLevels.length > 0
     ? snapshot.serviceLevels
     : cloneSettings(DEFAULT_SETTINGS).serviceLevels;
+  merged.partsCatalog = Array.isArray(snapshot.partsCatalog)
+    ? snapshot.partsCatalog
+    : cloneSettings(DEFAULT_SETTINGS).partsCatalog;
   return merged;
 }
 
@@ -41,6 +44,8 @@ function startFreshQuotePricing() {
   loadedQuoteId = null;
   updateLoadedQuoteActions();
   if (currentSettings) populateSettingsForm(currentSettings);
+  wireServiceLevelRemoveButtons();
+  wirePartsCatalogRemoveButtons();
 }
 
 function updateLoadedQuoteActions() {
@@ -186,7 +191,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cloudSettings) {
       currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
       if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
+      if (cloudSettings.partsCatalog) currentSettings.partsCatalog = cloudSettings.partsCatalog;
       populateSettingsForm(currentSettings);
+      wireServiceLevelRemoveButtons();
+      wirePartsCatalogRemoveButtons();
     }
 
     // Load quotes from Firestore
@@ -380,6 +388,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   wireServiceLevelRemoveButtons();
 
+  // --- Parts catalogue editor: Add / Remove ---
+  document.getElementById('addCatalogPart').addEventListener('click', () => {
+    const partsCatalog = collectPartsCatalogFromEditor();
+    partsCatalog.push({
+      id: 'new_part_' + Date.now(),
+      pipette: '',
+      description: 'New part',
+      name: 'New part',
+      costPerUnit: 0,
+      pricePerUnit: 0,
+    });
+    currentSettings.partsCatalog = partsCatalog;
+    renderPartsCatalogEditor(currentSettings);
+    wirePartsCatalogRemoveButtons();
+  });
+
+  wirePartsCatalogRemoveButtons();
+
   // Settings save
   document.getElementById('saveSettings').addEventListener('click', async () => {
     if (loadedQuoteId) {
@@ -424,10 +450,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (loadedQuoteId) {
         activeQuoteSettingsSnapshot = createQuoteSettingsSnapshot(DEFAULT_SETTINGS);
         populateSettingsForm(activeQuoteSettingsSnapshot);
+        wireServiceLevelRemoveButtons();
+        wirePartsCatalogRemoveButtons();
       } else {
         currentSettings = StorageManager.resetSettings();
         if (isSignedIn) await saveSettingsToFirestore(currentSettings);
         populateSettingsForm(currentSettings);
+        wireServiceLevelRemoveButtons();
+        wirePartsCatalogRemoveButtons();
       }
       wireServiceLevelRemoveButtons();
       const currentLines = collectPipetteLinesFromForm();
@@ -534,6 +564,19 @@ function wireServiceLevelRemoveButtons() {
       currentSettings.serviceLevels = levels;
       renderServiceLevelsEditor(currentSettings);
       wireServiceLevelRemoveButtons();
+    });
+  });
+}
+
+function wirePartsCatalogRemoveButtons() {
+  document.querySelectorAll('.part-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const partsCatalog = collectPartsCatalogFromEditor();
+      const idx = parseInt(btn.dataset.index);
+      partsCatalog.splice(idx, 1);
+      currentSettings.partsCatalog = partsCatalog;
+      renderPartsCatalogEditor(currentSettings);
+      wirePartsCatalogRemoveButtons();
     });
   });
 }
@@ -692,8 +735,10 @@ async function createJobSheetFromQuote(id) {
     proposedDate: quote.proposedDate || '',
     settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings),
     quoteSnapshot: { ...quote, settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings) },
+    partsCatalogSnapshot: cloneSettings(currentSettings?.partsCatalog || DEFAULT_SETTINGS.partsCatalog),
     plannedLines: quote.pipetteLines || [],
     actualEntries: [],
+    parts: [],
     poNumber: '',
     invoiceNumber: '',
     workCarriedOut: '',
@@ -766,6 +811,54 @@ function updateJobCost(jobId, field, value) {
   renderJobSheets(currentJobs);
 }
 
+function addJobPart(jobId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  const catalog = currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || [];
+  const firstPart = catalog[0] || {};
+  job.parts = job.parts || [];
+  job.parts.push({
+    id: crypto.randomUUID(),
+    catalogPartId: firstPart.id || '',
+    name: getCatalogPartName(firstPart),
+    quantity: 1,
+    costPerUnit: firstPart.costPerUnit || 0,
+    pricePerUnit: firstPart.pricePerUnit || 0,
+  });
+  renderJobSheets(currentJobs);
+}
+
+function updateJobPart(jobId, partId, field, value) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  const part = (job.parts || []).find(item => item.id === partId);
+  if (!part) return;
+  if (field === 'catalogPartId') {
+    const catalog = currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || [];
+    const catalogPart = catalog.find(item => item.id === value);
+    part.catalogPartId = value;
+    if (catalogPart) {
+      part.name = getCatalogPartName(catalogPart);
+      part.costPerUnit = catalogPart.costPerUnit || 0;
+      part.pricePerUnit = catalogPart.pricePerUnit || 0;
+    }
+  } else if (field === 'name') {
+    part.name = value;
+  } else {
+    part[field] = field === 'quantity'
+      ? (parseInt(value) || 0)
+      : (parseFloat(value) || 0);
+  }
+  renderJobSheets(currentJobs);
+}
+
+function deleteJobPart(jobId, partId) {
+  const job = getJobById(jobId);
+  if (!job) return;
+  job.parts = (job.parts || []).filter(part => part.id !== partId);
+  renderJobSheets(currentJobs);
+}
+
 function updateJobNotes(jobId, value) {
   const job = getJobById(jobId);
   if (!job) return;
@@ -814,12 +907,22 @@ function exportJobSheetCsv(jobId) {
     add([entry.date, sl?.name || entry.serviceLevelId, entry.singleChannelCount || 0, entry.multiChannel6Count || 0, entry.multiChannel8Count || 0, entry.multiChannel12Count || 0, entry.multiChannel16Count || 0]);
   });
   add([]);
+  add(['Parts']);
+  add(['Quantity', 'Part', 'Cost per unit', 'Customer price per unit', 'Total cost', 'Total price']);
+  (job.parts || []).forEach(part => {
+    const quantity = part.quantity || 0;
+    const costPerUnit = part.costPerUnit || 0;
+    const pricePerUnit = part.pricePerUnit || 0;
+    add([quantity, part.name || '', costPerUnit, pricePerUnit, quantity * costPerUnit, quantity * pricePerUnit]);
+  });
+  add(['Parts total', '', '', '', calc.partsCost, calc.partsRevenue]);
+  add([]);
   add(['Costs']);
   add(['Hotel', job.costs?.hotel || 0]);
   add(['Food', job.costs?.food || 0]);
   add(['Fuel', job.costs?.fuel || 0]);
   add(['Sticker cost', job.costs?.stickers || 0]);
-  add(['Parts', job.costs?.parts || 0]);
+  add(['Extra parts cost', job.costs?.parts || 0]);
   add(['Shipping', job.costs?.shipping || 0]);
   add(['Other', job.costs?.other || 0]);
   add(['Mileage miles', job.costs?.mileageMiles || 0]);
@@ -829,6 +932,8 @@ function exportJobSheetCsv(jobId) {
   add(['Invoice amount inc VAT', calc.revenueIncVat]);
   add(['Invoice amount exc VAT', calc.actualRevenue]);
   add(['VAT amount', calc.vatAmount]);
+  add(['Pipette revenue', calc.pipetteRevenue]);
+  add(['Parts revenue', calc.partsRevenue]);
   add(['Profit', calc.profit]);
   add(['Tax @40%', calc.taxAt40]);
   add(['Profit after tax', calc.profitAfterTax]);
@@ -931,6 +1036,8 @@ function loadQuote(id) {
   activeQuoteSettingsSnapshot = normaliseSettingsSnapshot(q.settingsSnapshot);
   const quoteSettings = getCalculationSettings();
   populateSettingsForm(quoteSettings);
+  wireServiceLevelRemoveButtons();
+  wirePartsCatalogRemoveButtons();
   wireServiceLevelRemoveButtons();
   updateLoadedQuoteActions();
 

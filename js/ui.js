@@ -455,6 +455,63 @@ function collectServiceLevelsFromEditor() {
   });
 }
 
+function getCatalogPartName(part) {
+  return part.name || [part.pipette, part.description].filter(Boolean).join(' ').trim() || 'Unnamed part';
+}
+
+function renderPartsCatalogEditor(settings) {
+  const container = document.getElementById('partsCatalogEditor');
+  if (!container) return;
+  const parts = settings.partsCatalog || [];
+  if (parts.length === 0) {
+    container.innerHTML = '<p class="empty-state compact">No parts yet. Add one below.</p>';
+    return;
+  }
+
+  container.innerHTML = parts.map((part, i) => `
+    <div class="part-card" data-index="${i}">
+      <div class="form-group">
+        <label>Pipette / model</label>
+        <input type="text" class="part-pipette" value="${escapeHtml(part.pipette || '')}">
+      </div>
+      <div class="form-group">
+        <label>Part</label>
+        <input type="text" class="part-description" value="${escapeHtml(part.description || '')}">
+      </div>
+      <div class="form-group">
+        <label>Dropdown name</label>
+        <input type="text" class="part-name" value="${escapeHtml(getCatalogPartName(part))}">
+      </div>
+      <div class="form-group">
+        <label>Cost</label>
+        <input type="number" class="part-cost" step="0.01" min="0" value="${part.costPerUnit || 0}">
+      </div>
+      <div class="form-group">
+        <label>Customer price</label>
+        <input type="number" class="part-price" step="0.01" min="0" value="${part.pricePerUnit || 0}">
+      </div>
+      <button type="button" class="btn-small btn-delete part-remove" data-index="${i}">Remove</button>
+    </div>
+  `).join('');
+}
+
+function collectPartsCatalogFromEditor() {
+  const cards = document.querySelectorAll('#partsCatalogEditor .part-card');
+  return Array.from(cards).map((card, i) => {
+    const pipette = card.querySelector('.part-pipette').value.trim();
+    const description = card.querySelector('.part-description').value.trim();
+    const name = card.querySelector('.part-name').value.trim() || [pipette, description].filter(Boolean).join(' ').trim() || `Part ${i + 1}`;
+    return {
+      id: name.toLowerCase().replace(/[^a-z0-9]+/g, '_') || `part_${i + 1}`,
+      pipette,
+      description,
+      name,
+      costPerUnit: parseFloat(card.querySelector('.part-cost').value) || 0,
+      pricePerUnit: parseFloat(card.querySelector('.part-price').value) || 0,
+    };
+  });
+}
+
 // --- Settings: scalar fields ---
 
 function populateSettingsForm(settings) {
@@ -480,6 +537,7 @@ function populateSettingsForm(settings) {
   if (accomCharge) accomCharge.checked = settings.chargeAccommodationToCustomer;
 
   renderServiceLevelsEditor(settings);
+  renderPartsCatalogEditor(settings);
 }
 
 function collectSettingsFromForm() {
@@ -487,6 +545,7 @@ function collectSettingsFromForm() {
   const str = id => document.getElementById(id)?.value || '';
   return {
     serviceLevels: collectServiceLevelsFromEditor(),
+    partsCatalog: collectPartsCatalogFromEditor(),
     costSingleChannel: num('s_costSingleChannel'),
     costMultiChannel6: num('s_costMultiChannel6'),
     costMultiChannel8: num('s_costMultiChannel8'),
@@ -582,15 +641,21 @@ function calculateJobSheet(job) {
     multi16: plannedTotals.multi16 - actualTotals.multi16,
   };
 
-  let actualRevenue = 0;
+  let pipetteRevenue = 0;
   (job.actualEntries || []).forEach(entry => {
     const sl = getServiceLevel(entry.serviceLevelId, settings);
-    actualRevenue += (entry.singleChannelCount || 0) * (sl?.chargeSingleChannel || 0);
-    actualRevenue += (entry.multiChannel6Count || 0) * (sl?.chargeMultiChannel6 || 0);
-    actualRevenue += (entry.multiChannel8Count || 0) * (sl?.chargeMultiChannel8 || 0);
-    actualRevenue += (entry.multiChannel12Count || 0) * (sl?.chargeMultiChannel12 || 0);
-    actualRevenue += (entry.multiChannel16Count || 0) * (sl?.chargeMultiChannel16 || 0);
+    pipetteRevenue += (entry.singleChannelCount || 0) * (sl?.chargeSingleChannel || 0);
+    pipetteRevenue += (entry.multiChannel6Count || 0) * (sl?.chargeMultiChannel6 || 0);
+    pipetteRevenue += (entry.multiChannel8Count || 0) * (sl?.chargeMultiChannel8 || 0);
+    pipetteRevenue += (entry.multiChannel12Count || 0) * (sl?.chargeMultiChannel12 || 0);
+    pipetteRevenue += (entry.multiChannel16Count || 0) * (sl?.chargeMultiChannel16 || 0);
   });
+
+  const partsCost = (job.parts || []).reduce((total, part) =>
+    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.costPerUnit) || 0)), 0);
+  const partsRevenue = (job.parts || []).reduce((total, part) =>
+    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.pricePerUnit) || 0)), 0);
+  const actualRevenue = pipetteRevenue + partsRevenue;
 
   const costs = job.costs || {};
   const mileageCost = (parseFloat(costs.mileageMiles) || 0) * 0.55;
@@ -602,7 +667,7 @@ function calculateJobSheet(job) {
     (parseFloat(costs.parts) || 0) +
     (parseFloat(costs.shipping) || 0) +
     (parseFloat(costs.other) || 0);
-  const totalCosts = mileageCost + otherCosts;
+  const totalCosts = mileageCost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
   const revenueIncVat = actualRevenue + vatAmount;
@@ -615,6 +680,9 @@ function calculateJobSheet(job) {
     remainingTotals,
     plannedCount: sumTotals(plannedTotals),
     actualCount: sumTotals(actualTotals),
+    pipetteRevenue: roundMoney(pipetteRevenue),
+    partsRevenue: roundMoney(partsRevenue),
+    partsCost: roundMoney(partsCost),
     actualRevenue: roundMoney(actualRevenue),
     vatAmount: roundMoney(vatAmount),
     revenueIncVat: roundMoney(revenueIncVat),
@@ -693,12 +761,23 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
             ${renderJobCostInput(job.id, 'fuel', 'Fuel', job.costs?.fuel)}
             ${renderJobCostInput(job.id, 'stickers', 'Sticker cost', job.costs?.stickers)}
-            ${renderJobCostInput(job.id, 'parts', 'Parts', job.costs?.parts)}
+            ${renderJobCostInput(job.id, 'parts', 'Extra parts cost', job.costs?.parts)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
           </div>
           <div class="field-hint">Mileage cost uses 55p per mile.</div>
+
+          <h3>Parts</h3>
+          <div class="job-parts-list">
+            ${(job.parts || []).map(part => renderJobPartRow(job, part)).join('')}
+          </div>
+          <button class="btn-small" onclick="addJobPart('${escapeJsString(job.id)}')">Add part</button>
+          <div class="job-parts-summary">
+            <span>Parts cost <strong>${formatCurrency(calc.partsCost)}</strong></span>
+            <span>Customer parts price <strong>${formatCurrency(calc.partsRevenue)}</strong></span>
+          </div>
+
           <div class="form-group" style="margin-top:0.75rem;">
             <label>Work carried out</label>
             <textarea class="job-notes" data-job-id="${escapeHtml(job.id)}" rows="3" onchange="updateJobField('${escapeJsString(job.id)}','workCarriedOut',this.value)">${escapeHtml(job.workCarriedOut || '')}</textarea>
@@ -732,6 +811,35 @@ function renderJobEntryRow(job, entry) {
       <input type="number" min="0" value="${entry.multiChannel12Count || 0}" placeholder="12ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel12Count',this.value)">
       <input type="number" min="0" value="${entry.multiChannel16Count || 0}" placeholder="16ch" onchange="updateJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}','multiChannel16Count',this.value)">
       <button class="btn-small btn-delete" onclick="deleteJobEntry('${escapeJsString(job.id)}','${escapeJsString(entry.id)}')">Remove</button>
+    </div>`;
+}
+
+function getJobPartsCatalog(job) {
+  return (typeof currentSettings !== 'undefined' && currentSettings?.partsCatalog)
+    || job.partsCatalogSnapshot
+    || job.settingsSnapshot?.partsCatalog
+    || DEFAULT_SETTINGS.partsCatalog
+    || [];
+}
+
+function renderJobPartRow(job, part) {
+  const catalog = getJobPartsCatalog(job);
+  const options = catalog.map(catalogPart =>
+    `<option value="${escapeHtml(catalogPart.id)}" ${catalogPart.id === part.catalogPartId ? 'selected' : ''}>${escapeHtml(getCatalogPartName(catalogPart))}</option>`
+  ).join('');
+  const quantity = part.quantity || 1;
+  const costTotal = (parseFloat(quantity) || 0) * (parseFloat(part.costPerUnit) || 0);
+  const priceTotal = (parseFloat(quantity) || 0) * (parseFloat(part.pricePerUnit) || 0);
+  return `
+    <div class="job-part-row" data-part-id="${escapeHtml(part.id)}">
+      <select onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','catalogPartId',this.value)">${options}</select>
+      <input type="text" value="${escapeHtml(part.name || '')}" placeholder="Part name" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">
+      <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">
+      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
+      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">
+      <span>${formatCurrency(costTotal)}</span>
+      <span>${formatCurrency(priceTotal)}</span>
+      <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>
     </div>`;
 }
 
