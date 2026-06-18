@@ -753,7 +753,7 @@ function renderJobSheets(jobs) {
     const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
     const isExpanded = typeof expandedJobIds !== 'undefined' && expandedJobIds.has(job.id);
     return `
-      <div class="job-card" data-id="${escapeHtml(job.id)}">
+      <div class="job-card" id="job-card-${escapeHtml(job.id)}" data-id="${escapeHtml(job.id)}">
         <div class="history-header">
           <strong>${escapeHtml(job.customerName || 'Unnamed job')}</strong>
           ${ref ? `<span class="ref-badge">${escapeHtml(ref)}</span>` : ''}
@@ -937,12 +937,17 @@ function renderQuoteHistory(quotes, settings) {
       : settings;
     const result = calculateQuote(q, quoteSettings);
     const refCode = buildRefCode(q.refPrefix, q.refNumber, true);
+    const linkedJob = typeof currentJobs !== 'undefined'
+      ? currentJobs.find(job => job.quoteId === q.id)
+      : null;
+    const hasJobSheet = Boolean(linkedJob);
 
     return `
-    <div class="history-card" data-id="${escapeHtml(q.id)}">
+    <div class="history-card ${hasJobSheet ? 'history-card-job-created' : ''}" data-id="${escapeHtml(q.id)}">
       <div class="history-header">
         <strong>${escapeHtml(q.customerName || 'Unnamed')}</strong>
         ${refCode ? `<span class="ref-badge">${escapeHtml(refCode)}</span>` : ''}
+        ${hasJobSheet ? '<span class="job-created-badge">Job sheet created</span>' : ''}
         ${q.proposedDate ? `<span class="history-date">Proposed ${escapeHtml(formatProposedDate(q.proposedDate))}</span>` : ''}
         <span class="history-date">${new Date(q.createdAt).toLocaleDateString('en-GB')}</span>
         ${q.savedBy ? `<span class="history-saved-by">by ${escapeHtml(q.savedBy)}</span>` : ''}
@@ -960,7 +965,9 @@ function renderQuoteHistory(quotes, settings) {
       <div class="history-actions">
         <button class="btn-small" onclick="toggleQuoteDetail('${escapeJsString(q.id)}')">View details</button>
         <button class="btn-small" onclick="loadQuote('${escapeJsString(q.id)}')">Load into form</button>
-        <button class="btn-small btn-quote" onclick="createJobSheetFromQuote('${escapeJsString(q.id)}')">Create Job Sheet</button>
+        ${hasJobSheet
+          ? `<button class="btn-small btn-quote" onclick="openJobSheet('${escapeJsString(linkedJob.id)}')">Open Job Sheet</button>`
+          : `<button class="btn-small btn-quote" onclick="createJobSheetFromQuote('${escapeJsString(q.id)}')">Create Job Sheet</button>`}
         <button class="btn-small btn-quote" onclick="openCustomerQuoteFromHistory('${escapeJsString(q.id)}')">Customer Quote</button>
         <button class="btn-small btn-delete" onclick="deleteQuote('${escapeJsString(q.id)}')">Delete</button>
       </div>

@@ -167,10 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   restoreFormState();
   recalculate();
-  currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
-  renderQuoteHistory(currentQuotes, currentSettings);
   currentJobs = StorageManager.loadJobs();
   renderJobSheets(currentJobs);
+  currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
+  renderQuoteHistory(currentQuotes, currentSettings);
 
   // Load customers from localStorage and wire autofill
   currentCustomers = StorageManager.loadCustomers();
@@ -704,6 +704,7 @@ async function refreshJobSheets() {
     currentJobs = StorageManager.loadJobs();
   }
   renderJobSheets(currentJobs);
+  renderQuoteHistory(currentQuotes, currentSettings);
 }
 
 function getJobById(id) {
@@ -729,6 +730,7 @@ async function persistJob(job, toastMessage) {
   currentJobs = StorageManager.loadJobs();
   if (isSignedIn && !isLocalPreviewMode) currentJobs = await loadJobsFromFirestore();
   renderJobSheets(currentJobs);
+  renderQuoteHistory(currentQuotes, currentSettings);
   if (toastMessage) showToast(toastMessage);
 }
 
@@ -805,6 +807,18 @@ function toggleJobDetail(id) {
   if (expandedJobIds.has(id)) expandedJobIds.delete(id);
   else expandedJobIds.add(id);
   renderJobSheets(currentJobs);
+}
+
+function openJobSheet(id) {
+  expandedJobIds.add(id);
+  renderJobSheets(currentJobs);
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="jobsPanel"]')?.classList.add('active');
+  document.getElementById('jobsPanel')?.classList.add('active');
+  setTimeout(() => {
+    document.getElementById(`job-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
 }
 
 function addJobEntry(jobId) {
@@ -920,6 +934,7 @@ async function deleteJobSheet(jobId) {
   StorageManager.deleteJob(jobId);
   if (isSignedIn) await deleteJobFromFirestore(jobId);
   await refreshJobSheets();
+  renderQuoteHistory(currentQuotes, currentSettings);
   showToast('Job sheet deleted');
 }
 
