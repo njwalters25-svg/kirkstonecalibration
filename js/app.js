@@ -816,7 +816,9 @@ function updateJobCost(jobId, field, value) {
 function addJobPart(jobId) {
   const job = getJobById(jobId);
   if (!job) return;
-  const catalog = currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || [];
+  const catalog = typeof getEffectivePartsCatalog === 'function'
+    ? getEffectivePartsCatalog(currentSettings || { partsCatalog: job.partsCatalogSnapshot })
+    : (currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || []);
   const firstPart = catalog[0] || {};
   job.parts = job.parts || [];
   job.parts.push({
@@ -836,7 +838,9 @@ function updateJobPart(jobId, partId, field, value) {
   const part = (job.parts || []).find(item => item.id === partId);
   if (!part) return;
   if (field === 'catalogPartId') {
-    const catalog = currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || [];
+    const catalog = typeof getEffectivePartsCatalog === 'function'
+      ? getEffectivePartsCatalog(currentSettings || { partsCatalog: job.partsCatalogSnapshot })
+      : (currentSettings?.partsCatalog || job.partsCatalogSnapshot || DEFAULT_SETTINGS.partsCatalog || []);
     const catalogPart = catalog.find(item => item.id === value);
     part.catalogPartId = value;
     if (catalogPart) {

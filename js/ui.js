@@ -459,10 +459,19 @@ function getCatalogPartName(part) {
   return part.name || [part.pipette, part.description].filter(Boolean).join(' ').trim() || 'Unnamed part';
 }
 
+function getEffectivePartsCatalog(settings) {
+  return Array.isArray(settings?.partsCatalog) && settings.partsCatalog.length > 0
+    ? settings.partsCatalog
+    : JSON.parse(JSON.stringify(DEFAULT_SETTINGS.partsCatalog || []));
+}
+
 function renderPartsCatalogEditor(settings) {
   const container = document.getElementById('partsCatalogEditor');
   if (!container) return;
-  const parts = settings.partsCatalog || [];
+  const parts = getEffectivePartsCatalog(settings);
+  if (settings && (!Array.isArray(settings.partsCatalog) || settings.partsCatalog.length === 0)) {
+    settings.partsCatalog = JSON.parse(JSON.stringify(parts));
+  }
   if (parts.length === 0) {
     container.innerHTML = '<p class="empty-state compact">No parts yet. Add one below.</p>';
     return;
