@@ -981,7 +981,7 @@ function exportJobSheetCsv(jobId) {
   add(['Costs']);
   add(['Hotel', job.costs?.hotel || 0]);
   add(['Food', job.costs?.food || 0]);
-  add(['Fuel', job.costs?.fuel || 0]);
+  add(['Other travel cost', job.costs?.fuel || 0]);
   add(['Sticker cost per pipette', calc.stickerCostPerPipette]);
   add(['Sticker cost', calc.stickerCost]);
   add(['Extra parts cost', calc.partsCost]);
@@ -989,7 +989,7 @@ function exportJobSheetCsv(jobId) {
   add(['Second person', job.costs?.secondPerson || 0]);
   add(['Other', job.costs?.other || 0]);
   add(['Mileage miles', job.costs?.mileageMiles || 0]);
-  add([`Mileage cost @ ${calc.mileageRatePence}p`, calc.mileageCost]);
+  add([`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost]);
   add(['Total costs', calc.totalCosts]);
   add([]);
   add(['Invoice amount inc VAT', calc.revenueIncVat]);
@@ -1073,7 +1073,7 @@ function toggleQuoteDetail(id) {
       <div class="summary-section">
         <h3>Internal Costs</h3>
         <div class="summary-row"><span>Pipettes</span><span>${formatCurrency(result.costPipettesTotal)}</span></div>
-        <div class="summary-row"><span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` × ${result.commuteTrips} days` : ''})</span><span>${formatCurrency(result.costTravel)}</span></div>
+        <div class="summary-row"><span>Mileage allowance (${result.totalTripMiles} mi @ ${result.mileageRatePence}p)</span><span>${formatCurrency(result.costTravel)}</span></div>
         ${result.costAccommodation > 0 ? `<div class="summary-row"><span>Accommodation</span><span>${formatCurrency(result.costAccommodation)}</span></div>` : ''}
         <div class="summary-row"><span>Labour — calibration</span><span>${formatCurrency(result.costLabourCalibration)}</span></div>
         <div class="summary-row"><span>Labour — travel</span><span>${formatCurrency(result.costLabourTravel)}</span></div>

@@ -307,6 +307,7 @@ function calculateQuote(input, settings) {
     (totalMC12 * settings.costMultiChannel12) +
     (totalMC16 * settings.costMultiChannel16);
 
+  result.mileageRatePence = settings.mileageRatePence;
   result.costTravel = totalTripMiles * (settings.mileageRatePence / 100);
   result.costAccommodation = totalHotelCost;
   result.costLabourCalibration = (calMinutes / 60) * settings.labourRatePerHour;

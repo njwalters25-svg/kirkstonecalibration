@@ -204,7 +204,7 @@ function renderQuoteSummary(result) {
       </div>
       ${result.travelCharge > 0 ? `
       <div class="summary-row">
-        <span>Travel charge (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily return trips` : ' round trip'})</span>
+        <span>Travel charge (${result.totalTripMiles} mi total)</span>
         <span>${formatCurrency(result.travelCharge)}</span>
       </div>` : ''}
       ${result.accommodationCharge > 0 && result.travelNight > 0 ? `
@@ -297,12 +297,12 @@ function renderQuoteSummary(result) {
         <span>${formatCurrency(result.costPipettesTotal)}</span>
       </div>
       <div class="summary-row">
-        <span>Mileage (${result.totalTripMiles} mi${result.commuteTrips > 1 ? ` — ${result.commuteTrips} daily trips` : ' round trip'})</span>
+        <span>Mileage allowance (${result.totalTripMiles} mi @ ${result.mileageRatePence}p)</span>
         <span>${formatCurrency(result.costTravel)}</span>
       </div>
-      ${result.hotelCommuteTotalMiles > 0 || result.returnHomeMiles > 0 ? `
+      ${result.homeTripMiles > 0 || result.hotelCommuteTotalMiles > 0 || result.returnHomeMiles > 0 ? `
       <div class="summary-row" style="font-size:0.75rem; color:var(--muted);">
-        <span>Includes${result.hotelCommuteTotalMiles > 0 ? ` ${result.hotelCommuteTotalMiles} mi hotel commute` : ''}${result.hotelCommuteTotalMiles > 0 && result.returnHomeMiles > 0 ? ' + ' : ''}${result.returnHomeMiles > 0 ? `${result.returnHomeMiles} mi return home` : ''}</span>
+        <span>Includes${result.homeTripMiles > 0 ? ` ${result.homeTripMiles} mi home/site return` : ''}${result.homeTripMiles > 0 && (result.hotelCommuteTotalMiles > 0 || result.returnHomeMiles > 0) ? ' + ' : ''}${result.hotelCommuteTotalMiles > 0 ? `${result.hotelCommuteTotalMiles} mi hotel/site` : ''}${result.hotelCommuteTotalMiles > 0 && result.returnHomeMiles > 0 ? ' + ' : ''}${result.returnHomeMiles > 0 ? `${result.returnHomeMiles} mi extra return home` : ''}</span>
         <span></span>
       </div>` : ''}
       ${result.costAccommodation > 0 && result.travelNight > 0 ? `
@@ -792,7 +792,7 @@ function renderJobSheets(jobs) {
           <div class="job-assumptions">
             <strong>From quote</strong>
             <span>Service level: ${escapeHtml(job.quotedServiceLevelSummary || 'Not set')}</span>
-            <span>Mileage: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${calc.mileageRatePence}p</span>
+            <span>Mileage allowance: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${calc.mileageRatePence}p = ${formatCurrency(calc.mileageCost)}</span>
             ${job.quotedAssumptions?.hotelCost ? `<span>Hotel carried over: ${formatCurrency(job.quotedAssumptions.hotelCost)}</span>` : ''}
             ${job.quotedAssumptions?.stickerCost ? `<span>Sticker estimate: ${formatCurrency(job.quotedAssumptions.stickerCost)} (${formatCurrency(job.quotedAssumptions.stickerCostPerPipette || 0)} each quoted)</span>` : ''}
             ${job.quotedAssumptions?.secondPersonCost ? `<span>Second person: ${formatCurrency(job.quotedAssumptions.secondPersonCost)}</span>` : ''}
@@ -817,16 +817,17 @@ function renderJobSheets(jobs) {
           <div class="job-cost-grid">
             ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel)}
             ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
-            ${renderJobCostInput(job.id, 'fuel', 'Fuel', job.costs?.fuel)}
+            ${renderJobCostInput(job.id, 'fuel', 'Other travel cost', job.costs?.fuel)}
             ${renderJobCalculatedCost('Extra parts cost', calc.partsCost)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
             ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
+            ${renderJobCalculatedCost(`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost)}
             ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01')}
             ${renderJobCalculatedCost('Sticker total', calc.stickerCost)}
           </div>
-          <div class="field-hint">Mileage cost uses ${calc.mileageRatePence}p per mile.</div>
+          <div class="field-hint">Mileage allowance is calculated from the miles above at ${calc.mileageRatePence}p per mile.</div>
           <div class="field-hint">Sticker cost is ${calc.actualCount} actual pipette${calc.actualCount !== 1 ? 's' : ''} × ${formatCurrency(calc.stickerCostPerPipette)} = ${formatCurrency(calc.stickerCost)}.</div>
 
           <h3>Parts</h3>
