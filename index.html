@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kirkstone Calibration — Quote Tool</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260618-2">
+  <link rel="stylesheet" href="css/styles.css?v=20260618-3">
 </head>
 <body>
 
@@ -256,14 +256,17 @@
     <section id="settingsPanel" class="tab-panel">
 
       <!-- Service Levels (full width, above the grid) -->
-      <div class="settings-card settings-full-width">
-        <h3>Service Levels</h3>
+      <details class="settings-card settings-full-width collapsible-settings">
+        <summary>
+          <h3>Service Levels</h3>
+          <span>Show / hide</span>
+        </summary>
         <p class="settings-hint">Each level defines the readings, volumes, per-pipette charges, and time estimates. These appear as options in the quote form.</p>
         <div id="serviceLevelsEditor"></div>
         <div style="margin-top: 0.75rem;">
           <button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button>
         </div>
-      </div>
+      </details>
 
       <details class="settings-card settings-full-width collapsible-settings">
         <summary>
@@ -494,12 +497,12 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- App scripts (dependency order) -->
-  <script src="js/data.js?v=20260618-2"></script>
-  <script src="js/firebase.js?v=20260618-2"></script>
-  <script src="js/routing.js?v=20260618-2"></script>
-  <script src="js/quote.js?v=20260618-2"></script>
-  <script src="js/ui.js?v=20260618-2"></script>
-  <script src="js/app.js?v=20260618-2"></script>
+  <script src="js/data.js?v=20260618-3"></script>
+  <script src="js/firebase.js?v=20260618-3"></script>
+  <script src="js/routing.js?v=20260618-3"></script>
+  <script src="js/quote.js?v=20260618-3"></script>
+  <script src="js/ui.js?v=20260618-3"></script>
+  <script src="js/app.js?v=20260618-3"></script>
 
 </body>
 </html>
