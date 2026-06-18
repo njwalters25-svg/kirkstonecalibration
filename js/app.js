@@ -18,6 +18,7 @@ function cloneSettings(settings) {
 function normaliseSettingsSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== 'object') return null;
   const merged = { ...DEFAULT_SETTINGS, ...snapshot };
+  merged.mileageRatePence = normalizeMileageRatePence(merged.mileageRatePence);
   merged.serviceLevels = Array.isArray(snapshot.serviceLevels) && snapshot.serviceLevels.length > 0
     ? snapshot.serviceLevels
     : cloneSettings(DEFAULT_SETTINGS).serviceLevels;
@@ -190,6 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cloudSettings = await loadSettingsFromFirestore();
     if (cloudSettings) {
       currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
+      currentSettings.mileageRatePence = normalizeMileageRatePence(currentSettings.mileageRatePence);
       if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
       currentSettings.partsCatalog = Array.isArray(cloudSettings.partsCatalog) && cloudSettings.partsCatalog.length > 0
         ? cloudSettings.partsCatalog
@@ -757,7 +759,7 @@ async function createJobSheetFromQuote(id) {
     quotedServiceLevelSummary: getJobServiceLevelSummary(quote, quoteSettings),
     quotedAssumptions: {
       totalTripMiles: quoteResult.totalTripMiles || 0,
-      mileageRatePence: quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence || 55,
+      mileageRatePence: normalizeMileageRatePence(quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence),
       hotelCost: quoteResult.costAccommodation || 0,
       foodCost: quoteResult.costSubsistence || 0,
       secondPersonCost: quoteResult.costSecondPerson || 0,
@@ -781,7 +783,7 @@ async function createJobSheetFromQuote(id) {
       other: 0,
       mileageMiles: quoteResult.totalTripMiles || 0,
     },
-    mileageRatePence: quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence || 55,
+    mileageRatePence: normalizeMileageRatePence(quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence),
     notes: '',
   };
   await persistJob(job, 'Job sheet created');

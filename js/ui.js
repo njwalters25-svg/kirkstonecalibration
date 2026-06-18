@@ -669,7 +669,7 @@ function calculateJobSheet(job) {
   const actualRevenue = pipetteRevenue + partsRevenue;
 
   const costs = job.costs || {};
-  const mileageRatePence = parseFloat(job.mileageRatePence ?? settings.mileageRatePence ?? 55) || 55;
+  const mileageRatePence = normalizeMileageRatePence(job.mileageRatePence ?? settings.mileageRatePence ?? 55);
   const mileageCost = (parseFloat(costs.mileageMiles) || 0) * (mileageRatePence / 100);
   const otherCosts =
     (parseFloat(costs.hotel) || 0) +
@@ -766,7 +766,7 @@ function renderJobSheets(jobs) {
           <div class="job-assumptions">
             <strong>From quote</strong>
             <span>Service level: ${escapeHtml(job.quotedServiceLevelSummary || 'Not set')}</span>
-            <span>Mileage: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${(job.mileageRatePence || calc.mileageRatePence)}p</span>
+            <span>Mileage: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${calc.mileageRatePence}p</span>
             ${job.quotedAssumptions?.hotelCost ? `<span>Hotel carried over: ${formatCurrency(job.quotedAssumptions.hotelCost)}</span>` : ''}
             ${job.quotedAssumptions?.stickerCost ? `<span>Sticker cost: ${formatCurrency(job.quotedAssumptions.stickerCost)} (${formatCurrency(job.quotedAssumptions.stickerCostPerPipette || 0)} each)</span>` : ''}
             ${job.quotedAssumptions?.secondPersonCost ? `<span>Second person: ${formatCurrency(job.quotedAssumptions.secondPersonCost)}</span>` : ''}

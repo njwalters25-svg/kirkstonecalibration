@@ -119,6 +119,12 @@ const DEFAULT_SETTINGS = {
   quoteValidDays: 30,
 };
 
+function normalizeMileageRatePence(value) {
+  const parsed = parseFloat(value);
+  if (!parsed || parsed === 45) return 55;
+  return parsed;
+}
+
 const StorageManager = {
   _prefix: 'kirkstone_',
 
@@ -129,6 +135,7 @@ const StorageManager = {
       const saved = JSON.parse(raw);
       // Merge scalar fields with defaults; keep saved serviceLevels array as-is
       const merged = { ...DEFAULT_SETTINGS, ...saved };
+      merged.mileageRatePence = normalizeMileageRatePence(merged.mileageRatePence);
       if (saved.serviceLevels && Array.isArray(saved.serviceLevels)) {
         merged.serviceLevels = saved.serviceLevels;
       } else {
