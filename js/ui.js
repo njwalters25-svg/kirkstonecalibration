@@ -799,6 +799,16 @@ function renderJobSheets(jobs) {
           </div>
           <h3>Actual pipettes by day</h3>
           <div class="job-entry-list">
+            <div class="job-entry-row job-entry-header" aria-hidden="true">
+              <span>Date</span>
+              <span>Service level</span>
+              <span>Single</span>
+              <span>6-channel</span>
+              <span>8-channel</span>
+              <span>12-channel</span>
+              <span>16-channel</span>
+              <span></span>
+            </div>
             ${(job.actualEntries || []).map(entry => renderJobEntryRow(job, entry)).join('')}
           </div>
           <button class="btn-small" onclick="addJobEntry('${escapeJsString(job.id)}')">Add day / service row</button>
@@ -814,6 +824,7 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
             ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01')}
+            ${renderJobCalculatedCost('Sticker total', calc.stickerCost)}
           </div>
           <div class="field-hint">Mileage cost uses ${calc.mileageRatePence}p per mile.</div>
           <div class="field-hint">Sticker cost is ${calc.actualCount} actual pipette${calc.actualCount !== 1 ? 's' : ''} × ${formatCurrency(calc.stickerCostPerPipette)} = ${formatCurrency(calc.stickerCost)}.</div>
