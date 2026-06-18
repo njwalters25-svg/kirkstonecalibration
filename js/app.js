@@ -7,6 +7,7 @@ let isSignedIn = false;
 let currentQuotes = [];
 let currentCustomers = [];
 let currentJobs = [];
+const expandedJobIds = new Set();
 let currentLogoDataUrl = null;
 let activeQuoteSettingsSnapshot = null;
 let loadedQuoteId = null;
@@ -787,6 +788,7 @@ async function createJobSheetFromQuote(id) {
     notes: '',
   };
   await persistJob(job, 'Job sheet created');
+  expandedJobIds.add(job.id);
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelector('[data-tab="jobsPanel"]').classList.add('active');
@@ -797,6 +799,12 @@ function updateJobField(jobId, field, value) {
   const job = getJobById(jobId);
   if (!job) return;
   job[field] = value;
+}
+
+function toggleJobDetail(id) {
+  if (expandedJobIds.has(id)) expandedJobIds.delete(id);
+  else expandedJobIds.add(id);
+  renderJobSheets(currentJobs);
 }
 
 function addJobEntry(jobId) {

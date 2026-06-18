@@ -912,6 +912,19 @@ body {
   margin: 0.75rem 0;
 }
 
+.job-list-summary {
+  display: flex;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  color: var(--text-light);
+  font-size: 0.85rem;
+  margin: 0.4rem 0;
+}
+
+.job-list-summary strong {
+  color: var(--text);
+}
+
 .job-mini-table,
 .job-kpis {
   background: var(--bg);

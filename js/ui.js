@@ -33,6 +33,13 @@ function formatProposedDate(value) {
   return date.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
 }
 
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -733,15 +740,23 @@ function renderJobSheets(jobs) {
   container.innerHTML = jobs.map(job => {
     const calc = calculateJobSheet(job);
     const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
+    const isExpanded = typeof expandedJobIds !== 'undefined' && expandedJobIds.has(job.id);
     return `
       <div class="job-card" data-id="${escapeHtml(job.id)}">
         <div class="history-header">
           <strong>${escapeHtml(job.customerName || 'Unnamed job')}</strong>
           ${ref ? `<span class="ref-badge">${escapeHtml(ref)}</span>` : ''}
           ${job.proposedDate ? `<span class="history-date">Proposed ${escapeHtml(formatProposedDate(job.proposedDate))}</span>` : ''}
-          <span class="history-date">${escapeHtml(job.status || 'open')}</span>
+          <span class="history-date">Updated ${escapeHtml(formatDate(job.updatedAt || job.createdAt))}</span>
         </div>
-        <div class="job-summary-grid">
+        <div class="job-list-summary">
+          <span>Planned <strong>${calc.plannedCount}</strong></span>
+          <span>Actual <strong>${calc.actualCount}</strong></span>
+          <span>Remaining <strong>${sumTotals(calc.remainingTotals)}</strong></span>
+          <span>Profit <strong>${formatCurrency(calc.profit)}</strong></span>
+        </div>
+        <div class="job-detail" style="display:${isExpanded ? 'block' : 'none'};">
+          <div class="job-summary-grid">
           ${renderMiniTotals('Planned', calc.plannedTotals)}
           ${renderMiniTotals('Actual', calc.actualTotals)}
           ${renderMiniTotals('Remaining', calc.remainingTotals)}
@@ -751,8 +766,8 @@ function renderJobSheets(jobs) {
             <span>Costs <strong>${formatCurrency(calc.totalCosts)}</strong></span>
             <span>Profit <strong>${formatCurrency(calc.profit)}</strong></span>
           </div>
-        </div>
-        <div class="job-meta-grid">
+          </div>
+          <div class="job-meta-grid">
           <div class="form-group">
             <label>PO number</label>
             <input type="text" value="${escapeHtml(job.poNumber || '')}" onchange="updateJobField('${escapeJsString(job.id)}','poNumber',this.value)">
@@ -761,8 +776,8 @@ function renderJobSheets(jobs) {
             <label>Invoice number</label>
             <input type="text" value="${escapeHtml(job.invoiceNumber || '')}" onchange="updateJobField('${escapeJsString(job.id)}','invoiceNumber',this.value)">
           </div>
-        </div>
-        <div class="job-editor">
+          </div>
+          <div class="job-editor">
           <div class="job-assumptions">
             <strong>From quote</strong>
             <span>Service level: ${escapeHtml(job.quotedServiceLevelSummary || 'Not set')}</span>
@@ -809,8 +824,10 @@ function renderJobSheets(jobs) {
             <label>Job notes</label>
             <textarea class="job-notes" data-job-id="${escapeHtml(job.id)}" rows="3" onchange="updateJobNotes('${escapeJsString(job.id)}', this.value)">${escapeHtml(job.notes || '')}</textarea>
           </div>
+          </div>
         </div>
         <div class="history-actions">
+          <button class="btn-small btn-quote" onclick="toggleJobDetail('${escapeJsString(job.id)}')">${isExpanded ? 'Close Job Sheet' : 'Open Job Sheet'}</button>
           <button class="btn-small btn-quote" onclick="saveJobSheet('${escapeJsString(job.id)}')">Save Job Sheet</button>
           <button class="btn-small" onclick="exportJobSheetCsv('${escapeJsString(job.id)}')">Export CSV</button>
           <button class="btn-small btn-delete" onclick="deleteJobSheet('${escapeJsString(job.id)}')">Delete</button>
