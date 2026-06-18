@@ -526,6 +526,7 @@ function collectPartsCatalogFromEditor() {
 function populateSettingsForm(settings) {
   const fields = [
     'costSingleChannel', 'costMultiChannel6', 'costMultiChannel8', 'costMultiChannel12', 'costMultiChannel16',
+    'stickerCostPerPipette',
     'labourRatePerHour', 'workingHoursPerDay',
     'secondPersonDayCost', 'secondPersonTimeReduction',
     'mileageRatePence', 'travelChargePerMile',
@@ -560,6 +561,7 @@ function collectSettingsFromForm() {
     costMultiChannel8: num('s_costMultiChannel8'),
     costMultiChannel12: num('s_costMultiChannel12'),
     costMultiChannel16: num('s_costMultiChannel16'),
+    stickerCostPerPipette: num('s_stickerCostPerPipette'),
     labourRatePerHour: num('s_labourRatePerHour'),
     workingHoursPerDay: num('s_workingHoursPerDay') || 8,
     secondPersonDayCost: num('s_secondPersonDayCost'),
@@ -667,7 +669,8 @@ function calculateJobSheet(job) {
   const actualRevenue = pipetteRevenue + partsRevenue;
 
   const costs = job.costs || {};
-  const mileageCost = (parseFloat(costs.mileageMiles) || 0) * 0.55;
+  const mileageRatePence = parseFloat(job.mileageRatePence ?? settings.mileageRatePence ?? 55) || 55;
+  const mileageCost = (parseFloat(costs.mileageMiles) || 0) * (mileageRatePence / 100);
   const otherCosts =
     (parseFloat(costs.hotel) || 0) +
     (parseFloat(costs.food) || 0) +
@@ -675,6 +678,7 @@ function calculateJobSheet(job) {
     (parseFloat(costs.stickers) || 0) +
     (parseFloat(costs.parts) || 0) +
     (parseFloat(costs.shipping) || 0) +
+    (parseFloat(costs.secondPerson) || 0) +
     (parseFloat(costs.other) || 0);
   const totalCosts = mileageCost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
@@ -693,6 +697,7 @@ function calculateJobSheet(job) {
     partsRevenue: roundMoney(partsRevenue),
     partsCost: roundMoney(partsCost),
     actualRevenue: roundMoney(actualRevenue),
+    mileageRatePence,
     vatAmount: roundMoney(vatAmount),
     revenueIncVat: roundMoney(revenueIncVat),
     mileageCost: roundMoney(mileageCost),
@@ -758,6 +763,14 @@ function renderJobSheets(jobs) {
           </div>
         </div>
         <div class="job-editor">
+          <div class="job-assumptions">
+            <strong>From quote</strong>
+            <span>Service level: ${escapeHtml(job.quotedServiceLevelSummary || 'Not set')}</span>
+            <span>Mileage: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${(job.mileageRatePence || calc.mileageRatePence)}p</span>
+            ${job.quotedAssumptions?.hotelCost ? `<span>Hotel carried over: ${formatCurrency(job.quotedAssumptions.hotelCost)}</span>` : ''}
+            ${job.quotedAssumptions?.stickerCost ? `<span>Sticker cost: ${formatCurrency(job.quotedAssumptions.stickerCost)} (${formatCurrency(job.quotedAssumptions.stickerCostPerPipette || 0)} each)</span>` : ''}
+            ${job.quotedAssumptions?.secondPersonCost ? `<span>Second person: ${formatCurrency(job.quotedAssumptions.secondPersonCost)}</span>` : ''}
+          </div>
           <h3>Actual pipettes by day</h3>
           <div class="job-entry-list">
             ${(job.actualEntries || []).map(entry => renderJobEntryRow(job, entry)).join('')}
@@ -772,10 +785,11 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'stickers', 'Sticker cost', job.costs?.stickers)}
             ${renderJobCostInput(job.id, 'parts', 'Extra parts cost', job.costs?.parts)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
+            ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
           </div>
-          <div class="field-hint">Mileage cost uses 55p per mile.</div>
+          <div class="field-hint">Mileage cost uses ${calc.mileageRatePence}p per mile.</div>
 
           <h3>Parts</h3>
           <div class="job-parts-list">

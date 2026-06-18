@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kirkstone Calibration — Quote Tool</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260618-3">
+  <link rel="stylesheet" href="css/styles.css?v=20260618-4">
 </head>
 <body>
 
@@ -310,6 +310,11 @@
             <input type="number" id="s_costMultiChannel16" step="0.50" min="0">
             <span class="unit">GBP</span>
           </div>
+          <div class="setting-row">
+            <label>Sticker cost per pipette</label>
+            <input type="number" id="s_stickerCostPerPipette" step="0.01" min="0">
+            <span class="unit">GBP</span>
+          </div>
         </div>
 
         <!-- Labour -->
@@ -497,12 +502,12 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <!-- App scripts (dependency order) -->
-  <script src="js/data.js?v=20260618-3"></script>
-  <script src="js/firebase.js?v=20260618-3"></script>
-  <script src="js/routing.js?v=20260618-3"></script>
-  <script src="js/quote.js?v=20260618-3"></script>
-  <script src="js/ui.js?v=20260618-3"></script>
-  <script src="js/app.js?v=20260618-3"></script>
+  <script src="js/data.js?v=20260618-4"></script>
+  <script src="js/firebase.js?v=20260618-4"></script>
+  <script src="js/routing.js?v=20260618-4"></script>
+  <script src="js/quote.js?v=20260618-4"></script>
+  <script src="js/ui.js?v=20260618-4"></script>
+  <script src="js/app.js?v=20260618-4"></script>
 
 </body>
 </html>

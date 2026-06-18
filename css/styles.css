@@ -947,6 +947,24 @@ body {
   padding-top: 1rem;
 }
 
+.job-assumptions {
+  display: flex;
+  gap: 0.5rem 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  background: var(--green-bg);
+  border: 1px solid #9ae6b4;
+  border-radius: var(--radius);
+  color: var(--green);
+  font-size: 0.8rem;
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.job-assumptions strong {
+  color: var(--green);
+}
+
 .job-entry-list {
   display: grid;
   gap: 0.5rem;

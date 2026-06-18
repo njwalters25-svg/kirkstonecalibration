@@ -77,6 +77,7 @@ const DEFAULT_SETTINGS = {
   costMultiChannel8: 12.00,
   costMultiChannel12: 16.00,
   costMultiChannel16: 20.00,
+  stickerCostPerPipette: 0.10,
 
   // Labour
   labourRatePerHour: 35.00,
@@ -87,7 +88,7 @@ const DEFAULT_SETTINGS = {
   secondPersonTimeReduction: 40,   // % reduction in calibration time
 
   // Travel
-  mileageRatePence: 45,
+  mileageRatePence: 55,
   travelChargeToCustomer: true,
   travelChargePerMile: 0.45,
 

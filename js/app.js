@@ -707,6 +707,18 @@ function getJobById(id) {
   return currentJobs.find(job => job.id === id);
 }
 
+function getDefaultJobServiceLevelId(quote, settings) {
+  return quote.pipetteLines?.find(line => line.serviceLevelId)?.serviceLevelId
+    || settings.serviceLevels?.[0]?.id
+    || '';
+}
+
+function getJobServiceLevelSummary(quote, settings) {
+  const ids = [...new Set((quote.pipetteLines || []).map(line => line.serviceLevelId).filter(Boolean))];
+  if (ids.length === 0) return settings.serviceLevels?.[0]?.name || 'Not set';
+  return ids.map(id => getServiceLevel(id, settings)?.name || id).join(', ');
+}
+
 async function persistJob(job, toastMessage) {
   job.updatedAt = new Date().toISOString();
   StorageManager.saveJob(job);
@@ -724,7 +736,10 @@ async function createJobSheetFromQuote(id) {
   if (existing && !confirm('A job sheet already exists for this quote. Create another one?')) return;
 
   const quoteSettings = getSettingsForQuote(quote);
+  const quoteResult = calculateQuote(quote, quoteSettings);
   const ref = buildRefCode(quote.refPrefix, quote.refNumber, true);
+  const stickerCostPerPipette = quoteSettings.stickerCostPerPipette ?? DEFAULT_SETTINGS.stickerCostPerPipette ?? 0.10;
+  const defaultServiceLevelId = getDefaultJobServiceLevelId(quote, quoteSettings);
   const job = {
     id: crypto.randomUUID(),
     quoteId: quote.id,
@@ -738,6 +753,17 @@ async function createJobSheetFromQuote(id) {
     settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings),
     quoteSnapshot: { ...quote, settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings) },
     partsCatalogSnapshot: cloneSettings(currentSettings?.partsCatalog || DEFAULT_SETTINGS.partsCatalog),
+    defaultServiceLevelId,
+    quotedServiceLevelSummary: getJobServiceLevelSummary(quote, quoteSettings),
+    quotedAssumptions: {
+      totalTripMiles: quoteResult.totalTripMiles || 0,
+      mileageRatePence: quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence || 55,
+      hotelCost: quoteResult.costAccommodation || 0,
+      foodCost: quoteResult.costSubsistence || 0,
+      secondPersonCost: quoteResult.costSecondPerson || 0,
+      stickerCostPerPipette,
+      stickerCost: (quoteResult.totalPipettes || 0) * stickerCostPerPipette,
+    },
     plannedLines: quote.pipetteLines || [],
     actualEntries: [],
     parts: [],
@@ -745,15 +771,17 @@ async function createJobSheetFromQuote(id) {
     invoiceNumber: '',
     workCarriedOut: '',
     costs: {
-      hotel: 0,
-      food: 0,
+      hotel: quoteResult.costAccommodation || 0,
+      food: quoteResult.costSubsistence || 0,
       fuel: 0,
-      stickers: 0,
+      stickers: (quoteResult.totalPipettes || 0) * stickerCostPerPipette,
       parts: 0,
       shipping: 0,
+      secondPerson: quoteResult.costSecondPerson || 0,
       other: 0,
-      mileageMiles: 0,
+      mileageMiles: quoteResult.totalTripMiles || 0,
     },
+    mileageRatePence: quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence || 55,
     notes: '',
   };
   await persistJob(job, 'Job sheet created');
@@ -772,7 +800,7 @@ function updateJobField(jobId, field, value) {
 function addJobEntry(jobId) {
   const job = getJobById(jobId);
   if (!job) return;
-  const firstLevel = job.settingsSnapshot?.serviceLevels?.[0]?.id || '';
+  const firstLevel = job.defaultServiceLevelId || job.settingsSnapshot?.serviceLevels?.[0]?.id || '';
   job.actualEntries = job.actualEntries || [];
   job.actualEntries.push({
     id: crypto.randomUUID(),
@@ -900,6 +928,8 @@ function exportJobSheetCsv(jobId) {
   add(['PO number', job.poNumber || '']);
   add(['Invoice number', job.invoiceNumber || '']);
   add(['Days on site', calc.actualDays]);
+  add(['Quoted service level', job.quotedServiceLevelSummary || '']);
+  add(['Mileage rate', `${calc.mileageRatePence}p per mile`]);
   add([]);
   add(['Planned', 'Single', '6ch', '8ch', '12ch', '16ch', 'Total']);
   add(['', calc.plannedTotals.single, calc.plannedTotals.multi6, calc.plannedTotals.multi8, calc.plannedTotals.multi12, calc.plannedTotals.multi16, calc.plannedCount]);
@@ -930,9 +960,10 @@ function exportJobSheetCsv(jobId) {
   add(['Sticker cost', job.costs?.stickers || 0]);
   add(['Extra parts cost', job.costs?.parts || 0]);
   add(['Shipping', job.costs?.shipping || 0]);
+  add(['Second person', job.costs?.secondPerson || 0]);
   add(['Other', job.costs?.other || 0]);
   add(['Mileage miles', job.costs?.mileageMiles || 0]);
-  add(['Mileage cost @ 55p', calc.mileageCost]);
+  add([`Mileage cost @ ${calc.mileageRatePence}p`, calc.mileageCost]);
   add(['Total costs', calc.totalCosts]);
   add([]);
   add(['Invoice amount inc VAT', calc.revenueIncVat]);
