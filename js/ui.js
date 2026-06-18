@@ -693,7 +693,6 @@ function calculateJobSheet(job) {
     (parseFloat(costs.food) || 0) +
     (parseFloat(costs.fuel) || 0) +
     stickerCost +
-    (parseFloat(costs.parts) || 0) +
     (parseFloat(costs.shipping) || 0) +
     (parseFloat(costs.secondPerson) || 0) +
     (parseFloat(costs.other) || 0);
@@ -809,7 +808,7 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel)}
             ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
             ${renderJobCostInput(job.id, 'fuel', 'Fuel', job.costs?.fuel)}
-            ${renderJobCostInput(job.id, 'parts', 'Extra parts cost', job.costs?.parts)}
+            ${renderJobCalculatedCost('Extra parts cost', calc.partsCost)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
             ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
@@ -901,6 +900,14 @@ function renderJobCostInput(jobId, field, label, value) {
     <div class="form-group">
       <label>${escapeHtml(label)}</label>
       <input type="number" min="0" step="0.01" value="${value || 0}" onchange="updateJobCost('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+    </div>`;
+}
+
+function renderJobCalculatedCost(label, value) {
+  return `
+    <div class="form-group">
+      <label>${escapeHtml(label)}</label>
+      <input type="number" value="${value || 0}" readonly>
     </div>`;
 }
 

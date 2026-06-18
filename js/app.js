@@ -969,7 +969,7 @@ function exportJobSheetCsv(jobId) {
   add(['Fuel', job.costs?.fuel || 0]);
   add(['Sticker cost per pipette', calc.stickerCostPerPipette]);
   add(['Sticker cost', calc.stickerCost]);
-  add(['Extra parts cost', job.costs?.parts || 0]);
+  add(['Extra parts cost', calc.partsCost]);
   add(['Shipping', job.costs?.shipping || 0]);
   add(['Second person', job.costs?.secondPerson || 0]);
   add(['Other', job.costs?.other || 0]);
