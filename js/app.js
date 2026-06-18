@@ -21,7 +21,7 @@ function normaliseSettingsSnapshot(snapshot) {
   merged.serviceLevels = Array.isArray(snapshot.serviceLevels) && snapshot.serviceLevels.length > 0
     ? snapshot.serviceLevels
     : cloneSettings(DEFAULT_SETTINGS).serviceLevels;
-  merged.partsCatalog = Array.isArray(snapshot.partsCatalog)
+  merged.partsCatalog = Array.isArray(snapshot.partsCatalog) && snapshot.partsCatalog.length > 0
     ? snapshot.partsCatalog
     : cloneSettings(DEFAULT_SETTINGS).partsCatalog;
   return merged;
@@ -191,7 +191,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cloudSettings) {
       currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
       if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
-      if (cloudSettings.partsCatalog) currentSettings.partsCatalog = cloudSettings.partsCatalog;
+      currentSettings.partsCatalog = Array.isArray(cloudSettings.partsCatalog) && cloudSettings.partsCatalog.length > 0
+        ? cloudSettings.partsCatalog
+        : cloneSettings(DEFAULT_SETTINGS).partsCatalog;
       populateSettingsForm(currentSettings);
       wireServiceLevelRemoveButtons();
       wirePartsCatalogRemoveButtons();

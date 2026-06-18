@@ -133,7 +133,7 @@ const StorageManager = {
       } else {
         merged.serviceLevels = JSON.parse(JSON.stringify(DEFAULT_SETTINGS.serviceLevels));
       }
-      if (saved.partsCatalog && Array.isArray(saved.partsCatalog)) {
+      if (Array.isArray(saved.partsCatalog) && saved.partsCatalog.length > 0) {
         merged.partsCatalog = saved.partsCatalog;
       } else {
         merged.partsCatalog = JSON.parse(JSON.stringify(DEFAULT_SETTINGS.partsCatalog));

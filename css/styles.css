@@ -621,6 +621,42 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.collapsible-settings summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.collapsible-settings summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible-settings summary h3 {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.collapsible-settings summary span {
+  color: var(--accent);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.collapsible-settings summary span::before {
+  content: '+ ';
+}
+
+.collapsible-settings[open] summary {
+  margin-bottom: 1rem;
+}
+
+.collapsible-settings[open] summary span::before {
+  content: '- ';
+}
+
 .setting-row {
   display: flex;
   align-items: center;
