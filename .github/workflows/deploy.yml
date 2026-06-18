@@ -17,6 +17,7 @@ jobs:
               "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/update" \
               -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
               --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
+              --data-urlencode "branch=main" \
               --insecure)
             echo "$response"
             test "$(echo "$response" | jq -r '.status')" = "1"
