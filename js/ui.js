@@ -698,6 +698,7 @@ function calculateJobSheet(job) {
     (parseFloat(costs.other) || 0);
   const totalCosts = mileageCost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
+  const profitMarginPercent = actualRevenue > 0 ? (profit / actualRevenue) * 100 : 0;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
   const revenueIncVat = actualRevenue + vatAmount;
   const taxAt40 = Math.max(profit, 0) * 0.40;
@@ -721,6 +722,7 @@ function calculateJobSheet(job) {
     mileageCost: roundMoney(mileageCost),
     totalCosts: roundMoney(totalCosts),
     profit: roundMoney(profit),
+    profitMarginPercent: roundMoney(profitMarginPercent),
     taxAt40: roundMoney(taxAt40),
     profitAfterTax: roundMoney(profitAfterTax),
     actualDays,
@@ -752,6 +754,7 @@ function renderJobSheets(jobs) {
     const calc = calculateJobSheet(job);
     const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
     const isExpanded = typeof expandedJobIds !== 'undefined' && expandedJobIds.has(job.id);
+    const profitClass = getProfitClass(calc.profitMarginPercent);
     return `
       <div class="job-card" id="job-card-${escapeHtml(job.id)}" data-id="${escapeHtml(job.id)}">
         <div class="history-header">
@@ -777,6 +780,17 @@ function renderJobSheets(jobs) {
             <span>Costs <strong>${formatCurrency(calc.totalCosts)}</strong></span>
             <span>Profit <strong>${formatCurrency(calc.profit)}</strong></span>
           </div>
+          </div>
+          <div class="summary-section profit-section job-profit-section ${profitClass}">
+            <div class="profit-label">Estimated actual job profit</div>
+            <div class="profit-amount">${formatCurrency(calc.profit)}</div>
+            <div class="profit-margin">${formatPercent(calc.profitMarginPercent)} margin</div>
+            <div class="profit-estimate">Revenue ${formatCurrency(calc.actualRevenue)} - costs ${formatCurrency(calc.totalCosts)}</div>
+            <div class="job-profit-breakdown">
+              <span>Tax @40% <strong>${formatCurrency(calc.taxAt40)}</strong></span>
+              <span>After tax <strong>${formatCurrency(calc.profitAfterTax)}</strong></span>
+              <span>Per day <strong>${formatCurrency(calc.profitPerDay)}</strong></span>
+            </div>
           </div>
           <div class="job-meta-grid">
           <div class="form-group">

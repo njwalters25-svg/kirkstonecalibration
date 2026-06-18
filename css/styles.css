@@ -485,6 +485,12 @@ body {
   line-height: 1.2;
 }
 
+.profit-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .profit-margin {
   font-size: 1.1rem;
   font-weight: 600;
@@ -496,6 +502,19 @@ body {
   font-size: 0.8rem;
   margin-top: 0.25rem;
   opacity: 0.8;
+}
+
+.job-profit-section {
+  margin: 0.75rem 0 1rem;
+}
+
+.job-profit-breakdown {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  font-size: 0.82rem;
+  margin-top: 0.65rem;
 }
 
 /* --- Buttons --- */
