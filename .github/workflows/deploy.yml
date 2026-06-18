@@ -11,13 +11,25 @@ jobs:
     steps:
       - name: Pull latest from GitHub
         run: |
-          response=$(curl -s -X POST \
-            "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/update" \
-            -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
-            --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
-            --insecure)
-          echo "$response"
-          test "$(echo "$response" | jq -r '.status')" = "1"
+          target_sha="${GITHUB_SHA}"
+          for attempt in 1 2 3 4 5; do
+            response=$(curl -s -X POST \
+              "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControl/update" \
+              -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
+              --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
+              --insecure)
+            echo "$response"
+            test "$(echo "$response" | jq -r '.status')" = "1"
+            current_sha="$(echo "$response" | jq -r '.data.last_update.identifier // empty')"
+            if [ "$current_sha" = "$target_sha" ]; then
+              echo "cPanel repository is at ${target_sha}"
+              exit 0
+            fi
+            echo "cPanel is at ${current_sha:-unknown}; waiting for ${target_sha} (attempt ${attempt}/5)"
+            sleep 5
+          done
+          echo "cPanel did not reach ${target_sha}"
+          exit 1
 
       - name: Deploy HEAD commit
         run: |
