@@ -767,6 +767,7 @@ async function createJobSheetFromQuote(id) {
       stickerCostPerPipette,
       stickerCost: (quoteResult.totalPipettes || 0) * stickerCostPerPipette,
     },
+    stickerCostPerPipette,
     plannedLines: quote.pipetteLines || [],
     actualEntries: [],
     parts: [],
@@ -777,7 +778,6 @@ async function createJobSheetFromQuote(id) {
       hotel: quoteResult.costAccommodation || 0,
       food: quoteResult.costSubsistence || 0,
       fuel: 0,
-      stickers: (quoteResult.totalPipettes || 0) * stickerCostPerPipette,
       parts: 0,
       shipping: 0,
       secondPerson: quoteResult.costSecondPerson || 0,
@@ -967,7 +967,8 @@ function exportJobSheetCsv(jobId) {
   add(['Hotel', job.costs?.hotel || 0]);
   add(['Food', job.costs?.food || 0]);
   add(['Fuel', job.costs?.fuel || 0]);
-  add(['Sticker cost', job.costs?.stickers || 0]);
+  add(['Sticker cost per pipette', calc.stickerCostPerPipette]);
+  add(['Sticker cost', calc.stickerCost]);
   add(['Extra parts cost', job.costs?.parts || 0]);
   add(['Shipping', job.costs?.shipping || 0]);
   add(['Second person', job.costs?.secondPerson || 0]);

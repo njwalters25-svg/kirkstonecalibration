@@ -651,6 +651,8 @@ function calculateJobSheet(job) {
     : (job.settingsSnapshot || DEFAULT_SETTINGS);
   const plannedTotals = getJobPlannedTotals(job);
   const actualTotals = getJobActualTotals(job);
+  const plannedCount = sumTotals(plannedTotals);
+  const actualCount = sumTotals(actualTotals);
   const remainingTotals = {
     single: plannedTotals.single - actualTotals.single,
     multi6: plannedTotals.multi6 - actualTotals.multi6,
@@ -678,11 +680,19 @@ function calculateJobSheet(job) {
   const costs = job.costs || {};
   const mileageRatePence = normalizeMileageRatePence(job.mileageRatePence ?? settings.mileageRatePence ?? 55);
   const mileageCost = (parseFloat(costs.mileageMiles) || 0) * (mileageRatePence / 100);
+  const stickerCostPerPipette = parseFloat(
+    job.stickerCostPerPipette
+    ?? job.quotedAssumptions?.stickerCostPerPipette
+    ?? settings.stickerCostPerPipette
+    ?? DEFAULT_SETTINGS.stickerCostPerPipette
+    ?? 0.10
+  ) || 0;
+  const stickerCost = actualCount * stickerCostPerPipette;
   const otherCosts =
     (parseFloat(costs.hotel) || 0) +
     (parseFloat(costs.food) || 0) +
     (parseFloat(costs.fuel) || 0) +
-    (parseFloat(costs.stickers) || 0) +
+    stickerCost +
     (parseFloat(costs.parts) || 0) +
     (parseFloat(costs.shipping) || 0) +
     (parseFloat(costs.secondPerson) || 0) +
@@ -698,13 +708,15 @@ function calculateJobSheet(job) {
     plannedTotals,
     actualTotals,
     remainingTotals,
-    plannedCount: sumTotals(plannedTotals),
-    actualCount: sumTotals(actualTotals),
+    plannedCount,
+    actualCount,
     pipetteRevenue: roundMoney(pipetteRevenue),
     partsRevenue: roundMoney(partsRevenue),
     partsCost: roundMoney(partsCost),
     actualRevenue: roundMoney(actualRevenue),
     mileageRatePence,
+    stickerCostPerPipette,
+    stickerCost: roundMoney(stickerCost),
     vatAmount: roundMoney(vatAmount),
     revenueIncVat: roundMoney(revenueIncVat),
     mileageCost: roundMoney(mileageCost),
@@ -783,7 +795,7 @@ function renderJobSheets(jobs) {
             <span>Service level: ${escapeHtml(job.quotedServiceLevelSummary || 'Not set')}</span>
             <span>Mileage: ${(job.quotedAssumptions?.totalTripMiles || job.costs?.mileageMiles || 0)} miles @ ${calc.mileageRatePence}p</span>
             ${job.quotedAssumptions?.hotelCost ? `<span>Hotel carried over: ${formatCurrency(job.quotedAssumptions.hotelCost)}</span>` : ''}
-            ${job.quotedAssumptions?.stickerCost ? `<span>Sticker cost: ${formatCurrency(job.quotedAssumptions.stickerCost)} (${formatCurrency(job.quotedAssumptions.stickerCostPerPipette || 0)} each)</span>` : ''}
+            ${job.quotedAssumptions?.stickerCost ? `<span>Sticker estimate: ${formatCurrency(job.quotedAssumptions.stickerCost)} (${formatCurrency(job.quotedAssumptions.stickerCostPerPipette || 0)} each quoted)</span>` : ''}
             ${job.quotedAssumptions?.secondPersonCost ? `<span>Second person: ${formatCurrency(job.quotedAssumptions.secondPersonCost)}</span>` : ''}
           </div>
           <h3>Actual pipettes by day</h3>
@@ -797,14 +809,15 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel)}
             ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
             ${renderJobCostInput(job.id, 'fuel', 'Fuel', job.costs?.fuel)}
-            ${renderJobCostInput(job.id, 'stickers', 'Sticker cost', job.costs?.stickers)}
             ${renderJobCostInput(job.id, 'parts', 'Extra parts cost', job.costs?.parts)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
             ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
+            ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01')}
           </div>
           <div class="field-hint">Mileage cost uses ${calc.mileageRatePence}p per mile.</div>
+          <div class="field-hint">Sticker cost is ${calc.actualCount} actual pipette${calc.actualCount !== 1 ? 's' : ''} × ${formatCurrency(calc.stickerCostPerPipette)} = ${formatCurrency(calc.stickerCost)}.</div>
 
           <h3>Parts</h3>
           <div class="job-parts-list">
@@ -888,6 +901,14 @@ function renderJobCostInput(jobId, field, label, value) {
     <div class="form-group">
       <label>${escapeHtml(label)}</label>
       <input type="number" min="0" step="0.01" value="${value || 0}" onchange="updateJobCost('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+    </div>`;
+}
+
+function renderJobFieldInput(jobId, field, label, value, step = '1') {
+  return `
+    <div class="form-group">
+      <label>${escapeHtml(label)}</label>
+      <input type="number" min="0" step="${escapeHtml(step)}" value="${value || 0}" onchange="updateJobField('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
     </div>`;
 }
 

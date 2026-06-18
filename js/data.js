@@ -136,6 +136,7 @@ const StorageManager = {
       // Merge scalar fields with defaults; keep saved serviceLevels array as-is
       const merged = { ...DEFAULT_SETTINGS, ...saved };
       merged.mileageRatePence = normalizeMileageRatePence(merged.mileageRatePence);
+      merged.stickerCostPerPipette = parseFloat(merged.stickerCostPerPipette) || DEFAULT_SETTINGS.stickerCostPerPipette;
       if (saved.serviceLevels && Array.isArray(saved.serviceLevels)) {
         merged.serviceLevels = saved.serviceLevels;
       } else {
