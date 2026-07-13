@@ -180,7 +180,7 @@ function calculateQuote(input, settings) {
 
   // --- Auto-suggest overnight & estimate nights ---
   const threshold = settings.overnightThresholdMins || 90;
-  const needsOvernight = travelMinutes >= threshold || totalDays > 1 || input.travelDayBefore;
+  const needsOvernight = travelMinutes >= threshold || input.travelDayBefore;
 
   // Job nights = days minus 1 (sleep between working days)
   const jobNights = totalDays > 1 ? totalDays - 1 : 0;

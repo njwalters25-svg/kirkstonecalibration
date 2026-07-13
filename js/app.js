@@ -605,7 +605,8 @@ function recalculate() {
   // Show overnight suggestion hint if not already ticked
   const hint = document.getElementById('overnightHint');
   if (finalResult.overnightSuggested && !finalInput.overnightStay) {
-    hint.textContent = `Travel is ${finalResult.timePlan.travelOutMins} mins one way — overnight stay recommended (${finalResult.suggestedNights} night${finalResult.suggestedNights !== 1 ? 's' : ''})`;
+    const threshold = settings.overnightThresholdMins || 90;
+    hint.textContent = `Travel is ${finalResult.timePlan.travelOutMins} mins one way, above the ${threshold}-minute threshold — overnight stay recommended (${finalResult.suggestedNights} night${finalResult.suggestedNights !== 1 ? 's' : ''})`;
     hint.style.display = 'block';
   } else {
     hint.style.display = 'none';
