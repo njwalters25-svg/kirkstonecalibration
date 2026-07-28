@@ -90,7 +90,7 @@ async function backfillMissingQuoteSettingsSnapshots(rawQuotes, quotesWithSnapsh
 
   if (missing.length === 0) return;
 
-  if (isSignedIn && !isLocalPreviewMode) {
+  if (!isLocalPreviewMode) {
     await Promise.all(missing.map(({ updated }) =>
       updateQuoteSettingsSnapshotInFirestore(updated.id, updated.settingsSnapshot)
     ));
@@ -139,6 +139,68 @@ function restoreRefFields(refPrefix, refNumber) {
   }
 }
 
+function setCloudStatus(status, message) {
+  const statusEl = document.getElementById('cloudStatus');
+  if (!statusEl) return;
+  statusEl.className = `cloud-status cloud-status-${status}`;
+  statusEl.textContent = message;
+}
+
+function getFirebaseErrorMessage(error) {
+  const code = error?.code ? `${error.code}: ` : '';
+  return `${code}${error?.message || 'Firebase could not be reached.'}`;
+}
+
+async function initialiseFirebaseData() {
+  if (isLocalPreviewMode) {
+    setCloudStatus('ready', 'Local preview mode - using this browser only.');
+    currentJobs = StorageManager.loadJobs();
+    renderJobSheets(currentJobs);
+    currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
+    renderQuoteHistory(currentQuotes, currentSettings);
+    currentCustomers = StorageManager.loadCustomers();
+    updateCustomerDatalist();
+    return;
+  }
+
+  setCloudStatus('loading', 'Connecting to Firebase...');
+  currentJobs = [];
+  currentQuotes = [];
+  renderJobSheets(currentJobs);
+  renderQuoteHistory(currentQuotes, currentSettings);
+
+  try {
+    await signInAnonymously();
+    isSignedIn = true;
+  } catch (error) {
+    isSignedIn = false;
+    console.warn('Firebase auth unavailable; trying Firestore directly', error);
+  }
+
+  const cloudSettings = await loadSettingsFromFirestore();
+  if (cloudSettings) {
+    currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
+    currentSettings.mileageRatePence = normalizeMileageRatePence(currentSettings.mileageRatePence);
+    if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
+    currentSettings.partsCatalog = Array.isArray(cloudSettings.partsCatalog) && cloudSettings.partsCatalog.length > 0
+      ? cloudSettings.partsCatalog
+      : cloneSettings(DEFAULT_SETTINGS).partsCatalog;
+    populateSettingsForm(currentSettings);
+    wireServiceLevelRemoveButtons();
+    wirePartsCatalogRemoveButtons();
+  }
+
+  await refreshQuoteHistory();
+  await refreshJobSheets();
+
+  const cloudCustomers = await loadCustomersFromFirestore();
+  currentCustomers = cloudCustomers;
+  StorageManager.saveCustomers(currentCustomers);
+  updateCustomerDatalist();
+  setCloudStatus('ready', `Firebase connected - ${currentQuotes.length} saved quote${currentQuotes.length !== 1 ? 's' : ''} loaded.`);
+  recalculate();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   currentSettings = StorageManager.loadSettings();
   populateSettingsForm(currentSettings);
@@ -167,10 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   restoreFormState();
   recalculate();
-  currentJobs = StorageManager.loadJobs();
-  renderJobSheets(currentJobs);
-  currentQuotes = ensureQuoteSettingsSnapshots(StorageManager.loadQuoteHistory());
-  renderQuoteHistory(currentQuotes, currentSettings);
 
   // Load customers from localStorage and wire autofill
   currentCustomers = StorageManager.loadCustomers();
@@ -184,40 +242,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Sign in anonymously to enable Firestore access
-  signInAnonymously().then(async () => {
-    isSignedIn = true;
-
-    // Load settings from Firestore
-    const cloudSettings = await loadSettingsFromFirestore();
-    if (cloudSettings) {
-      currentSettings = { ...DEFAULT_SETTINGS, ...cloudSettings };
-      currentSettings.mileageRatePence = normalizeMileageRatePence(currentSettings.mileageRatePence);
-      if (cloudSettings.serviceLevels) currentSettings.serviceLevels = cloudSettings.serviceLevels;
-      currentSettings.partsCatalog = Array.isArray(cloudSettings.partsCatalog) && cloudSettings.partsCatalog.length > 0
-        ? cloudSettings.partsCatalog
-        : cloneSettings(DEFAULT_SETTINGS).partsCatalog;
-      populateSettingsForm(currentSettings);
-      wireServiceLevelRemoveButtons();
-      wirePartsCatalogRemoveButtons();
-    }
-
-    // Load quotes from Firestore
-    await refreshQuoteHistory();
-
-    // Load job sheets from Firestore
-    await refreshJobSheets();
-
-    // Load customers from Firestore
-    const cloudCustomers = await loadCustomersFromFirestore();
-    if (cloudCustomers.length > 0) {
-      currentCustomers = cloudCustomers;
-      StorageManager.saveCustomers(currentCustomers);
-    }
-    updateCustomerDatalist();
-    recalculate();
-  }).catch(() => {
-    // Firestore unavailable — app still works from localStorage
+  initialiseFirebaseData().catch(error => {
+    isSignedIn = false;
+    currentJobs = [];
+    currentQuotes = [];
+    renderJobSheets(currentJobs);
+    renderQuoteHistory(currentQuotes, currentSettings);
+    setCloudStatus('error', `Firebase unavailable - saved quotes are not loaded. ${getFirebaseErrorMessage(error)}`);
   });
 
   // Tab switching
@@ -418,7 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       currentSettings = collectSettingsFromForm();
       StorageManager.saveSettings(currentSettings);
-      if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+      if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);
     }
     // Re-render pipette lines to update service level dropdowns
     const currentLines = collectPipetteLinesFromForm();
@@ -433,7 +464,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const defaults = collectSettingsFromForm();
     currentSettings = defaults;
     StorageManager.saveSettings(currentSettings);
-    if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+    if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);
 
     if (!loadedQuoteId) {
       const currentLines = collectPipetteLinesFromForm();
@@ -459,7 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wirePartsCatalogRemoveButtons();
       } else {
         currentSettings = StorageManager.resetSettings();
-        if (isSignedIn) await saveSettingsToFirestore(currentSettings);
+        if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);
         populateSettingsForm(currentSettings);
         wireServiceLevelRemoveButtons();
         wirePartsCatalogRemoveButtons();
@@ -477,11 +508,19 @@ document.addEventListener('DOMContentLoaded', () => {
   // Save quote
   document.getElementById('saveQuote').addEventListener('click', async () => {
     const saved = buildSavedQuoteFromForm(null, null, getCalculationSettings());
-    StorageManager.saveQuote(saved);
-    if (isSignedIn) await saveQuoteToFirestore(saved);
-    await upsertCustomer(input.customerName, input.customerAddress);
-    await refreshQuoteHistory();
-    showToast('Quote saved');
+    try {
+      StorageManager.saveQuote(saved);
+      if (!isLocalPreviewMode) await saveQuoteToFirestore(saved);
+      await upsertCustomer(saved.customerName, saved.customerAddress);
+      await refreshQuoteHistory();
+      setCloudStatus(isLocalPreviewMode ? 'ready' : 'ready', isLocalPreviewMode
+        ? 'Local preview mode - using this browser only.'
+        : `Firebase connected - ${currentQuotes.length} saved quote${currentQuotes.length !== 1 ? 's' : ''} loaded.`);
+      showToast(isLocalPreviewMode ? 'Quote saved locally' : 'Quote saved to Firebase');
+    } catch (error) {
+      setCloudStatus('error', `Firebase save failed. ${getFirebaseErrorMessage(error)}`);
+      showToast('Firebase save failed - quote kept only on this device');
+    }
   });
 
   document.getElementById('updateSavedQuote').addEventListener('click', async () => {
@@ -493,10 +532,18 @@ document.addEventListener('DOMContentLoaded', () => {
       ...buildSavedQuoteFromForm(original.id, original.createdAt, getCalculationSettings()),
       savedBy: original.savedBy,
     };
-    StorageManager.updateQuote(updated);
-    if (isSignedIn) await updateQuoteInFirestore(updated);
-    await refreshQuoteHistory();
-    showToast('Saved quote updated');
+    try {
+      StorageManager.updateQuote(updated);
+      if (!isLocalPreviewMode) await updateQuoteInFirestore(updated);
+      await refreshQuoteHistory();
+      setCloudStatus(isLocalPreviewMode ? 'ready' : 'ready', isLocalPreviewMode
+        ? 'Local preview mode - using this browser only.'
+        : `Firebase connected - ${currentQuotes.length} saved quote${currentQuotes.length !== 1 ? 's' : ''} loaded.`);
+      showToast(isLocalPreviewMode ? 'Saved quote updated locally' : 'Saved quote updated in Firebase');
+    } catch (error) {
+      setCloudStatus('error', `Firebase update failed. ${getFirebaseErrorMessage(error)}`);
+      showToast('Firebase update failed - changes kept only on this device');
+    }
   });
 
   // Print
@@ -688,10 +735,10 @@ function restoreFormState() {
 
 async function refreshQuoteHistory() {
   let rawQuotes;
-  if (isSignedIn) {
-    rawQuotes = await loadQuotesFromFirestore();
-  } else {
+  if (isLocalPreviewMode) {
     rawQuotes = StorageManager.loadQuoteHistory();
+  } else {
+    rawQuotes = await loadQuotesFromFirestore();
   }
   currentQuotes = ensureQuoteSettingsSnapshots(rawQuotes);
   await backfillMissingQuoteSettingsSnapshots(rawQuotes, currentQuotes);
@@ -699,10 +746,10 @@ async function refreshQuoteHistory() {
 }
 
 async function refreshJobSheets() {
-  if (isSignedIn) {
-    currentJobs = await loadJobsFromFirestore();
-  } else {
+  if (isLocalPreviewMode) {
     currentJobs = StorageManager.loadJobs();
+  } else {
+    currentJobs = await loadJobsFromFirestore();
   }
   renderJobSheets(currentJobs);
   renderQuoteHistory(currentQuotes, currentSettings);
@@ -727,9 +774,9 @@ function getJobServiceLevelSummary(quote, settings) {
 async function persistJob(job, toastMessage) {
   job.updatedAt = new Date().toISOString();
   StorageManager.saveJob(job);
-  if (isSignedIn) await saveJobToFirestore(job);
+  if (!isLocalPreviewMode) await saveJobToFirestore(job);
   currentJobs = StorageManager.loadJobs();
-  if (isSignedIn && !isLocalPreviewMode) currentJobs = await loadJobsFromFirestore();
+  if (!isLocalPreviewMode) currentJobs = await loadJobsFromFirestore();
   renderJobSheets(currentJobs);
   renderQuoteHistory(currentQuotes, currentSettings);
   if (toastMessage) showToast(toastMessage);
@@ -933,7 +980,7 @@ async function saveJobSheet(jobId) {
 async function deleteJobSheet(jobId) {
   if (!confirm('Delete this job sheet?')) return;
   StorageManager.deleteJob(jobId);
-  if (isSignedIn) await deleteJobFromFirestore(jobId);
+  if (!isLocalPreviewMode) await deleteJobFromFirestore(jobId);
   await refreshJobSheets();
   renderQuoteHistory(currentQuotes, currentSettings);
   showToast('Job sheet deleted');
@@ -1020,7 +1067,7 @@ function exportJobSheetCsv(jobId) {
 async function deleteQuote(id) {
   if (confirm('Delete this saved quote?')) {
     StorageManager.deleteQuote(id);
-    if (isSignedIn) await deleteQuoteFromFirestore(id);
+    if (!isLocalPreviewMode) await deleteQuoteFromFirestore(id);
     await refreshQuoteHistory();
     showToast('Quote deleted');
   }
@@ -1188,7 +1235,13 @@ async function upsertCustomer(name, address) {
   };
   currentCustomers = StorageManager.upsertCustomer(customer);
   updateCustomerDatalist();
-  if (isSignedIn) await saveCustomerToFirestore(customer);
+  if (!isLocalPreviewMode) {
+    try {
+      await saveCustomerToFirestore(customer);
+    } catch (error) {
+      console.warn('Customer cloud sync failed', error);
+    }
+  }
 }
 
 function showLogoPreview(dataUrl) {

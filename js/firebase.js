@@ -15,29 +15,35 @@ const firebaseConfig = {
   appId: "1:556297442382:web:37cf1dab88dfeefcc61f1f"
 };
 
-if (!window.firebase && !isLocalPreviewMode) {
-  throw new Error('Firebase SDK failed to load.');
-}
+const firebaseLoadError = (!window.firebase && !isLocalPreviewMode)
+  ? new Error('Firebase SDK failed to load.')
+  : null;
 
 if (window.firebase) {
   firebase.initializeApp(firebaseConfig);
 }
 
-const auth = window.firebase ? firebase.auth() : null;
-const db = window.firebase ? firebase.firestore() : null;
-const googleProvider = window.firebase ? new firebase.auth.GoogleAuthProvider() : null;
+const auth = window.firebase && firebase.auth ? firebase.auth() : null;
+const db = window.firebase && firebase.firestore ? firebase.firestore() : null;
+const googleProvider = window.firebase && firebase.auth ? new firebase.auth.GoogleAuthProvider() : null;
 
 const localPreviewUser = {
   displayName: 'Local preview',
   email: 'preview@kirkstone.local',
 };
 
+function requireFirebase(service) {
+  if (firebaseLoadError) throw firebaseLoadError;
+  if (!service) throw new Error('Firebase is not available.');
+  return service;
+}
+
 // --- Allowed users (stored in Firestore > config/allowedUsers) ---
 
 async function isUserAllowed(user) {
   if (isLocalPreviewMode) return true;
   try {
-    const doc = await db.collection('config').doc('allowedusers').get();
+    const doc = await requireFirebase(db).collection('config').doc('allowedusers').get();
     if (!doc.exists) return false;
     const data = doc.data();
     const emails = (data.emails || []).map(e => e.toLowerCase());
@@ -55,7 +61,10 @@ function isMobile() {
 
 function signInAnonymously() {
   if (isLocalPreviewMode) return Promise.resolve(localPreviewUser);
-  return auth.signInAnonymously();
+  requireFirebase(auth);
+  return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+    .catch(() => null)
+    .then(() => auth.signInAnonymously());
 }
 
 function signInWithGoogle() {
@@ -69,7 +78,7 @@ function signInWithGoogle() {
 }
 
 // Handle redirect result on page load (for mobile sign-in)
-if (!isLocalPreviewMode) {
+if (!isLocalPreviewMode && auth) {
   auth.getRedirectResult().catch(() => {
     // Silently ignore — redirect result errors are non-critical
   });
@@ -77,6 +86,7 @@ if (!isLocalPreviewMode) {
 
 function signOut() {
   if (isLocalPreviewMode) return Promise.resolve();
+  requireFirebase(auth);
   return auth.signOut();
 }
 
@@ -85,26 +95,26 @@ function onAuthStateChanged(callback) {
     setTimeout(() => callback(localPreviewUser), 0);
     return () => {};
   }
+  requireFirebase(auth);
   return auth.onAuthStateChanged(callback);
 }
 
 function getCurrentUser() {
   if (isLocalPreviewMode) return localPreviewUser;
-  return auth.currentUser;
+  return auth ? auth.currentUser : null;
 }
 
 // --- Firestore: Quotes (shared between all users) ---
 
 function getQuotesRef() {
-  return db.collection('quotes');
+  return requireFirebase(db).collection('quotes');
 }
 
 async function saveQuoteToFirestore(quote) {
   if (isLocalPreviewMode) return;
   const user = getCurrentUser();
-  if (!user) return;
   // Tag with who saved it
-  quote.savedBy = user.displayName || user.email;
+  quote.savedBy = user ? (user.displayName || user.email) : (quote.savedBy || 'Kirkstone app');
   await getQuotesRef().doc(quote.id).set(quote);
 }
 
@@ -132,7 +142,7 @@ async function updateQuoteSettingsSnapshotInFirestore(id, settingsSnapshot) {
 // --- Firestore: Jobs ---
 
 function getJobsRef() {
-  return db.collection('jobs');
+  return requireFirebase(db).collection('jobs');
 }
 
 async function saveJobToFirestore(job) {
@@ -154,13 +164,11 @@ async function deleteJobFromFirestore(id) {
 // --- Firestore: Customers ---
 
 function getCustomersRef() {
-  return db.collection('customers');
+  return requireFirebase(db).collection('customers');
 }
 
 async function saveCustomerToFirestore(customer) {
   if (isLocalPreviewMode) return;
-  const user = getCurrentUser();
-  if (!user) return;
   await getCustomersRef().doc(customer.id).set(customer);
 }
 
@@ -174,12 +182,12 @@ async function loadCustomersFromFirestore() {
 
 async function saveSettingsToFirestore(settings) {
   if (isLocalPreviewMode) return;
-  await db.collection('config').doc('settings').set(settings);
+  await requireFirebase(db).collection('config').doc('settings').set(settings);
 }
 
 async function loadSettingsFromFirestore() {
   if (isLocalPreviewMode) return null;
-  const doc = await db.collection('config').doc('settings').get();
+  const doc = await requireFirebase(db).collection('config').doc('settings').get();
   if (doc.exists) {
     return doc.data();
   }

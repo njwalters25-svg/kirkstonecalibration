@@ -171,6 +171,33 @@ body {
   padding: 1.5rem;
 }
 
+.cloud-status {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.75rem;
+}
+
+.cloud-status-loading {
+  background: var(--amber-bg);
+  border-color: #ecc94b;
+  color: var(--amber);
+}
+
+.cloud-status-ready {
+  background: var(--green-bg);
+  border-color: #9ae6b4;
+  color: var(--green);
+}
+
+.cloud-status-error {
+  background: var(--red-bg);
+  border-color: #feb2b2;
+  color: var(--red);
+}
+
 .tab-panel {
   display: none;
 }
