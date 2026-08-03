@@ -352,6 +352,9 @@ function calculateQuote(input, settings) {
   result.profitMarginPercent = result.totalQuotePrice > 0
     ? (result.profitAmount / result.totalQuotePrice) * 100
     : 0;
+  result.profitPerDay = result.timePlan.totalDays > 0
+    ? result.profitAmount / result.timePlan.totalDays
+    : result.profitAmount;
 
   // --- Notes ---
   result.notes = input.notes || '';

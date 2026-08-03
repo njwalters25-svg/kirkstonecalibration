@@ -346,6 +346,7 @@ function renderQuoteSummary(result) {
     <div class="summary-section profit-section ${profitClass}">
       <div class="profit-amount">${formatCurrency(result.profitAmount)}</div>
       <div class="profit-margin">${formatPercent(result.profitMarginPercent)} margin</div>
+      <div class="profit-estimate">${formatCurrency(result.profitPerDay)} profit per day</div>
       <div class="profit-pipettes">${result.totalPipettes} pipette${result.totalPipettes !== 1 ? 's' : ''} total</div>
     </div>
 
