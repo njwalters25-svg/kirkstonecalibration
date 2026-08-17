@@ -1,0 +1,44 @@
+name: Position job part labels
+
+on:
+  push:
+    paths:
+      - '.github/workflows/position-job-part-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Position Cost and Price labels above their boxes
+        run: |
+          cat >> css/styles.css <<'EOF'
+
+/* Keep Job Sheet Cost and Price labels directly above their own input boxes */
+.job-part-row {
+  align-items: end;
+}
+.job-part-money-field {
+  align-self: end;
+  justify-content: flex-end;
+  gap: 0.18rem;
+}
+.job-part-money-field > span {
+  display: block;
+  width: 100%;
+  text-align: left;
+  line-height: 1.1;
+  margin: 0 0 0.08rem 0;
+}
+EOF
+          sed -i 's/styles.css?v=20260817-2/styles.css?v=20260817-3/' index.html
+      - name: Commit app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add css/styles.css index.html
+          git commit -m "Position Cost and Price labels above job part boxes"
+          git push
