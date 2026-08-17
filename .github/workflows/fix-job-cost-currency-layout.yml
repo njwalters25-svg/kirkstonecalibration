@@ -1,0 +1,93 @@
+name: Fix job cost currency layout
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-job-cost-currency-layout.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add missing pound sign and tidy currency inputs
+        shell: python
+        run: |
+          from pathlib import Path
+
+          ui = Path('js/ui.js')
+          s = ui.read_text()
+          old = "${renderJobCalculatedCost('Extra parts cost', calc.partsCost)}"
+          new = "${renderJobCalculatedCost('Extra parts cost', calc.partsCost, true)}"
+          if old not in s:
+              raise SystemExit('Extra parts cost call not found')
+          s = s.replace(old, new, 1)
+          ui.write_text(s)
+
+          css = Path('css/styles.css')
+          c = css.read_text()
+          marker = '/* Currency prefix inside Job Sheet monetary inputs */'
+          if marker not in c:
+              raise SystemExit('Currency CSS marker not found')
+          start = c.index(marker)
+          replacement = '''/* Currency prefix inside Job Sheet monetary inputs */
+.currency-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 0.7rem;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.currency-input:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.currency-input .currency-prefix {
+  position: static;
+  flex: 0 0 auto;
+  margin-right: 0.35rem;
+  color: var(--text);
+  line-height: 1;
+  pointer-events: none;
+}
+.currency-input input,
+.currency-input input[type="number"] {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0;
+  margin: 0;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none !important;
+  background: transparent;
+}
+.currency-input input:focus {
+  outline: none;
+}
+'''
+          # Currency block is at the end of the stylesheet, so replace from marker onward.
+          c = c[:start] + replacement
+          css.write_text(c)
+
+          index = Path('index.html')
+          i = index.read_text()
+          i = i.replace('styles.css?v=20260817-6', 'styles.css?v=20260817-7')
+          i = i.replace('ui.js?v=20260817-6', 'ui.js?v=20260817-7')
+          index.write_text(i)
+
+      - name: Commit real app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/ui.js css/styles.css index.html
+          git commit -m "Fix job cost currency alignment and extra parts prefix"
+          git push
