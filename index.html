@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Kirkstone Calibration — Quote Tool</title>
-  <link rel="stylesheet" href="css/styles.css?v=20260803-1">
+  <link rel="stylesheet" href="css/styles.css?v=20260817-2">
 </head>
 <body>
 
@@ -323,38 +323,18 @@
           <h3>Labour</h3>
           <div class="setting-row">
             <label>Hourly rate (internal cost)</label>
-            <input type="number" id="s_labourRatePerHour" step="0.50" min="0">
+            <input type="number" id="s_labourHourlyRate" step="1" min="0">
             <span class="unit">GBP/hr</span>
           </div>
           <div class="setting-row">
-            <label>Working hours per day</label>
-            <input type="number" id="s_workingHoursPerDay" step="0.5" min="1" max="24">
-            <span class="unit">hrs</span>
+            <label>Daily overheads</label>
+            <input type="number" id="s_dailyOverheads" step="1" min="0">
+            <span class="unit">GBP/day</span>
           </div>
           <div class="setting-row">
-            <label>Second person day cost</label>
-            <input type="number" id="s_secondPersonDayCost" step="10" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Time reduction with 2nd person</label>
-            <input type="number" id="s_secondPersonTimeReduction" step="5" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
-        </div>
-
-        <!-- Subsistence -->
-        <div class="settings-card">
-          <h3>Subsistence (HMRC rates)</h3>
-          <div class="setting-row">
-            <label>Overnight rate (per day)</label>
-            <input type="number" id="s_subsistenceOvernightRate" step="1" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Day trip rate (10hr+, per day)</label>
-            <input type="number" id="s_subsistenceDayTripRate" step="1" min="0">
-            <span class="unit">GBP</span>
+            <label>Working day length</label>
+            <input type="number" id="s_workingDayHours" step="0.5" min="1">
+            <span class="unit">hours</span>
           </div>
         </div>
 
@@ -362,111 +342,103 @@
         <div class="settings-card">
           <h3>Travel</h3>
           <div class="setting-row">
-            <label>Mileage allowance rate</label>
-            <input type="number" id="s_mileageRatePence" step="1" min="0">
-            <span class="unit">p/mi</span>
-          </div>
-          <div class="checkbox-group">
-            <input type="checkbox" id="s_travelChargeToCustomer">
-            <label for="s_travelChargeToCustomer">Charge travel to customer</label>
+            <label>Mileage rate</label>
+            <input type="number" id="s_mileageRate" step="0.01" min="0">
+            <span class="unit">GBP/mile</span>
           </div>
           <div class="setting-row">
-            <label>Travel charge rate</label>
-            <input type="number" id="s_travelChargePerMile" step="0.01" min="0">
-            <span class="unit">GBP/mi</span>
+            <label>Travel time value</label>
+            <input type="number" id="s_travelTimeRate" step="1" min="0">
+            <span class="unit">GBP/hr</span>
           </div>
         </div>
 
-        <!-- Location & routing -->
+        <!-- Thresholds -->
         <div class="settings-card">
-          <h3>Location & Routing</h3>
+          <h3>Profit Thresholds</h3>
           <div class="setting-row">
-            <label>Home postcode</label>
-            <input type="text" id="s_homePostcode" style="width:120px; text-align:left;">
-            <span class="unit"></span>
+            <label>Good profit</label>
+            <input type="number" id="s_profitGood" step="1" min="0">
+            <span class="unit">GBP/day</span>
           </div>
           <div class="setting-row">
-            <label>London premium</label>
-            <input type="number" id="s_londonPremiumPercent" step="1" min="0">
-            <span class="unit">%</span>
+            <label>OK profit</label>
+            <input type="number" id="s_profitOk" step="1" min="0">
+            <span class="unit">GBP/day</span>
+          </div>
+          <div class="setting-row">
+            <label>Target profit</label>
+            <input type="number" id="s_profitTarget" step="1" min="0">
+            <span class="unit">GBP/day</span>
           </div>
         </div>
 
-        <!-- Accommodation -->
+        <!-- Home base -->
         <div class="settings-card">
-          <h3>Accommodation</h3>
+          <h3>Home Base</h3>
           <div class="setting-row">
-            <label>Default hotel budget</label>
-            <input type="number" id="s_hotelBudgetDefault" step="5" min="0">
-            <span class="unit">GBP/night</span>
+            <label>Postcode</label>
+            <input type="text" id="s_homePostcode" style="width:110px;">
           </div>
-          <div class="setting-row">
-            <label>Suggest overnight if travel exceeds</label>
-            <input type="number" id="s_overnightThresholdMins" step="15" min="0">
-            <span class="unit">mins</span>
-          </div>
-          <div class="checkbox-group">
-            <input type="checkbox" id="s_chargeAccommodationToCustomer">
-            <label for="s_chargeAccommodationToCustomer">Charge accommodation to customer</label>
-          </div>
+          <p class="settings-hint">Used for route calculations to customer sites.</p>
         </div>
 
         <!-- Discounts -->
         <div class="settings-card">
           <h3>Discounts</h3>
           <div class="setting-row">
-            <label>Regular customer discount</label>
-            <input type="number" id="s_discountRegularPercent" step="1" min="0">
+            <label>Regular customer</label>
+            <input type="number" id="s_discountRegular" step="0.5" min="0" max="100">
             <span class="unit">%</span>
           </div>
           <div class="setting-row">
-            <label>Contract-winning discount</label>
-            <input type="number" id="s_discountContractPercent" step="1" min="0">
+            <label>Contract-winning</label>
+            <input type="number" id="s_discountContract" step="0.5" min="0" max="100">
             <span class="unit">%</span>
           </div>
         </div>
 
-      </div>
-
-      <!-- Company details for customer quotes -->
-      <div class="settings-card settings-full-width" style="margin-top:1.5rem;">
-        <h3>Company Details (Customer Quotes)</h3>
-        <p class="settings-hint">These details appear on customer-facing quote documents.</p>
-        <div class="cq-settings-grid">
-          <div class="form-group">
-            <label for="s_companyName">Company name</label>
-            <input type="text" id="s_companyName" placeholder="Kirkstone Calibration">
-          </div>
-          <div class="form-group">
-            <label for="s_companyPhone">Telephone</label>
-            <input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890">
-          </div>
-          <div class="form-group">
-            <label for="s_companyEmail">Email</label>
-            <input type="text" id="s_companyEmail" placeholder="e.g. info@example.com">
-          </div>
-          <div class="form-group">
-            <label for="s_companyWebsite">Website</label>
-            <input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com">
-          </div>
-          <div class="form-group">
-            <label for="s_vatNumber">VAT number (optional)</label>
-            <input type="text" id="s_vatNumber" placeholder="e.g. GB123456789">
-          </div>
-          <div class="form-group">
-            <label for="s_quoteValidDays">Quote valid for (days)</label>
-            <input type="number" id="s_quoteValidDays" min="1" step="1" value="30">
-          </div>
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="s_companyAddress">Address</label>
-            <textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea>
-          </div>
-          <div class="form-group" style="grid-column: 1 / -1;">
-            <label for="logoUpload">Company logo</label>
-            <input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif">
-            <div id="logoPreview" style="margin-top:0.5rem;"></div>
+        <!-- Company details -->
+        <div class="settings-card settings-full-width">
+          <h3>Company Details (Customer Quotes)</h3>
+          <p class="settings-hint">These details appear on customer-facing quote documents.</p>
+          <div class="cq-settings-grid">
+            <div class="form-group">
+              <label for="s_companyName">Company name</label>
+              <input type="text" id="s_companyName" placeholder="Kirkstone Calibration">
+            </div>
+            <div class="form-group">
+              <label for="s_companyPhone">Telephone</label>
+              <input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890">
+            </div>
+            <div class="form-group">
+              <label for="s_companyEmail">Email</label>
+              <input type="text" id="s_companyEmail" placeholder="e.g. info@example.com">
+            </div>
+            <div class="form-group">
+              <label for="s_companyWebsite">Website</label>
+              <input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com">
+            </div>
+            <div class="form-group">
+              <label for="s_vatNumber">VAT number (optional)</label>
+              <input type="text" id="s_vatNumber" placeholder="e.g. GB123456789">
+            </div>
+            <div class="form-group">
+              <label for="s_quoteValidDays">Quote valid for (days)</label>
+              <input type="number" id="s_quoteValidDays" min="1" step="1" value="30">
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label for="s_companyAddress">Address</label>
+              <textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea>
+            </div>
+            <div class="form-group" style="grid-column: 1 / -1;">
+              <label for="logoUpload">Company logo</label>
+              <input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif">
+              <div id="logoPreview" style="margin-top:0.5rem;"></div>
+            </div>
           </div>
         </div>
+
       </div>
 
       <div class="settings-actions">
@@ -507,7 +479,7 @@
   <script src="js/firebase.js?v=20260803-1"></script>
   <script src="js/routing.js?v=20260803-1"></script>
   <script src="js/quote.js?v=20260803-1"></script>
-  <script src="js/ui.js?v=20260803-1"></script>
+  <script src="js/ui.js?v=20260817-2"></script>
   <script src="js/app.js?v=20260803-1"></script>
 
 </body>
