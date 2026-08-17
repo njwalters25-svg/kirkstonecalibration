@@ -74,7 +74,6 @@ jobs:
   outline: none;
 }
 '''
-          # Currency block is at the end of the stylesheet, so replace from marker onward.
           c = c[:start] + replacement
           css.write_text(c)
 
@@ -91,3 +90,5 @@ jobs:
           git add js/ui.js css/styles.css index.html
           git commit -m "Fix job cost currency alignment and extra parts prefix"
           git push
+
+# trigger
