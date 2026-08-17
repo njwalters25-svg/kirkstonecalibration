@@ -1,0 +1,243 @@
+name: Apply persistent screen state
+
+on:
+  push:
+    paths:
+      - '.github/workflows/persist-ui-state-patch.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Persist active tab and open job sheet
+        shell: python
+        run: |
+          from pathlib import Path
+
+          p = Path('js/app.js')
+          s = p.read_text()
+
+          old = """let currentJobs = [];
+const expandedJobIds = new Set();
+let currentLogoDataUrl = null;"""
+          new = """let currentJobs = [];
+const UI_STATE_KEY = 'kirkstoneQuoteAppUiState';
+
+function loadUiState() {
+  try {
+    return JSON.parse(localStorage.getItem(UI_STATE_KEY) || '{}');
+  } catch (error) {
+    return {};
+  }
+}
+
+const initialUiState = loadUiState();
+const expandedJobIds = new Set(Array.isArray(initialUiState.expandedJobIds) ? initialUiState.expandedJobIds : []);
+let lastViewedJobId = initialUiState.lastViewedJobId || null;
+
+function saveUiState(activeTabId) {
+  const activeTab = activeTabId || document.querySelector('.tab-btn.active')?.dataset.tab || 'quotePanel';
+  localStorage.setItem(UI_STATE_KEY, JSON.stringify({
+    activeTab,
+    expandedJobIds: [...expandedJobIds],
+    lastViewedJobId,
+  }));
+}
+
+function activateAppTab(tabId, persist = true) {
+  const button = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+  const panel = document.getElementById(tabId);
+  if (!button || !panel) return;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  button.classList.add('active');
+  panel.classList.add('active');
+  if (persist) saveUiState(tabId);
+}
+
+function restoreLastScreen() {
+  const state = loadUiState();
+  activateAppTab(state.activeTab || 'quotePanel', false);
+}
+
+function restoreLastJobPosition() {
+  const state = loadUiState();
+  if (state.activeTab !== 'jobsPanel' || !lastViewedJobId) return;
+  setTimeout(() => {
+    document.getElementById(`job-card-${lastViewedJobId}`)?.scrollIntoView({ behavior: 'auto', block: 'start' });
+  }, 0);
+}
+
+let currentLogoDataUrl = null;"""
+          if old not in s:
+            raise SystemExit('Could not find app state declaration block')
+          s = s.replace(old, new, 1)
+
+          old = """  // Tab switching
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });"""
+          new = """  // Tab switching - remember the user's current screen across saves/refreshes
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => activateAppTab(btn.dataset.tab));
+  });
+  restoreLastScreen();"""
+          if old not in s:
+            raise SystemExit('Could not find tab switching block')
+          s = s.replace(old, new, 1)
+
+          old = """  renderJobSheets(currentJobs);
+  renderQuoteHistory(currentQuotes, currentSettings);
+}"""
+          new = """  renderJobSheets(currentJobs);
+  renderQuoteHistory(currentQuotes, currentSettings);
+  restoreLastJobPosition();
+}"""
+          # Only replace refreshJobSheets occurrence by anchoring from its function.
+          marker = "async function refreshJobSheets() {"
+          start = s.find(marker)
+          if start < 0:
+            raise SystemExit('Could not find refreshJobSheets')
+          end = s.find("\n}\n\nfunction getJobById", start)
+          if end < 0:
+            raise SystemExit('Could not find refreshJobSheets end')
+          chunk = s[start:end+2]
+          if old not in chunk:
+            raise SystemExit('Could not find refreshJobSheets render block')
+          chunk = chunk.replace(old, new, 1)
+          s = s[:start] + chunk + s[end+2:]
+
+          old = """  await persistJob(job, 'Job sheet created');
+  expandedJobIds.add(job.id);
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab=\"jobsPanel\"]').classList.add('active');
+  document.getElementById('jobsPanel').classList.add('active');"""
+          new = """  await persistJob(job, 'Job sheet created');
+  expandedJobIds.add(job.id);
+  lastViewedJobId = job.id;
+  activateAppTab('jobsPanel');
+  saveUiState('jobsPanel');"""
+          if old not in s:
+            raise SystemExit('Could not find create job tab block')
+          s = s.replace(old, new, 1)
+
+          old = """function toggleJobDetail(id) {
+  if (expandedJobIds.has(id)) expandedJobIds.delete(id);
+  else expandedJobIds.add(id);
+  renderJobSheets(currentJobs);
+}"""
+          new = """function toggleJobDetail(id) {
+  if (expandedJobIds.has(id)) {
+    expandedJobIds.delete(id);
+    if (lastViewedJobId === id) lastViewedJobId = null;
+  } else {
+    expandedJobIds.add(id);
+    lastViewedJobId = id;
+  }
+  saveUiState('jobsPanel');
+  renderJobSheets(currentJobs);
+}"""
+          if old not in s:
+            raise SystemExit('Could not find toggleJobDetail')
+          s = s.replace(old, new, 1)
+
+          old = """function openJobSheet(id) {
+  expandedJobIds.add(id);
+  renderJobSheets(currentJobs);
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab=\"jobsPanel\"]')?.classList.add('active');
+  document.getElementById('jobsPanel')?.classList.add('active');
+  setTimeout(() => {
+    document.getElementById(`job-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
+}"""
+          new = """function openJobSheet(id) {
+  expandedJobIds.add(id);
+  lastViewedJobId = id;
+  activateAppTab('jobsPanel');
+  saveUiState('jobsPanel');
+  renderJobSheets(currentJobs);
+  setTimeout(() => {
+    document.getElementById(`job-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 0);
+}"""
+          if old not in s:
+            raise SystemExit('Could not find openJobSheet')
+          s = s.replace(old, new, 1)
+
+          p.write_text(s)
+
+      - name: Align Cost and Price fields with the rest of the parts row
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('css/styles.css')
+          s = p.read_text()
+          old = """.job-part-money-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+}
+.job-part-money-field input {
+  width: 100%;
+}"""
+          new = """.job-part-money-field {
+  position: relative;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+}
+.job-part-money-field > span {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 0.2rem);
+  width: 100%;
+  color: #475569;
+  font-size: 0.72rem;
+  line-height: 1;
+  text-align: left;
+}
+.job-part-money-field input {
+  width: 100%;
+}"""
+          if old not in s:
+            raise SystemExit('Could not find job part money styling')
+          p.write_text(s.replace(old, new, 1))
+
+      - name: Bust browser cache for changed app files
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          s = p.read_text()
+          s = re.sub(r'css/styles\.css\?v=[^\"]+', 'css/styles.css?v=20260817-3', s)
+          s = re.sub(r'js/app\.js\?v=[^\"]+', 'js/app.js?v=20260817-3', s)
+          p.write_text(s)
+
+      - name: Commit real app changes
+        run: |
+          rm .github/workflows/persist-ui-state-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/app.js css/styles.css index.html .github/workflows/persist-ui-state-patch.yml
+          git commit -m "Keep current screen after refresh and align parts labels"
+          git push origin main
