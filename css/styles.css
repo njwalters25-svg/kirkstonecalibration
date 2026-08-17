@@ -1489,3 +1489,8 @@ body {
   padding-left: 1.5rem;
   width: 100%;
 }
+
+.job-cost-grid .form-group > label { min-height: 1.5rem; }
+.job-cost-grid .currency-input { position: static; display: flex; align-items: center; height: 42px; padding: 0 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
+.job-cost-grid .currency-input .currency-prefix { position: static; transform: none; margin-right: 0.4rem; }
+.job-cost-grid .currency-input input { flex: 1; min-width: 0; height: 40px; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: transparent !important; }

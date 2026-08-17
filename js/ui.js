@@ -834,7 +834,7 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel, true)}
             ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food, true)}
             ${renderJobCostInput(job.id, 'fuel', 'Other travel cost', job.costs?.fuel, true)}
-            ${renderJobCalculatedCost('Extra parts cost', calc.partsCost)}
+            ${renderJobCalculatedCost('Extra parts cost', calc.partsCost, true)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping, true)}
             ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson, true)}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other, true)}
