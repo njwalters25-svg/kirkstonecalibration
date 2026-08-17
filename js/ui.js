@@ -500,11 +500,11 @@ function renderPartsCatalogEditor(settings) {
         <input type="text" class="part-name" value="${escapeHtml(getCatalogPartName(part))}">
       </div>
       <div class="form-group">
-        <label>Cost</label>
+        <label>Customer price</label>
         <input type="number" class="part-cost" step="0.01" min="0" value="${part.costPerUnit || 0}">
       </div>
       <div class="form-group">
-        <label>Customer price</label>
+        <label>Cost</label>
         <input type="number" class="part-price" step="0.01" min="0" value="${part.pricePerUnit || 0}">
       </div>
       <button type="button" class="btn-small btn-delete part-remove" data-index="${i}">Remove</button>
@@ -672,10 +672,11 @@ function calculateJobSheet(job) {
     pipetteRevenue += (entry.multiChannel16Count || 0) * (sl?.chargeMultiChannel16 || 0);
   });
 
+  // Legacy part data has cost/price field names reversed. Interpret them correctly here.
   const partsCost = (job.parts || []).reduce((total, part) =>
-    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.costPerUnit) || 0)), 0);
-  const partsRevenue = (job.parts || []).reduce((total, part) =>
     total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.pricePerUnit) || 0)), 0);
+  const partsRevenue = (job.parts || []).reduce((total, part) =>
+    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.costPerUnit) || 0)), 0);
   const actualRevenue = pipetteRevenue + partsRevenue;
 
   const costs = job.costs || {};
@@ -849,13 +850,12 @@ function renderJobSheets(jobs) {
           <div class="job-parts-list">
             ${(job.parts || []).length ? `
               <div class="job-part-row job-part-header">
-                <span></span>
-                <span></span>
-                <span></span>
+                <span>Part</span>
+                <span>Quantity</span>
                 <span>Cost</span>
                 <span>Price</span>
-                <span></span>
-                <span></span>
+                <span>Total Cost</span>
+                <span>Total Price</span>
                 <span></span>
               </div>` : ''}
             ${(job.parts || []).map(part => renderJobPartRow(job, part)).join('')}
@@ -918,15 +918,15 @@ function renderJobPartRow(job, part) {
     `<option value="${escapeHtml(catalogPart.id)}" ${catalogPart.id === part.catalogPartId ? 'selected' : ''}>${escapeHtml(getCatalogPartName(catalogPart))}</option>`
   ).join('');
   const quantity = part.quantity || 1;
-  const costTotal = (parseFloat(quantity) || 0) * (parseFloat(part.costPerUnit) || 0);
-  const priceTotal = (parseFloat(quantity) || 0) * (parseFloat(part.pricePerUnit) || 0);
+  // Stored field names are legacy/reversed: pricePerUnit is cost, costPerUnit is customer price.
+  const costTotal = (parseFloat(quantity) || 0) * (parseFloat(part.pricePerUnit) || 0);
+  const priceTotal = (parseFloat(quantity) || 0) * (parseFloat(part.costPerUnit) || 0);
   return `
     <div class="job-part-row" data-part-id="${escapeHtml(part.id)}">
       <select onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','catalogPartId',this.value)">${options}</select>
-      <input type="text" value="${escapeHtml(part.name || '')}" placeholder="Part name" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">
       <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">
-      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
-      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">
+      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">
+      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
       <span>${formatCurrency(costTotal)}</span>
       <span>${formatCurrency(priceTotal)}</span>
       <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>
