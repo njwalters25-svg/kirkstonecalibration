@@ -914,8 +914,8 @@ function renderJobPartRow(job, part) {
       <select onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','catalogPartId',this.value)">${options}</select>
       <input type="text" value="${escapeHtml(part.name || '')}" placeholder="Part name" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">
       <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">
-      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
-      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">
+      <label class="job-part-money-field"><span>Cost</span><input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)"></label>
+      <label class="job-part-money-field"><span>Price</span><input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)"></label>
       <span>${formatCurrency(costTotal)}</span>
       <span>${formatCurrency(priceTotal)}</span>
       <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>

@@ -1424,3 +1424,17 @@ body {
 .print-header {
   display: none;
 }
+
+
+/* Visible labels for cost/price fields in Job Sheet parts rows */
+.job-part-money-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+}
+.job-part-money-field input {
+  width: 100%;
+}
