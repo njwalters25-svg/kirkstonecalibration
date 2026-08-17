@@ -19,15 +19,24 @@ jobs:
               --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
               --data-urlencode "branch=main" \
               --insecure)
-            echo "$response"
-            test "$(echo "$response" | jq -r '.status')" = "1"
-            current_sha="$(echo "$response" | jq -r '.data.last_update.identifier // empty')"
+
+            status="$(printf '%s' "$response" | jq -r '.status // empty' 2>/dev/null || true)"
+            current_sha="$(printf '%s' "$response" | jq -r '.data.last_update.identifier // empty' 2>/dev/null || true)"
+
+            if [ "$status" != "1" ]; then
+              echo "cPanel did not return a successful JSON response (attempt ${attempt}/5). Retrying..."
+              printf '%s\n' "$response" | head -c 500
+              printf '\n'
+              sleep 10
+              continue
+            fi
+
             if [ "$current_sha" = "$target_sha" ]; then
               echo "cPanel repository is at ${target_sha}"
               exit 0
             fi
             echo "cPanel is at ${current_sha:-unknown}; waiting for ${target_sha} (attempt ${attempt}/5)"
-            sleep 5
+            sleep 10
           done
           echo "cPanel did not reach ${target_sha}"
           exit 1
