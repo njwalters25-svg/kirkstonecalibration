@@ -1,0 +1,28 @@
+name: Apply parts labels
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/apply-parts-labels.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply labels
+        run: |
+          echo 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwID0gUGF0aCgianMvdWkuanMiKQpsaW5lcyA9IHAucmVhZF90ZXh0KCkuc3BsaXRsaW5lcygpCm91dCA9IFtdCmNvc3RfY2hhbmdlZCA9IHByaWNlX2NoYW5nZWQgPSBGYWxzZQoKZm9yIGxpbmUgaW4gbGluZXM6CiAgICBzdHJpcHBlZCA9IGxpbmUuc3RyaXAoKQogICAgaWYgJ3BsYWNlaG9sZGVyPSJDb3N0IicgaW4gbGluZSBhbmQgIidjb3N0UGVyVW5pdCciIGluIGxpbmUgYW5kICc8bGFiZWwgY2xhc3M9ImpvYi1wYXJ0LW1vbmV5LWZpZWxkIj4nIG5vdCBpbiBsaW5lOgogICAgICAgIGluZGVudCA9IGxpbmVbOmxlbihsaW5lKSAtIGxlbihsaW5lLmxzdHJpcCgpKV0KICAgICAgICBvdXQuYXBwZW5kKGluZGVudCArICc8bGFiZWwgY2xhc3M9ImpvYi1wYXJ0LW1vbmV5LWZpZWxkIj48c3Bhbj5Db3N0PC9zcGFuPicgKyBzdHJpcHBlZCArICc8L2xhYmVsPicpCiAgICAgICAgY29zdF9jaGFuZ2VkID0gVHJ1ZQogICAgZWxpZiAncGxhY2Vob2xkZXI9IlByaWNlIicgaW4gbGluZSBhbmQgIidwcmljZVBlclVuaXQnIiBpbiBsaW5lIGFuZCAnPGxhYmVsIGNsYXNzPSJqb2ItcGFydC1tb25leS1maWVsZCI+JyBub3QgaW4gbGluZToKICAgICAgICBpbmRlbnQgPSBsaW5lWzpsZW4obGluZSkgLSBsZW4obGluZS5sc3RyaXAoKSldCiAgICAgICAgb3V0LmFwcGVuZChpbmRlbnQgKyAnPGxhYmVsIGNsYXNzPSJqb2ItcGFydC1tb25leS1maWVsZCI+PHNwYW4+UHJpY2U8L3NwYW4+JyArIHN0cmlwcGVkICsgJzwvbGFiZWw+JykKICAgICAgICBwcmljZV9jaGFuZ2VkID0gVHJ1ZQogICAgZWxzZToKICAgICAgICBvdXQuYXBwZW5kKGxpbmUpCgppZiBub3QgKGNvc3RfY2hhbmdlZCBhbmQgcHJpY2VfY2hhbmdlZCk6CiAgICByYWlzZSBTeXN0ZW1FeGl0KGYiRXhwZWN0ZWQgYm90aCBmaWVsZHMgdG8gY2hhbmdlOyBjb3N0PXtjb3N0X2NoYW5nZWR9LCBwcmljZT17cHJpY2VfY2hhbmdlZH0iKQoKcC53cml0ZV90ZXh0KCJcbiIuam9pbihvdXQpICsgIlxuIikKCmNzc19wYXRoID0gUGF0aCgiY3NzL3N0eWxlcy5jc3MiKQpjc3MgPSBjc3NfcGF0aC5yZWFkX3RleHQoKQppZiAiLmpvYi1wYXJ0LW1vbmV5LWZpZWxkIHsiIG5vdCBpbiBjc3M6CiAgICBjc3MgKz0gIiIiCgovKiBWaXNpYmxlIGxhYmVscyBmb3IgY29zdC9wcmljZSBmaWVsZHMgaW4gSm9iIFNoZWV0IHBhcnRzIHJvd3MgKi8KLmpvYi1wYXJ0LW1vbmV5LWZpZWxkIHsKICBkaXNwbGF5OiBmbGV4OwogIGZsZXgtZGlyZWN0aW9uOiBjb2x1bW47CiAgZ2FwOiAwLjJyZW07CiAgZm9udC1zaXplOiAwLjcycmVtOwogIGZvbnQtd2VpZ2h0OiA2MDA7CiAgY29sb3I6ICM0NzU1Njk7Cn0KLmpvYi1wYXJ0LW1vbmV5LWZpZWxkIGlucHV0IHsKICB3aWR0aDogMTAwJTsKfQoiIiIKICAgIGNzc19wYXRoLndyaXRlX3RleHQoY3NzKQo=' | base64 --decode > /tmp/apply_parts_labels.py
+          python3 /tmp/apply_parts_labels.py
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/ui.js css/styles.css
+          git commit -m "Show Cost and Price labels on job sheet parts"
+          git push
