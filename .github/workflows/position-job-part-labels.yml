@@ -14,27 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Position Cost and Price labels above their boxes
+        shell: python
         run: |
-          cat >> css/styles.css <<'EOF'
-
-/* Keep Job Sheet Cost and Price labels directly above their own input boxes */
-.job-part-row {
-  align-items: end;
-}
-.job-part-money-field {
-  align-self: end;
-  justify-content: flex-end;
-  gap: 0.18rem;
-}
-.job-part-money-field > span {
-  display: block;
-  width: 100%;
-  text-align: left;
-  line-height: 1.1;
-  margin: 0 0 0.08rem 0;
-}
-EOF
-          sed -i 's/styles.css?v=20260817-2/styles.css?v=20260817-3/' index.html
+          from pathlib import Path
+          css_path = Path('css/styles.css')
+          css = css_path.read_text()
+          marker = '/* Keep Job Sheet Cost and Price labels directly above their own input boxes */'
+          override = '''\n\n/* Keep Job Sheet Cost and Price labels directly above their own input boxes */\n.job-part-row {\n  align-items: end;\n}\n.job-part-money-field {\n  align-self: end;\n  justify-content: flex-end;\n  gap: 0.18rem;\n}\n.job-part-money-field > span {\n  display: block;\n  width: 100%;\n  text-align: left;\n  line-height: 1.1;\n  margin: 0 0 0.08rem 0;\n}\n'''
+          if marker not in css:
+              css_path.write_text(css + override)
+          index_path = Path('index.html')
+          index = index_path.read_text().replace('styles.css?v=20260817-2', 'styles.css?v=20260817-3')
+          index_path.write_text(index)
       - name: Commit app changes
         run: |
           git config user.name "github-actions[bot]"
