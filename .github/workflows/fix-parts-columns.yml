@@ -1,0 +1,74 @@
+name: Fix parts columns
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-parts-columns.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clean up parts columns and correct cost/price meaning
+        shell: python
+        run: |
+          from pathlib import Path
+
+          ui = Path('js/ui.js')
+          s = ui.read_text()
+
+          old_header = '''              <div class="job-part-row job-part-header">\n                <span></span>\n                <span></span>\n                <span></span>\n                <span>Cost</span>\n                <span>Price</span>\n                <span></span>\n                <span></span>\n                <span></span>\n              </div>'''
+          new_header = '''              <div class="job-part-row job-part-header">\n                <span>Part</span>\n                <span>Quantity</span>\n                <span>Cost</span>\n                <span>Price</span>\n                <span>Total Cost</span>\n                <span>Total Price</span>\n                <span></span>\n              </div>'''
+          if old_header not in s:
+              raise SystemExit('Parts header not found')
+          s = s.replace(old_header, new_header, 1)
+
+          old_calc = '''  const partsCost = (job.parts || []).reduce((total, part) =>\n    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.costPerUnit) || 0)), 0);\n  const partsRevenue = (job.parts || []).reduce((total, part) =>\n    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.pricePerUnit) || 0)), 0);'''
+          new_calc = '''  // Legacy part data has cost/price field names reversed. Interpret them correctly here.\n  const partsCost = (job.parts || []).reduce((total, part) =>\n    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.pricePerUnit) || 0)), 0);\n  const partsRevenue = (job.parts || []).reduce((total, part) =>\n    total + ((parseFloat(part.quantity) || 0) * (parseFloat(part.costPerUnit) || 0)), 0);'''
+          if old_calc not in s:
+              raise SystemExit('Parts calculation block not found')
+          s = s.replace(old_calc, new_calc, 1)
+
+          old_totals = '''  const costTotal = (parseFloat(quantity) || 0) * (parseFloat(part.costPerUnit) || 0);\n  const priceTotal = (parseFloat(quantity) || 0) * (parseFloat(part.pricePerUnit) || 0);'''
+          new_totals = '''  // Stored field names are legacy/reversed: pricePerUnit is cost, costPerUnit is customer price.\n  const costTotal = (parseFloat(quantity) || 0) * (parseFloat(part.pricePerUnit) || 0);\n  const priceTotal = (parseFloat(quantity) || 0) * (parseFloat(part.costPerUnit) || 0);'''
+          if old_totals not in s:
+              raise SystemExit('Row totals block not found')
+          s = s.replace(old_totals, new_totals, 1)
+
+          old_row = '''      <select onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','catalogPartId',this.value)">${options}</select>\n      <input type="text" value="${escapeHtml(part.name || '')}" placeholder="Part name" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">\n      <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">\n      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">\n      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">\n      <span>${formatCurrency(costTotal)}</span>\n      <span>${formatCurrency(priceTotal)}</span>\n      <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>'''
+          new_row = '''      <select onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','catalogPartId',this.value)">${options}</select>\n      <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">\n      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">\n      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">\n      <span>${formatCurrency(costTotal)}</span>\n      <span>${formatCurrency(priceTotal)}</span>\n      <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>'''
+          if old_row not in s:
+              raise SystemExit('Parts row block not found')
+          s = s.replace(old_row, new_row, 1)
+
+          # Correct catalogue labels too so future edits preserve the intended meaning.
+          s = s.replace('<label>Cost</label>\n        <input type="number" class="part-cost"', '<label>Customer price</label>\n        <input type="number" class="part-cost"', 1)
+          s = s.replace('<label>Customer price</label>\n        <input type="number" class="part-price"', '<label>Cost</label>\n        <input type="number" class="part-price"', 1)
+          ui.write_text(s)
+
+          css = Path('css/styles.css')
+          c = css.read_text()
+          old_grid = 'grid-template-columns: 13rem 12rem 4.5rem 5.5rem 5.5rem 5.5rem 5.5rem 5.5rem;'
+          new_grid = 'grid-template-columns: 16rem 5.5rem 6rem 6rem 6.5rem 6.5rem 5.5rem;'
+          if old_grid not in c:
+              raise SystemExit('Job part grid not found')
+          c = c.replace(old_grid, new_grid, 1)
+          css.write_text(c)
+
+          index = Path('index.html')
+          i = index.read_text()
+          i = i.replace('styles.css?v=20260817-4', 'styles.css?v=20260817-5')
+          i = i.replace('ui.js?v=20260817-4', 'ui.js?v=20260817-5')
+          index.write_text(i)
+
+      - name: Commit real app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/ui.js css/styles.css index.html
+          git commit -m "Clean up parts columns and correct cost price labels"
+          git push
