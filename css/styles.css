@@ -1438,3 +1438,21 @@ body {
 .job-part-money-field input {
   width: 100%;
 }
+
+
+/* Keep Job Sheet Cost and Price labels directly above their own input boxes */
+.job-part-row {
+  align-items: end;
+}
+.job-part-money-field {
+  align-self: end;
+  justify-content: flex-end;
+  gap: 0.18rem;
+}
+.job-part-money-field > span {
+  display: block;
+  width: 100%;
+  text-align: left;
+  line-height: 1.1;
+  margin: 0 0 0.08rem 0;
+}
