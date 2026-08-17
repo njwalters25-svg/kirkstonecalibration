@@ -1456,3 +1456,17 @@ body {
   line-height: 1.1;
   margin: 0 0 0.08rem 0;
 }
+
+
+/* Job Sheet parts column headings */
+.job-part-header {
+  align-items: end;
+  margin-bottom: -0.15rem;
+}
+.job-part-header span {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1;
+}
