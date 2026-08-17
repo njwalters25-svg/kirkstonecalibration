@@ -43,3 +43,5 @@ jobs:
           git add js/ui.js css/styles.css .github/workflows/label-job-parts.yml
           git commit -m "Show Cost and Price labels on job sheet parts"
           git push
+
+# trigger
