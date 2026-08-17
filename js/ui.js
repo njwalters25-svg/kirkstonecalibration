@@ -831,17 +831,17 @@ function renderJobSheets(jobs) {
 
           <h3>Costs</h3>
           <div class="job-cost-grid">
-            ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel)}
-            ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food)}
-            ${renderJobCostInput(job.id, 'fuel', 'Other travel cost', job.costs?.fuel)}
+            ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel, true)}
+            ${renderJobCostInput(job.id, 'food', 'Food', job.costs?.food, true)}
+            ${renderJobCostInput(job.id, 'fuel', 'Other travel cost', job.costs?.fuel, true)}
             ${renderJobCalculatedCost('Extra parts cost', calc.partsCost)}
-            ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping)}
-            ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson)}
-            ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other)}
+            ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping, true)}
+            ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson, true)}
+            ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other, true)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
-            ${renderJobCalculatedCost(`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost)}
-            ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01')}
-            ${renderJobCalculatedCost('Sticker total', calc.stickerCost)}
+            ${renderJobCalculatedCost(`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost, true)}
+            ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01', true)}
+            ${renderJobCalculatedCost('Sticker total', calc.stickerCost, true)}
           </div>
           <div class="field-hint">Mileage allowance is calculated from the miles above at ${calc.mileageRatePence}p per mile.</div>
           <div class="field-hint">Sticker cost is ${calc.actualCount} actual pipette${calc.actualCount !== 1 ? 's' : ''} × ${formatCurrency(calc.stickerCostPerPipette)} = ${formatCurrency(calc.stickerCost)}.</div>
@@ -933,27 +933,36 @@ function renderJobPartRow(job, part) {
     </div>`;
 }
 
-function renderJobCostInput(jobId, field, label, value) {
+function renderJobCostInput(jobId, field, label, value, currency = false) {
   return `
     <div class="form-group">
       <label>${escapeHtml(label)}</label>
-      <input type="number" min="0" step="0.01" value="${value || 0}" onchange="updateJobCost('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+      <div class="${currency ? 'currency-input' : ''}">
+        ${currency ? '<span class="currency-prefix">£</span>' : ''}
+        <input type="number" min="0" step="0.01" value="${value || 0}" onchange="updateJobCost('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+      </div>
     </div>`;
 }
 
-function renderJobCalculatedCost(label, value) {
+function renderJobCalculatedCost(label, value, currency = false) {
   return `
     <div class="form-group">
       <label>${escapeHtml(label)}</label>
-      <input type="number" value="${value || 0}" readonly>
+      <div class="${currency ? 'currency-input' : ''}">
+        ${currency ? '<span class="currency-prefix">£</span>' : ''}
+        <input type="number" value="${value || 0}" readonly>
+      </div>
     </div>`;
 }
 
-function renderJobFieldInput(jobId, field, label, value, step = '1') {
+function renderJobFieldInput(jobId, field, label, value, step = '1', currency = false) {
   return `
     <div class="form-group">
       <label>${escapeHtml(label)}</label>
-      <input type="number" min="0" step="${escapeHtml(step)}" value="${value || 0}" onchange="updateJobField('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+      <div class="${currency ? 'currency-input' : ''}">
+        ${currency ? '<span class="currency-prefix">£</span>' : ''}
+        <input type="number" min="0" step="${escapeHtml(step)}" value="${value || 0}" onchange="updateJobField('${escapeJsString(jobId)}','${escapeJsString(field)}',this.value)">
+      </div>
     </div>`;
 }
 
