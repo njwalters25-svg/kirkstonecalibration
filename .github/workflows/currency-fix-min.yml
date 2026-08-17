@@ -1,0 +1,18 @@
+name: Currency fix min
+on: [push]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sed -i "s/renderJobCalculatedCost('Extra parts cost', calc.partsCost)/renderJobCalculatedCost('Extra parts cost', calc.partsCost, true)/" js/ui.js
+          printf '\n.job-cost-grid .form-group > label { min-height: 1.5rem; }\n.job-cost-grid .currency-input { position: static; display: flex; align-items: center; height: 42px; padding: 0 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }\n.job-cost-grid .currency-input .currency-prefix { position: static; transform: none; margin-right: 0.4rem; }\n.job-cost-grid .currency-input input { flex: 1; min-width: 0; height: 40px; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: transparent !important; }\n' >> css/styles.css
+          sed -i 's/20260817-6/20260817-9/g' index.html
+          git config user.name github-actions-bot
+          git config user.email bot@users.noreply.github.com
+          git add js/ui.js css/styles.css index.html
+          git commit -m 'Fix job cost boxes' || exit 0
+          git push
