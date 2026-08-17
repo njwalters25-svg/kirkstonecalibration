@@ -1,4 +1,4 @@
-name: Deploy to cPanel
+name: Update cPanel site
 
 on:
   push:
@@ -6,10 +6,10 @@ on:
       - main
 
 jobs:
-  deploy:
+  update-cpanel:
     runs-on: ubuntu-latest
     steps:
-      - name: Pull latest from GitHub
+      - name: Update cPanel Git checkout
         run: |
           target_sha="${GITHUB_SHA}"
           for attempt in 1 2 3 4 5; do
@@ -31,13 +31,3 @@ jobs:
           done
           echo "cPanel did not reach ${target_sha}"
           exit 1
-
-      - name: Deploy HEAD commit
-        run: |
-          response=$(curl -s -X POST \
-            "https://${{ secrets.CPANEL_DOMAIN }}:2083/execute/VersionControlDeployment/create" \
-            -H "Authorization: cpanel ${{ secrets.CPANEL_USERNAME }}:${{ secrets.CPANEL_API_TOKEN }}" \
-            --data-urlencode "repository_root=${{ secrets.CPANEL_PATH }}" \
-            --insecure)
-          echo "$response"
-          test "$(echo "$response" | jq -r '.status')" = "1"
