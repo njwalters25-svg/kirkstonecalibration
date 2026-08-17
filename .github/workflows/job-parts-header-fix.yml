@@ -1,0 +1,54 @@
+name: Apply proper parts column labels
+
+on:
+  push:
+    paths:
+      - '.github/workflows/job-parts-header-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move Cost and Price labels into a header row
+        shell: python
+        run: |
+          from pathlib import Path
+
+          ui = Path('js/ui.js')
+          s = ui.read_text()
+
+          old_list = '''          <div class="job-parts-list">\n            ${(job.parts || []).map(part => renderJobPartRow(job, part)).join('')}\n          </div>'''
+          new_list = '''          <div class="job-parts-list">\n            ${(job.parts || []).length ? `\n              <div class="job-part-row job-part-header">\n                <span></span>\n                <span></span>\n                <span></span>\n                <span>Cost</span>\n                <span>Price</span>\n                <span></span>\n                <span></span>\n                <span></span>\n              </div>` : ''}\n            ${(job.parts || []).map(part => renderJobPartRow(job, part)).join('')}\n          </div>'''
+          if old_list not in s:
+              raise SystemExit('Parts list block not found')
+          s = s.replace(old_list, new_list, 1)
+
+          old_fields = '''      <label class="job-part-money-field"><span>Cost</span><input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)"></label>\n      <label class="job-part-money-field"><span>Price</span><input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)"></label>'''
+          new_fields = '''      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">\n      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">'''
+          if old_fields not in s:
+              raise SystemExit('Money fields block not found')
+          s = s.replace(old_fields, new_fields, 1)
+          ui.write_text(s)
+
+          css = Path('css/styles.css')
+          c = css.read_text()
+          c += '''\n\n/* Job Sheet parts column headings */\n.job-part-header {\n  align-items: end;\n  margin-bottom: -0.15rem;\n}\n.job-part-header span {\n  text-align: left;\n  font-size: 0.72rem;\n  font-weight: 600;\n  color: #475569;\n  line-height: 1;\n}\n'''
+          css.write_text(c)
+
+          index = Path('index.html')
+          i = index.read_text()
+          i = i.replace('styles.css?v=20260817-3', 'styles.css?v=20260817-4')
+          i = i.replace('ui.js?v=20260817-2', 'ui.js?v=20260817-4')
+          index.write_text(i)
+
+      - name: Commit real app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/ui.js css/styles.css index.html
+          git commit -m "Put Cost and Price labels above job part columns"
+          git push
