@@ -1,0 +1,45 @@
+name: Label job sheet parts fields
+
+on:
+  push:
+    paths:
+      - '.github/workflows/label-job-parts.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add visible Cost and Price labels
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('js/ui.js')
+          s = p.read_text()
+          old = '''      <input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
+      <input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">'''
+          new = '''      <label class="job-part-money-field"><span>Cost</span><input type="number" min="0" step="0.01" value="${part.costPerUnit || 0}" placeholder="Cost" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)"></label>
+      <label class="job-part-money-field"><span>Price</span><input type="number" min="0" step="0.01" value="${part.pricePerUnit || 0}" placeholder="Price" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)"></label>'''
+          if old not in s:
+              raise SystemExit('Expected job parts fields not found')
+          p.write_text(s.replace(old, new, 1))
+      - name: Add label styling
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('css/styles.css')
+          s = p.read_text()
+          css = '''\n\n/* Visible labels for cost/price fields in Job Sheet parts rows */\n.job-part-money-field { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.72rem; font-weight: 600; color: #475569; }\n.job-part-money-field input { width: 100%; }\n'''
+          if '.job-part-money-field {' not in s:
+              p.write_text(s + css)
+      - name: Commit patch and remove temporary workflow
+        run: |
+          rm .github/workflows/label-job-parts.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/ui.js css/styles.css .github/workflows/label-job-parts.yml
+          git commit -m "Show Cost and Price labels on job sheet parts"
+          git push
