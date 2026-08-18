@@ -259,6 +259,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById(btn.dataset.tab).classList.add('active');
+
+      // The Settings tab always edits the global settings used for new quotes.
+      // Do not show a loaded quote's historical settings snapshot here.
+      if (btn.dataset.tab === 'settingsPanel' && currentSettings) {
+        populateSettingsForm(currentSettings);
+        wireServiceLevelRemoveButtons();
+        wirePartsCatalogRemoveButtons();
+      }
     });
   });
 
@@ -443,22 +451,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   wirePartsCatalogRemoveButtons();
 
-  // Settings save
+  // Settings save - always saves the global settings used by new quotes.
+  // Historical loaded quotes keep their own pricing snapshot until Update Saved Quote is pressed.
   document.getElementById('saveSettings').addEventListener('click', async () => {
-    if (loadedQuoteId) {
-      activeQuoteSettingsSnapshot = createQuoteSettingsSnapshot(collectSettingsFromForm());
-    } else {
-      currentSettings = collectSettingsFromForm();
-      StorageManager.saveSettings(currentSettings);
+    const savedSettings = collectSettingsFromForm();
+    currentSettings = savedSettings;
+    StorageManager.saveSettings(currentSettings);
+
+    try {
       if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);
+    } catch (error) {
+      console.error('Could not save settings to Firebase', error);
+      showToast('Saved on this device, but cloud save failed');
+      return;
     }
-    // Re-render pipette lines to update service level dropdowns
-    const currentLines = collectPipetteLinesFromForm();
-    renderPipetteLines(currentLines, getCalculationSettings());
-    wirePipetteLineEvents();
-    recalculate();
-    autoSaveForm();
-    showToast(loadedQuoteId ? 'Loaded quote prices updated' : 'Settings saved');
+
+    // Settings are global defaults, so leave any loaded historical quote snapshot untouched.
+    // For a normal/new quote, immediately refresh the service-level dropdowns.
+    if (!loadedQuoteId) {
+      const currentLines = collectPipetteLinesFromForm();
+      renderPipetteLines(currentLines, currentSettings);
+      wirePipetteLineEvents();
+      recalculate();
+      autoSaveForm();
+    }
+
+    showToast('Settings saved');
   });
 
   document.getElementById('setDefaultSettings').addEventListener('click', async () => {
