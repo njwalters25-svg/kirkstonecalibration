@@ -116,6 +116,13 @@ function collectKirkstoneSettingsSafely() {
   return base;
 }
 
+// app.js calls collectSettingsFromForm() when Save Settings is pressed. The
+// original collector still expects legacy inputs that are no longer on the
+// Settings page, so replace it with the safe collector above after app.js loads.
+if (typeof collectSettingsFromForm === 'function') {
+  collectSettingsFromForm = collectKirkstoneSettingsSafely;
+}
+
 async function recoverKirkstoneServiceLevels() {
   if (typeof currentSettings === 'undefined' || !currentSettings) return false;
   const current = Array.isArray(currentSettings.serviceLevels) ? currentSettings.serviceLevels : [];
