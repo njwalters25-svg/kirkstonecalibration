@@ -172,8 +172,6 @@ async function repairMissingServiceLevelsFromHistory() {
     wireServiceLevelRemoveButtons();
     wirePartsCatalogRemoveButtons();
 
-    // The quote form is rendered before Firebase finishes loading. Refresh its
-    // service-level dropdowns now so they use the cloud settings, not stale defaults.
     const currentLines = collectPipetteLinesFromForm();
     renderPipetteLines(currentLines, currentSettings);
     wirePipetteLineEvents();
@@ -205,3 +203,5 @@ async function repairMissingServiceLevelsFromHistory() {
           git add js/ui.js js/app.js index.html
           git commit -m "Repair settings save and restore service levels"
           git push
+
+# trigger 2
