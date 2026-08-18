@@ -50,6 +50,14 @@ function startFreshQuotePricing() {
   wirePartsCatalogRemoveButtons();
 }
 
+function refreshQuoteFormServiceLevels(settings = getCalculationSettings()) {
+  const container = document.getElementById('pipetteLines');
+  if (!container) return;
+  const lines = collectPipetteLinesFromForm();
+  renderPipetteLines(lines.length ? lines : [getDefaultPipetteLine(settings)], settings);
+  wirePipetteLineEvents();
+}
+
 function updateLoadedQuoteActions() {
   const updateBtn = document.getElementById('updateSavedQuote');
   if (!updateBtn) return;
@@ -189,6 +197,7 @@ async function initialiseFirebaseData() {
     populateSettingsForm(currentSettings);
     wireServiceLevelRemoveButtons();
     wirePartsCatalogRemoveButtons();
+    if (!loadedQuoteId) refreshQuoteFormServiceLevels(currentSettings);
   }
 
   await refreshQuoteHistory();
@@ -199,6 +208,7 @@ async function initialiseFirebaseData() {
   StorageManager.saveCustomers(currentCustomers);
   updateCustomerDatalist();
   setCloudStatus('ready', `Firebase connected - ${currentQuotes.length} saved quote${currentQuotes.length !== 1 ? 's' : ''} loaded.`);
+  if (!loadedQuoteId) refreshQuoteFormServiceLevels(currentSettings);
   recalculate();
 }
 
@@ -469,9 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Settings are global defaults, so leave any loaded historical quote snapshot untouched.
     // For a normal/new quote, immediately refresh the service-level dropdowns.
     if (!loadedQuoteId) {
-      const currentLines = collectPipetteLinesFromForm();
-      renderPipetteLines(currentLines, currentSettings);
-      wirePipetteLineEvents();
+      refreshQuoteFormServiceLevels(currentSettings);
       recalculate();
       autoSaveForm();
     }
@@ -486,9 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);
 
     if (!loadedQuoteId) {
-      const currentLines = collectPipetteLinesFromForm();
-      renderPipetteLines(currentLines, currentSettings);
-      wirePipetteLineEvents();
+      refreshQuoteFormServiceLevels(currentSettings);
       recalculate();
       autoSaveForm();
     }

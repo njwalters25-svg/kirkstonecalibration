@@ -169,31 +169,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // app.js currently calls collectSettingsFromForm(), which references settings controls
-  // that are no longer present in index.html. Intercept the save before that broken
-  // handler runs and save only the controls that actually exist, preserving all others.
-  const saveSettingsButton = document.getElementById('saveSettings');
-  if (saveSettingsButton) {
-    saveSettingsButton.addEventListener('click', async event => {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      currentSettings = collectKirkstoneSettingsSafely();
-      StorageManager.saveSettings(currentSettings);
-      try {
-        if (typeof isLocalPreviewMode === 'undefined' || !isLocalPreviewMode) {
-          await saveSettingsToFirestore(currentSettings);
-        }
-        refreshKirkstoneServiceDropdowns();
-        if (typeof recalculate === 'function') recalculate();
-        if (typeof autoSaveForm === 'function') autoSaveForm();
-        showToast('Settings saved');
-      } catch (error) {
-        console.error('Could not save settings to Firebase', error);
-        showToast('Saved on this device, but cloud save failed');
-      }
-    }, true);
-  }
-
   // Firebase loads after the quote form is first rendered. Watch for it to finish,
   // then refresh the dropdowns and, if necessary, recover the full service-level list
   // from the richest saved quote snapshot.
