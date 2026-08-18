@@ -1,0 +1,48 @@
+name: Fix settings service level save
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-settings-service-level-save.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair global settings save and service level dropdown state
+        shell: python
+        run: |
+          from pathlib import Path
+
+          app = Path('js/app.js')
+          s = app.read_text()
+
+          old_tab = '''  document.querySelectorAll('.tab-btn').forEach(btn => {\n    btn.addEventListener('click', () => {\n      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));\n      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));\n      btn.classList.add('active');\n      document.getElementById(btn.dataset.tab).classList.add('active');\n    });\n  });'''
+          new_tab = '''  document.querySelectorAll('.tab-btn').forEach(btn => {\n    btn.addEventListener('click', () => {\n      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));\n      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));\n      btn.classList.add('active');\n      document.getElementById(btn.dataset.tab).classList.add('active');\n\n      // The Settings tab always edits the global settings used for new quotes.\n      // Do not show a loaded quote's historical settings snapshot here.\n      if (btn.dataset.tab === 'settingsPanel' && currentSettings) {\n        populateSettingsForm(currentSettings);\n        wireServiceLevelRemoveButtons();\n        wirePartsCatalogRemoveButtons();\n      }\n    });\n  });'''
+          if old_tab not in s:
+              raise SystemExit('Tab switching block not found')
+          s = s.replace(old_tab, new_tab, 1)
+
+          old_save = '''  // Settings save\n  document.getElementById('saveSettings').addEventListener('click', async () => {\n    if (loadedQuoteId) {\n      activeQuoteSettingsSnapshot = createQuoteSettingsSnapshot(collectSettingsFromForm());\n    } else {\n      currentSettings = collectSettingsFromForm();\n      StorageManager.saveSettings(currentSettings);\n      if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);\n    }\n    // Re-render pipette lines to update service level dropdowns\n    const currentLines = collectPipetteLinesFromForm();\n    renderPipetteLines(currentLines, getCalculationSettings());\n    wirePipetteLineEvents();\n    recalculate();\n    autoSaveForm();\n    showToast(loadedQuoteId ? 'Loaded quote prices updated' : 'Settings saved');\n  });'''
+          new_save = '''  // Settings save - always saves the global settings used by new quotes.\n  // Historical loaded quotes keep their own pricing snapshot until Update Saved Quote is pressed.\n  document.getElementById('saveSettings').addEventListener('click', async () => {\n    const savedSettings = collectSettingsFromForm();\n    currentSettings = savedSettings;\n    StorageManager.saveSettings(currentSettings);\n\n    try {\n      if (!isLocalPreviewMode) await saveSettingsToFirestore(currentSettings);\n    } catch (error) {\n      console.error('Could not save settings to Firebase', error);\n      showToast('Saved on this device, but cloud save failed');\n      return;\n    }\n\n    // Settings are global defaults, so leave any loaded historical quote snapshot untouched.\n    // For a normal/new quote, immediately refresh the service-level dropdowns.\n    if (!loadedQuoteId) {\n      const currentLines = collectPipetteLinesFromForm();\n      renderPipetteLines(currentLines, currentSettings);\n      wirePipetteLineEvents();\n      recalculate();\n      autoSaveForm();\n    }\n\n    showToast('Settings saved');\n  });'''
+          if old_save not in s:
+              raise SystemExit('Settings save block not found')
+          s = s.replace(old_save, new_save, 1)
+          app.write_text(s)
+
+          index = Path('index.html')
+          i = index.read_text()
+          i = i.replace('js/app.js?v=20260803-1', 'js/app.js?v=20260818-1')
+          index.write_text(i)
+
+      - name: Commit app changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add js/app.js index.html
+          git commit -m "Fix settings save and service level dropdown state"
+          git push
