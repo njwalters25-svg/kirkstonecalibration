@@ -61,7 +61,8 @@ function openCustomerCompletedQuote(jobId) {
     || DEFAULT_SETTINGS;
   const customerName = job.customerName || job.quoteSnapshot?.customerName || 'Customer';
   const customerAddress = job.quoteSnapshot?.customerAddress || '';
-  const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true) || '';
+  const originalRef = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true) || '';
+  const ref = originalRef ? `${originalRef}a` : '';
   const companyName = settings.companyName || 'Kirkstone Calibration';
   const companyAddress = settings.companyAddress || '';
   const companyPhone = settings.companyPhone || '';
