@@ -381,8 +381,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const jobsContainer = document.getElementById('jobSheets');
   if (jobsContainer) {
     const observer = new MutationObserver(() => {
+      // Installing/updating the buttons itself changes #jobSheets. Disconnect while
+      // doing that work so those button changes do not recursively trigger this observer.
+      observer.disconnect();
       renderInvoiceSpreadsheet();
       installInvoiceSpreadsheetJobButtons();
+      observer.observe(jobsContainer, { childList: true, subtree: true });
     });
     observer.observe(jobsContainer, { childList: true, subtree: true });
   }
