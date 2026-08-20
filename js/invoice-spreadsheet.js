@@ -60,12 +60,108 @@ function invoiceSpreadsheetSortDate(job) {
   return job.updatedAt || job.createdAt || '';
 }
 
+function getInvoiceReferenceFromJob(job) {
+  if (!job) return '';
+  if (job.quoteRef) return job.quoteRef;
+
+  const snapshotRef = buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
+  if (snapshotRef) return snapshotRef;
+
+  const linkedQuote = (typeof currentQuotes !== 'undefined' && job.quoteId)
+    ? currentQuotes.find(quote => quote.id === job.quoteId)
+    : null;
+  if (linkedQuote) return buildRefCode(linkedQuote.refPrefix, linkedQuote.refNumber, true) || '';
+
+  return '';
+}
+
+function createInvoiceNumberFromJob(job) {
+  const ref = getInvoiceReferenceFromJob(job);
+  return ref ? ref.replace(/Q$/i, '') : '';
+}
+
 function getInvoiceSpreadsheetJobs() {
   if (typeof currentJobs === 'undefined' || !Array.isArray(currentJobs)) return [];
   return currentJobs
-    .filter(job => String(job.invoiceNumber || '').trim())
+    .filter(job => job.invoiceSpreadsheetAdded === true)
     .slice()
     .sort((a, b) => invoiceSpreadsheetSortDate(a).localeCompare(invoiceSpreadsheetSortDate(b)));
+}
+
+function getLiveInvoiceSpreadsheetValues(job) {
+  const calc = calculateJobSheet(job);
+  return {
+    company: job.customerName || '',
+    invoiceNumber: job.invoiceNumber || createInvoiceNumberFromJob(job),
+    excVat: invoiceSpreadsheetRound(calc.actualRevenue),
+    incVat: invoiceSpreadsheetRound(calc.revenueIncVat),
+    vat: invoiceSpreadsheetRound(calc.vatAmount),
+    cost: invoiceSpreadsheetRound(calc.totalCosts),
+    preTaxProfit: invoiceSpreadsheetRound(calc.profit),
+    pension: invoiceSpreadsheetRound(Math.max(calc.profit, 0) * 0.07),
+    tax: invoiceSpreadsheetRound(calc.taxAt40),
+    postTaxProfit: invoiceSpreadsheetRound(calc.profitAfterTax),
+    numberOfDays: calc.actualDays,
+    mileage: invoiceSpreadsheetRound(parseFloat(job.costs?.mileageMiles) || 0),
+  };
+}
+
+function getInvoiceSpreadsheetValues(job) {
+  if (job.invoiceSpreadsheetLocked && job.invoiceSpreadsheetSnapshot) {
+    return job.invoiceSpreadsheetSnapshot;
+  }
+  return getLiveInvoiceSpreadsheetValues(job);
+}
+
+async function persistInvoiceSpreadsheetJob(job, message) {
+  job.updatedAt = new Date().toISOString();
+  StorageManager.saveJob(job);
+
+  try {
+    if (typeof isLocalPreviewMode === 'undefined' || !isLocalPreviewMode) {
+      await saveJobToFirestore(job);
+    }
+    if (typeof refreshJobSheets === 'function') await refreshJobSheets();
+    if (typeof showToast === 'function' && message) showToast(message);
+  } catch (error) {
+    console.error('Could not save invoice spreadsheet job to Firebase', error);
+    if (typeof showToast === 'function') showToast('Saved on this device, but cloud save failed');
+  }
+
+  renderInvoiceSpreadsheet();
+}
+
+async function addJobToInvoiceSpreadsheet(jobId) {
+  const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
+  if (!job) return;
+
+  const invoiceNumber = createInvoiceNumberFromJob(job);
+  if (!invoiceNumber) {
+    if (typeof showToast === 'function') showToast('Could not create invoice number because this job has no quote reference');
+    return;
+  }
+
+  job.invoiceNumber = invoiceNumber;
+  job.invoiceSpreadsheetAdded = true;
+  job.invoiceSpreadsheetLocked = false;
+  delete job.invoiceSpreadsheetSnapshot;
+  delete job.invoiceSpreadsheetLockedAt;
+
+  await persistInvoiceSpreadsheetJob(job, `Added to Invoice Spreadsheet as ${invoiceNumber}`);
+}
+
+async function completeInvoiceSpreadsheetJob(jobId) {
+  const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
+  if (!job || !job.invoiceSpreadsheetAdded || job.invoiceSpreadsheetLocked) return;
+
+  const confirmed = confirm('Mark this job as completed? This will lock the job-sheet figures in the Invoice Spreadsheet so later job-sheet changes will not alter them.');
+  if (!confirmed) return;
+
+  job.invoiceSpreadsheetSnapshot = getLiveInvoiceSpreadsheetValues(job);
+  job.invoiceSpreadsheetLocked = true;
+  job.invoiceSpreadsheetLockedAt = new Date().toISOString();
+
+  await persistInvoiceSpreadsheetJob(job, 'Job completed and Invoice Spreadsheet figures locked');
 }
 
 async function updateInvoiceSpreadsheetField(jobId, field, value) {
@@ -89,34 +185,83 @@ async function updateInvoiceSpreadsheetField(jobId, field, value) {
   renderInvoiceSpreadsheet();
 }
 
+function installInvoiceSpreadsheetJobButtons() {
+  document.querySelectorAll('#jobSheets .job-card').forEach(card => {
+    const jobId = card.dataset.id;
+    const actions = card.querySelector('.history-actions');
+    const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
+    if (!jobId || !actions || !job) return;
+
+    actions.querySelectorAll('[data-invoice-spreadsheet-action]').forEach(button => button.remove());
+
+    if (!job.invoiceSpreadsheetAdded) {
+      const addButton = document.createElement('button');
+      addButton.type = 'button';
+      addButton.className = 'btn-small btn-quote';
+      addButton.dataset.invoiceSpreadsheetAction = 'add';
+      addButton.textContent = 'Add to Invoice Spreadsheet';
+      addButton.addEventListener('click', () => addJobToInvoiceSpreadsheet(jobId));
+      actions.appendChild(addButton);
+      return;
+    }
+
+    if (!job.invoiceSpreadsheetLocked) {
+      const liveButton = document.createElement('button');
+      liveButton.type = 'button';
+      liveButton.className = 'btn-small';
+      liveButton.dataset.invoiceSpreadsheetAction = 'live';
+      liveButton.textContent = 'Invoice Spreadsheet: Live';
+      liveButton.disabled = true;
+      actions.appendChild(liveButton);
+
+      const completeButton = document.createElement('button');
+      completeButton.type = 'button';
+      completeButton.className = 'btn-small btn-quote';
+      completeButton.dataset.invoiceSpreadsheetAction = 'complete';
+      completeButton.textContent = 'Completed';
+      completeButton.addEventListener('click', () => completeInvoiceSpreadsheetJob(jobId));
+      actions.appendChild(completeButton);
+      return;
+    }
+
+    const lockedButton = document.createElement('button');
+    lockedButton.type = 'button';
+    lockedButton.className = 'btn-small';
+    lockedButton.dataset.invoiceSpreadsheetAction = 'locked';
+    lockedButton.textContent = 'Invoice Spreadsheet: Locked';
+    lockedButton.disabled = true;
+    actions.appendChild(lockedButton);
+  });
+}
+
 function renderInvoiceSpreadsheet() {
   const container = document.getElementById('invoiceSpreadsheet');
   if (!container) return;
 
   const jobs = getInvoiceSpreadsheetJobs();
   if (!jobs.length) {
-    container.innerHTML = '<p class="empty-state">No completed/invoiced job sheets yet. Add an invoice number to a job sheet and it will appear here.</p>';
+    container.innerHTML = '<p class="empty-state">No jobs have been added yet. Use the “Add to Invoice Spreadsheet” button on a job sheet.</p>';
     return;
   }
 
   const rows = jobs.map(job => {
-    const calc = calculateJobSheet(job);
-    const pension = invoiceSpreadsheetRound(Math.max(calc.profit, 0) * 0.07);
+    const values = getInvoiceSpreadsheetValues(job);
     const daysToPay = invoiceSpreadsheetDaysBetween(job.invoiceDateIssued, job.invoiceDatePaid);
     const clinicRepair = job.clinicRepair || '';
+    const rowClass = job.invoiceSpreadsheetLocked ? ' invoice-row-locked' : '';
     return `
-      <tr>
-        <td class="invoice-company">${escapeHtml(job.customerName || '')}</td>
-        <td>${escapeHtml(job.invoiceNumber || '')}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.actualRevenue)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.revenueIncVat)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.vatAmount)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.totalCosts)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.profit)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(pension)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.taxAt40)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(calc.profitAfterTax)}</td>
-        <td class="invoice-number">${calc.actualDays}</td>
+      <tr class="${rowClass.trim()}">
+        <td class="invoice-company">${escapeHtml(values.company || '')}</td>
+        <td>${escapeHtml(values.invoiceNumber || '')}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.excVat)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.incVat)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.vat)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.cost)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.preTaxProfit)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.pension)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.tax)}</td>
+        <td class="invoice-money">${invoiceSpreadsheetMoney(values.postTaxProfit)}</td>
+        <td class="invoice-number">${values.numberOfDays || 0}</td>
         <td>
           <select class="invoice-cell-input" onchange="updateInvoiceSpreadsheetField('${escapeJsString(job.id)}','clinicRepair',this.value)">
             <option value="" ${clinicRepair === '' ? 'selected' : ''}>Select</option>
@@ -128,30 +273,33 @@ function renderInvoiceSpreadsheet() {
         <td><input class="invoice-cell-input invoice-date" type="date" value="${escapeHtml(job.invoiceDatePaid || '')}" onchange="updateInvoiceSpreadsheetField('${escapeJsString(job.id)}','invoiceDatePaid',this.value)"></td>
         <td class="invoice-number">${daysToPay}</td>
         <td class="invoice-spacer"></td>
-        <td class="invoice-number">${parseFloat(job.costs?.mileageMiles) || 0}</td>
+        <td class="invoice-number">${values.mileage || 0}</td>
       </tr>`;
   }).join('');
 
   const totals = jobs.reduce((sum, job) => {
-    const calc = calculateJobSheet(job);
-    sum.excVat += calc.actualRevenue;
-    sum.incVat += calc.revenueIncVat;
-    sum.vat += calc.vatAmount;
-    sum.cost += calc.totalCosts;
-    sum.preTax += calc.profit;
-    sum.pension += Math.max(calc.profit, 0) * 0.07;
-    sum.tax += calc.taxAt40;
-    sum.postTax += calc.profitAfterTax;
-    sum.days += calc.actualDays;
-    sum.mileage += parseFloat(job.costs?.mileageMiles) || 0;
+    const values = getInvoiceSpreadsheetValues(job);
+    sum.excVat += parseFloat(values.excVat) || 0;
+    sum.incVat += parseFloat(values.incVat) || 0;
+    sum.vat += parseFloat(values.vat) || 0;
+    sum.cost += parseFloat(values.cost) || 0;
+    sum.preTax += parseFloat(values.preTaxProfit) || 0;
+    sum.pension += parseFloat(values.pension) || 0;
+    sum.tax += parseFloat(values.tax) || 0;
+    sum.postTax += parseFloat(values.postTaxProfit) || 0;
+    sum.days += parseFloat(values.numberOfDays) || 0;
+    sum.mileage += parseFloat(values.mileage) || 0;
     return sum;
   }, { excVat: 0, incVat: 0, vat: 0, cost: 0, preTax: 0, pension: 0, tax: 0, postTax: 0, days: 0, mileage: 0 });
+
+  const liveCount = jobs.filter(job => !job.invoiceSpreadsheetLocked).length;
+  const lockedCount = jobs.length - liveCount;
 
   container.innerHTML = `
     <div class="invoice-spreadsheet-header">
       <div>
         <h2>${escapeHtml(invoiceSpreadsheetPeriodLabel())}</h2>
-        <p>${jobs.length} completed/invoiced job sheet${jobs.length !== 1 ? 's' : ''}</p>
+        <p>${jobs.length} job${jobs.length !== 1 ? 's' : ''} · ${liveCount} live · ${lockedCount} completed/locked</p>
       </div>
     </div>
     <div class="invoice-table-wrap">
@@ -212,6 +360,7 @@ function installInvoiceSpreadsheetStyles() {
     .invoice-table thead th { position:sticky; top:0; z-index:1; background:var(--primary); color:#fff; font-weight:700; text-align:left; }
     .invoice-table tbody tr:nth-child(even) { background:#f8fafc; }
     .invoice-table tbody tr:hover { background:#eef4fb; }
+    .invoice-table tbody tr.invoice-row-locked { background:#f1f5f9; }
     .invoice-table tfoot th { background:#e8eef6; color:var(--text); font-weight:800; }
     .invoice-company { min-width:210px; }
     .invoice-money, .invoice-number { text-align:right !important; font-variant-numeric:tabular-nums; }
@@ -227,10 +376,14 @@ document.addEventListener('DOMContentLoaded', () => {
   ensureInvoiceSpreadsheetUi();
   installInvoiceSpreadsheetStyles();
   renderInvoiceSpreadsheet();
+  installInvoiceSpreadsheetJobButtons();
 
   const jobsContainer = document.getElementById('jobSheets');
   if (jobsContainer) {
-    const observer = new MutationObserver(renderInvoiceSpreadsheet);
+    const observer = new MutationObserver(() => {
+      renderInvoiceSpreadsheet();
+      installInvoiceSpreadsheetJobButtons();
+    });
     observer.observe(jobsContainer, { childList: true, subtree: true });
   }
 });
