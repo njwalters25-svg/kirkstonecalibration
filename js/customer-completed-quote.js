@@ -49,6 +49,24 @@ function getCompletedQuotePartRows(job) {
   }).filter(row => row.quantity > 0);
 }
 
+function getCompletedQuoteOriginalRef(job) {
+  if (job.quoteRef) return job.quoteRef;
+
+  const snapshotRef = buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true);
+  if (snapshotRef) return snapshotRef;
+
+  // Older job sheets may not have quoteRef/ref fields in their snapshot.
+  // Recover the reference from the original saved quote linked by quoteId.
+  const linkedQuote = (typeof currentQuotes !== 'undefined' && job.quoteId)
+    ? currentQuotes.find(quote => quote.id === job.quoteId)
+    : null;
+  if (linkedQuote) {
+    return buildRefCode(linkedQuote.refPrefix, linkedQuote.refNumber, true) || '';
+  }
+
+  return '';
+}
+
 function openCustomerCompletedQuote(jobId) {
   const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
   if (!job) return;
@@ -61,7 +79,7 @@ function openCustomerCompletedQuote(jobId) {
     || DEFAULT_SETTINGS;
   const customerName = job.customerName || job.quoteSnapshot?.customerName || 'Customer';
   const customerAddress = job.quoteSnapshot?.customerAddress || '';
-  const originalRef = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true) || '';
+  const originalRef = getCompletedQuoteOriginalRef(job);
   const ref = originalRef ? `${originalRef}a` : '';
   const companyName = settings.companyName || 'Kirkstone Calibration';
   const companyAddress = settings.companyAddress || '';
