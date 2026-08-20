@@ -2,6 +2,35 @@
 // invoice-spreadsheet.js — Invoice spreadsheet from completed job sheets
 // ============================================================
 
+function ensureInvoiceSpreadsheetUi() {
+  const nav = document.querySelector('.tab-nav');
+  if (nav && !nav.querySelector('[data-tab="invoicePanel"]')) {
+    const button = document.createElement('button');
+    button.className = 'tab-btn';
+    button.dataset.tab = 'invoicePanel';
+    button.textContent = 'Invoice Spreadsheet';
+    nav.appendChild(button);
+
+    button.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      button.classList.add('active');
+      document.getElementById('invoicePanel')?.classList.add('active');
+      if (typeof saveKirkstoneUiState === 'function') saveKirkstoneUiState('invoicePanel', null);
+      renderInvoiceSpreadsheet();
+    });
+  }
+
+  const main = document.getElementById('appMain');
+  if (main && !document.getElementById('invoicePanel')) {
+    const section = document.createElement('section');
+    section.id = 'invoicePanel';
+    section.className = 'tab-panel';
+    section.innerHTML = '<div class="card"><div id="invoiceSpreadsheet"></div></div>';
+    main.appendChild(section);
+  }
+}
+
 function invoiceSpreadsheetMoney(value) {
   return formatCurrency(parseFloat(value) || 0);
 }
@@ -195,14 +224,9 @@ function installInvoiceSpreadsheetStyles() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  ensureInvoiceSpreadsheetUi();
   installInvoiceSpreadsheetStyles();
   renderInvoiceSpreadsheet();
-
-  document.querySelectorAll('.tab-btn').forEach(button => {
-    button.addEventListener('click', () => {
-      if (button.dataset.tab === 'invoicePanel') renderInvoiceSpreadsheet();
-    });
-  });
 
   const jobsContainer = document.getElementById('jobSheets');
   if (jobsContainer) {
