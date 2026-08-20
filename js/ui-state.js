@@ -160,6 +160,95 @@ function refreshKirkstoneServiceDropdowns() {
   wirePipetteLineEvents();
 }
 
+function renderKirkstoneJobSummary(job) {
+  const calc = calculateJobSheet(job);
+  const costs = job.costs || {};
+  const vat = calc.actualRevenue * 0.20;
+  const totalWithVat = calc.actualRevenue + vat;
+  const pension = Math.max(calc.profit, 0) * 0.07;
+  const costRows = [
+    ['Hotel', parseFloat(costs.hotel) || 0],
+    ['Food', parseFloat(costs.food) || 0],
+    ['Other travel cost', parseFloat(costs.fuel) || 0],
+    ['Extra parts cost', calc.partsCost || 0],
+    ['Shipping', parseFloat(costs.shipping) || 0],
+    ['Second person', parseFloat(costs.secondPerson) || 0],
+    ['Other', parseFloat(costs.other) || 0],
+    [`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost || 0],
+    ['Sticker total', calc.stickerCost || 0],
+  ];
+
+  return `
+    <div class="kirkstone-job-summary-inner">
+      <h3>Job Sheet Summary</h3>
+      <div class="kirkstone-summary-metrics">
+        <div><span>Total</span><strong>${formatCurrency(calc.actualRevenue)}</strong></div>
+        <div><span>VAT (20%)</span><strong>${formatCurrency(vat)}</strong></div>
+        <div><span>Total + VAT</span><strong>${formatCurrency(totalWithVat)}</strong></div>
+        <div><span>Number of days</span><strong>${calc.actualDays}</strong></div>
+      </div>
+
+      <div class="kirkstone-summary-costs">
+        <h4>Costs</h4>
+        ${costRows.map(([label, amount]) => `
+          <div class="kirkstone-summary-row"><span>${escapeHtml(label)}</span><strong>${formatCurrency(amount)}</strong></div>
+        `).join('')}
+        <div class="kirkstone-summary-row kirkstone-summary-total"><span>Total cost</span><strong>${formatCurrency(calc.totalCosts)}</strong></div>
+      </div>
+
+      <div class="kirkstone-summary-metrics kirkstone-summary-profit-metrics">
+        <div><span>Profit</span><strong>${formatCurrency(calc.profit)}</strong></div>
+        <div><span>Tax (40% of profit)</span><strong>${formatCurrency(calc.taxAt40)}</strong></div>
+        <div><span>Post-tax profit</span><strong>${formatCurrency(calc.profitAfterTax)}</strong></div>
+        <div><span>Profit per day</span><strong>${formatCurrency(calc.profitPerDay)}</strong></div>
+        <div><span>Pension (7% of profit)</span><strong>${formatCurrency(pension)}</strong></div>
+      </div>
+    </div>`;
+}
+
+function toggleKirkstoneJobSummary(jobId) {
+  const panel = document.getElementById(`job-summary-${jobId}`);
+  const button = document.querySelector(`button[data-job-summary-id="${jobId}"]`);
+  const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
+  if (!panel || !job) return;
+
+  const opening = panel.style.display === 'none' || !panel.style.display;
+  if (opening) {
+    panel.innerHTML = renderKirkstoneJobSummary(job);
+    panel.style.display = 'block';
+    if (button) button.textContent = 'Close Job Sheet Summary';
+  } else {
+    panel.style.display = 'none';
+    if (button) button.textContent = 'Job Sheet Summary';
+  }
+}
+
+function installKirkstoneJobSummaryButtons() {
+  document.querySelectorAll('#jobSheets .job-card').forEach(card => {
+    const jobId = card.dataset.id;
+    const actions = card.querySelector('.history-actions');
+    if (!jobId || !actions) return;
+
+    if (!card.querySelector('.kirkstone-job-summary-panel')) {
+      const panel = document.createElement('div');
+      panel.id = `job-summary-${jobId}`;
+      panel.className = 'kirkstone-job-summary-panel';
+      panel.style.display = 'none';
+      card.insertBefore(panel, actions);
+    }
+
+    if (!actions.querySelector('[data-job-summary-id]')) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn-small btn-quote';
+      button.textContent = 'Job Sheet Summary';
+      button.dataset.jobSummaryId = jobId;
+      button.addEventListener('click', () => toggleKirkstoneJobSummary(jobId));
+      actions.insertBefore(button, actions.firstChild);
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Restore the top-level tab after app.js has applied its default New Quote state.
   restoreKirkstoneTab(savedKirkstoneUiState.activeTab || 'quotePanel');
@@ -212,6 +301,68 @@ document.addEventListener('DOMContentLoaded', () => {
       line-height: 1;
       text-align: left;
     }
+    .kirkstone-job-summary-panel {
+      margin: 1rem 0;
+      padding: 1rem;
+      border: 1px solid #dbe3ee;
+      border-radius: 10px;
+      background: #f8fafc;
+    }
+    .kirkstone-job-summary-inner h3,
+    .kirkstone-job-summary-inner h4 {
+      margin-top: 0;
+    }
+    .kirkstone-summary-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .kirkstone-summary-metrics > div {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .kirkstone-summary-metrics span {
+      color: #64748b;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .kirkstone-summary-metrics strong {
+      font-size: 1.05rem;
+    }
+    .kirkstone-summary-costs {
+      margin: 1rem 0;
+      padding: 0.75rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      background: #fff;
+    }
+    .kirkstone-summary-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .kirkstone-summary-row:last-child {
+      border-bottom: 0;
+    }
+    .kirkstone-summary-total {
+      margin-top: 0.35rem;
+      padding-top: 0.65rem;
+      border-top: 2px solid #cbd5e1;
+      border-bottom: 0;
+      font-size: 1.05rem;
+    }
+    .kirkstone-summary-profit-metrics {
+      margin-top: 1rem;
+      margin-bottom: 0;
+    }
   `;
   document.head.appendChild(alignmentStyle);
 
@@ -228,8 +379,12 @@ document.addEventListener('DOMContentLoaded', () => {
   restoreJobPosition();
   const jobsContainer = document.getElementById('jobSheets');
   if (jobsContainer) {
-    const observer = new MutationObserver(restoreJobPosition);
+    const observer = new MutationObserver(() => {
+      restoreJobPosition();
+      installKirkstoneJobSummaryButtons();
+    });
     observer.observe(jobsContainer, { childList: true, subtree: true });
-    setTimeout(() => observer.disconnect(), 15000);
+    installKirkstoneJobSummaryButtons();
+    setTimeout(() => observer.disconnect(), 30000);
   }
 });
