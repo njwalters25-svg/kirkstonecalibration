@@ -207,20 +207,124 @@ function renderKirkstoneJobSummary(job) {
 }
 
 function toggleKirkstoneJobSummary(jobId) {
-  const panel = document.getElementById(`job-summary-${jobId}`);
-  const button = document.querySelector(`button[data-job-summary-id="${jobId}"]`);
   const job = typeof currentJobs !== 'undefined' ? currentJobs.find(item => item.id === jobId) : null;
-  if (!panel || !job) return;
+  if (!job) return;
 
-  const opening = panel.style.display === 'none' || !panel.style.display;
-  if (opening) {
-    panel.innerHTML = renderKirkstoneJobSummary(job);
-    panel.style.display = 'block';
-    if (button) button.textContent = 'Close Job Sheet Summary';
-  } else {
-    panel.style.display = 'none';
-    if (button) button.textContent = 'Job Sheet Summary';
+  const calc = calculateJobSheet(job);
+  const costs = job.costs || {};
+  const vat = calc.actualRevenue * 0.20;
+  const totalWithVat = calc.actualRevenue + vat;
+  const pension = Math.max(calc.profit, 0) * 0.07;
+  const ref = job.quoteRef || buildRefCode(job.quoteSnapshot?.refPrefix, job.quoteSnapshot?.refNumber, true) || '';
+  const titleCustomer = job.customerName || 'Job';
+  const costRows = [
+    ['Hotel', parseFloat(costs.hotel) || 0],
+    ['Food', parseFloat(costs.food) || 0],
+    ['Other travel cost', parseFloat(costs.fuel) || 0],
+    ['Extra parts cost', calc.partsCost || 0],
+    ['Shipping', parseFloat(costs.shipping) || 0],
+    ['Second person', parseFloat(costs.secondPerson) || 0],
+    ['Other', parseFloat(costs.other) || 0],
+    [`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost || 0],
+    ['Sticker total', calc.stickerCost || 0],
+  ];
+
+  const summaryWindow = window.open('', '_blank');
+  if (!summaryWindow) {
+    if (typeof showToast === 'function') showToast('Please allow pop-ups to open the Job Sheet Summary');
+    return;
   }
+
+  const summaryHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Sheet Summary - ${escapeHtml(titleCustomer)}${ref ? ` - ${escapeHtml(ref)}` : ''}</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f3f6fa; color: #1f2937; font-family: Arial, Helvetica, sans-serif; }
+    .page { width: min(900px, calc(100% - 32px)); margin: 28px auto; background: #fff; padding: 34px 40px; border-radius: 12px; box-shadow: 0 8px 28px rgba(15, 23, 42, 0.10); }
+    .header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; padding-bottom: 18px; border-bottom: 2px solid #dbe3ee; }
+    .header h1 { margin: 0 0 4px; font-size: 26px; }
+    .header .subtitle { color: #64748b; font-size: 14px; }
+    .job-meta { text-align: right; font-size: 13px; line-height: 1.6; color: #475569; }
+    .job-meta strong { color: #1f2937; }
+    h2 { font-size: 17px; margin: 26px 0 10px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .metric { border: 1px solid #dbe3ee; border-radius: 8px; padding: 13px; }
+    .metric span { display: block; color: #64748b; font-size: 12px; font-weight: 700; margin-bottom: 5px; }
+    .metric strong { font-size: 18px; }
+    .costs { border: 1px solid #dbe3ee; border-radius: 8px; padding: 8px 16px; }
+    .row { display: flex; justify-content: space-between; gap: 20px; padding: 9px 0; border-bottom: 1px solid #edf2f7; }
+    .row:last-child { border-bottom: 0; }
+    .row.total { margin-top: 4px; padding-top: 12px; border-top: 2px solid #cbd5e1; font-size: 16px; }
+    .profit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .profit-grid .metric { min-height: 76px; }
+    .actions { display: flex; gap: 10px; margin-top: 28px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
+    button { border: 0; border-radius: 7px; padding: 10px 16px; cursor: pointer; font-size: 14px; font-weight: 700; }
+    .print { background: #1f4f7a; color: white; }
+    .close { background: #e8edf3; color: #25364a; }
+    @media (max-width: 700px) { .metrics, .profit-grid { grid-template-columns: 1fr 1fr; } .header { flex-direction: column; } .job-meta { text-align: left; } }
+    @media print {
+      @page { size: A4; margin: 14mm; }
+      body { background: #fff; }
+      .page { width: 100%; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
+      .actions { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>Kirkstone Calibration</h1>
+        <div class="subtitle">Job Sheet Summary</div>
+      </div>
+      <div class="job-meta">
+        <div><strong>${escapeHtml(titleCustomer)}</strong></div>
+        ${ref ? `<div>Reference: ${escapeHtml(ref)}</div>` : ''}
+        ${job.poNumber ? `<div>PO: ${escapeHtml(job.poNumber)}</div>` : ''}
+        ${job.invoiceNumber ? `<div>Invoice: ${escapeHtml(job.invoiceNumber)}</div>` : ''}
+      </div>
+    </div>
+
+    <h2>Revenue</h2>
+    <div class="metrics">
+      <div class="metric"><span>Total</span><strong>${formatCurrency(calc.actualRevenue)}</strong></div>
+      <div class="metric"><span>VAT (20%)</span><strong>${formatCurrency(vat)}</strong></div>
+      <div class="metric"><span>Total + VAT</span><strong>${formatCurrency(totalWithVat)}</strong></div>
+      <div class="metric"><span>Number of days</span><strong>${calc.actualDays}</strong></div>
+    </div>
+
+    <h2>Costs</h2>
+    <div class="costs">
+      ${costRows.map(([label, amount]) => `<div class="row"><span>${escapeHtml(label)}</span><strong>${formatCurrency(amount)}</strong></div>`).join('')}
+      <div class="row total"><span><strong>Total cost</strong></span><strong>${formatCurrency(calc.totalCosts)}</strong></div>
+    </div>
+
+    <h2>Profit & deductions</h2>
+    <div class="profit-grid">
+      <div class="metric"><span>Profit</span><strong>${formatCurrency(calc.profit)}</strong></div>
+      <div class="metric"><span>Tax (40% of profit)</span><strong>${formatCurrency(calc.taxAt40)}</strong></div>
+      <div class="metric"><span>Post-tax profit</span><strong>${formatCurrency(calc.profitAfterTax)}</strong></div>
+      <div class="metric"><span>Profit per day</span><strong>${formatCurrency(calc.profitPerDay)}</strong></div>
+      <div class="metric"><span>Pension (7% of profit)</span><strong>${formatCurrency(pension)}</strong></div>
+      <div class="metric"><span>Days worked</span><strong>${calc.actualDays}</strong></div>
+    </div>
+
+    <div class="actions">
+      <button class="print" onclick="window.print()">Print / Save as PDF</button>
+      <button class="close" onclick="window.close()">Close</button>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  summaryWindow.document.open();
+  summaryWindow.document.write(summaryHtml);
+  summaryWindow.document.close();
+  summaryWindow.focus();
 }
 
 function installKirkstoneJobSummaryButtons() {
