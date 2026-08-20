@@ -25,21 +25,15 @@
   <main class="main" id="appMain">
     <div id="cloudStatus" class="cloud-status cloud-status-loading">Connecting to Firebase...</div>
 
-    <!-- ===== PRINT HEADER (only visible in print) ===== -->
     <div class="print-header">
       <h1>Kirkstone Calibration</h1>
       <p>Pipette Calibration Quote</p>
     </div>
 
-    <!-- ===== QUOTE TAB ===== -->
     <section id="quotePanel" class="tab-panel active">
       <div class="quote-layout">
-
-        <!-- LEFT: Form -->
         <div class="form-column">
           <form id="quoteForm" autocomplete="off">
-
-            <!-- Customer -->
             <div class="card">
               <h2>Job Details</h2>
               <div class="form-group">
@@ -71,14 +65,12 @@
               </div>
             </div>
 
-            <!-- Pipettes (line items) -->
             <div class="card">
               <h2>Pipettes</h2>
               <div id="pipetteLines"></div>
               <button type="button" id="addPipetteLine" class="btn btn-secondary" style="margin-top:0.5rem;">+ Add line</button>
             </div>
 
-            <!-- Travel -->
             <div class="card">
               <h2>Travel</h2>
               <div class="form-row">
@@ -107,7 +99,6 @@
               </div>
             </div>
 
-            <!-- Location -->
             <div class="card">
               <h2>Location</h2>
               <div class="checkbox-group">
@@ -121,7 +112,6 @@
               </div>
             </div>
 
-            <!-- Accommodation -->
             <div class="card">
               <h2>Accommodation</h2>
               <div id="overnightHint" class="info-note" style="display:none; background:#fffff0; border-color:#ecc94b; color:#975a16;"></div>
@@ -175,7 +165,6 @@
               </div>
             </div>
 
-            <!-- Calibration Time -->
             <div class="card">
               <h2>On-site Time</h2>
               <div class="form-group">
@@ -197,7 +186,6 @@
               <div id="secondPersonNote" class="info-note" style="display:none; background:#f0fff4; border-color:#9ae6b4; color:#276749;"></div>
             </div>
 
-            <!-- Notes -->
             <div class="card">
               <h2>Notes</h2>
               <div class="form-group">
@@ -206,7 +194,6 @@
               </div>
             </div>
 
-            <!-- Discount -->
             <div class="card">
               <h2>Discount</h2>
               <div class="radio-group" style="flex-direction: column; gap: 0.5rem;">
@@ -223,7 +210,6 @@
               </div>
             </div>
 
-            <!-- VAT -->
             <div class="card">
               <h2>VAT</h2>
               <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
@@ -231,11 +217,9 @@
                 VAT exempt — do not add VAT to this quote
               </label>
             </div>
-
           </form>
         </div>
 
-        <!-- RIGHT: Summary -->
         <div class="summary-column">
           <div class="card">
             <h2>Quote Summary</h2>
@@ -249,196 +233,81 @@
             </div>
           </div>
         </div>
-
       </div>
     </section>
 
-    <!-- ===== SETTINGS TAB ===== -->
     <section id="settingsPanel" class="tab-panel">
-
-      <!-- Service Levels (full width, above the grid) -->
       <details class="settings-card settings-full-width collapsible-settings">
-        <summary>
-          <h3>Service Levels</h3>
-          <span>Show / hide</span>
-        </summary>
+        <summary><h3>Service Levels</h3><span>Show / hide</span></summary>
         <p class="settings-hint">Each level defines the readings, volumes, per-pipette charges, and time estimates. These appear as options in the quote form.</p>
         <div id="serviceLevelsEditor"></div>
-        <div style="margin-top: 0.75rem;">
-          <button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button>
-        </div>
+        <div style="margin-top: 0.75rem;"><button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button></div>
       </details>
 
       <details class="settings-card settings-full-width collapsible-settings">
-        <summary>
-          <h3>Parts Catalogue</h3>
-          <span>Show / hide</span>
-        </summary>
+        <summary><h3>Parts Catalogue</h3><span>Show / hide</span></summary>
         <p class="settings-hint">These parts appear in the job sheet dropdown. Costs and customer prices are copied into each job sheet when a part is added.</p>
         <div id="partsCatalogEditor"></div>
-        <div style="margin-top: 0.75rem;">
-          <button type="button" id="addCatalogPart" class="btn btn-secondary">+ Add Part</button>
-        </div>
+        <div style="margin-top: 0.75rem;"><button type="button" id="addCatalogPart" class="btn btn-secondary">+ Add Part</button></div>
       </details>
 
       <div class="settings-grid">
-
-        <!-- Internal costs -->
         <div class="settings-card">
           <h3>Internal Costs (per pipette)</h3>
-          <div class="setting-row">
-            <label>Single-channel</label>
-            <input type="number" id="s_costSingleChannel" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (6-ch)</label>
-            <input type="number" id="s_costMultiChannel6" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (8-ch)</label>
-            <input type="number" id="s_costMultiChannel8" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (12-ch)</label>
-            <input type="number" id="s_costMultiChannel12" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Multi-channel (16-ch)</label>
-            <input type="number" id="s_costMultiChannel16" step="0.50" min="0">
-            <span class="unit">GBP</span>
-          </div>
-          <div class="setting-row">
-            <label>Sticker cost per pipette</label>
-            <input type="number" id="s_stickerCostPerPipette" step="0.01" min="0">
-            <span class="unit">GBP</span>
-          </div>
+          <div class="setting-row"><label>Single-channel</label><input type="number" id="s_costSingleChannel" step="0.50" min="0"><span class="unit">GBP</span></div>
+          <div class="setting-row"><label>Multi-channel (6-ch)</label><input type="number" id="s_costMultiChannel6" step="0.50" min="0"><span class="unit">GBP</span></div>
+          <div class="setting-row"><label>Multi-channel (8-ch)</label><input type="number" id="s_costMultiChannel8" step="0.50" min="0"><span class="unit">GBP</span></div>
+          <div class="setting-row"><label>Multi-channel (12-ch)</label><input type="number" id="s_costMultiChannel12" step="0.50" min="0"><span class="unit">GBP</span></div>
+          <div class="setting-row"><label>Multi-channel (16-ch)</label><input type="number" id="s_costMultiChannel16" step="0.50" min="0"><span class="unit">GBP</span></div>
+          <div class="setting-row"><label>Sticker cost per pipette</label><input type="number" id="s_stickerCostPerPipette" step="0.01" min="0"><span class="unit">GBP</span></div>
         </div>
 
-        <!-- Labour -->
         <div class="settings-card">
           <h3>Labour</h3>
-          <div class="setting-row">
-            <label>Hourly rate (internal cost)</label>
-            <input type="number" id="s_labourHourlyRate" step="1" min="0">
-            <span class="unit">GBP/hr</span>
-          </div>
-          <div class="setting-row">
-            <label>Daily overheads</label>
-            <input type="number" id="s_dailyOverheads" step="1" min="0">
-            <span class="unit">GBP/day</span>
-          </div>
-          <div class="setting-row">
-            <label>Working day length</label>
-            <input type="number" id="s_workingDayHours" step="0.5" min="1">
-            <span class="unit">hours</span>
-          </div>
+          <div class="setting-row"><label>Hourly rate (internal cost)</label><input type="number" id="s_labourHourlyRate" step="1" min="0"><span class="unit">GBP/hr</span></div>
+          <div class="setting-row"><label>Daily overheads</label><input type="number" id="s_dailyOverheads" step="1" min="0"><span class="unit">GBP/day</span></div>
+          <div class="setting-row"><label>Working day length</label><input type="number" id="s_workingDayHours" step="0.5" min="1"><span class="unit">hours</span></div>
         </div>
 
-        <!-- Travel -->
         <div class="settings-card">
           <h3>Travel</h3>
-          <div class="setting-row">
-            <label>Mileage rate</label>
-            <input type="number" id="s_mileageRate" step="0.01" min="0">
-            <span class="unit">GBP/mile</span>
-          </div>
-          <div class="setting-row">
-            <label>Travel time value</label>
-            <input type="number" id="s_travelTimeRate" step="1" min="0">
-            <span class="unit">GBP/hr</span>
-          </div>
+          <div class="setting-row"><label>Mileage rate</label><input type="number" id="s_mileageRate" step="0.01" min="0"><span class="unit">GBP/mile</span></div>
+          <div class="setting-row"><label>Travel time value</label><input type="number" id="s_travelTimeRate" step="1" min="0"><span class="unit">GBP/hr</span></div>
         </div>
 
-        <!-- Thresholds -->
         <div class="settings-card">
           <h3>Profit Thresholds</h3>
-          <div class="setting-row">
-            <label>Good profit</label>
-            <input type="number" id="s_profitGood" step="1" min="0">
-            <span class="unit">GBP/day</span>
-          </div>
-          <div class="setting-row">
-            <label>OK profit</label>
-            <input type="number" id="s_profitOk" step="1" min="0">
-            <span class="unit">GBP/day</span>
-          </div>
-          <div class="setting-row">
-            <label>Target profit</label>
-            <input type="number" id="s_profitTarget" step="1" min="0">
-            <span class="unit">GBP/day</span>
-          </div>
+          <div class="setting-row"><label>Good profit</label><input type="number" id="s_profitGood" step="1" min="0"><span class="unit">GBP/day</span></div>
+          <div class="setting-row"><label>OK profit</label><input type="number" id="s_profitOk" step="1" min="0"><span class="unit">GBP/day</span></div>
+          <div class="setting-row"><label>Target profit</label><input type="number" id="s_profitTarget" step="1" min="0"><span class="unit">GBP/day</span></div>
         </div>
 
-        <!-- Home base -->
         <div class="settings-card">
           <h3>Home Base</h3>
-          <div class="setting-row">
-            <label>Postcode</label>
-            <input type="text" id="s_homePostcode" style="width:110px;">
-          </div>
+          <div class="setting-row"><label>Postcode</label><input type="text" id="s_homePostcode" style="width:110px;"></div>
           <p class="settings-hint">Used for route calculations to customer sites.</p>
         </div>
 
-        <!-- Discounts -->
         <div class="settings-card">
           <h3>Discounts</h3>
-          <div class="setting-row">
-            <label>Regular customer</label>
-            <input type="number" id="s_discountRegular" step="0.5" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
-          <div class="setting-row">
-            <label>Contract-winning</label>
-            <input type="number" id="s_discountContract" step="0.5" min="0" max="100">
-            <span class="unit">%</span>
-          </div>
+          <div class="setting-row"><label>Regular customer</label><input type="number" id="s_discountRegular" step="0.5" min="0" max="100"><span class="unit">%</span></div>
+          <div class="setting-row"><label>Contract-winning</label><input type="number" id="s_discountContract" step="0.5" min="0" max="100"><span class="unit">%</span></div>
         </div>
 
-        <!-- Company details -->
         <div class="settings-card settings-full-width">
           <h3>Company Details (Customer Quotes)</h3>
           <p class="settings-hint">These details appear on customer-facing quote documents.</p>
           <div class="cq-settings-grid">
-            <div class="form-group">
-              <label for="s_companyName">Company name</label>
-              <input type="text" id="s_companyName" placeholder="Kirkstone Calibration">
-            </div>
-            <div class="form-group">
-              <label for="s_companyPhone">Telephone</label>
-              <input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890">
-            </div>
-            <div class="form-group">
-              <label for="s_companyEmail">Email</label>
-              <input type="text" id="s_companyEmail" placeholder="e.g. info@example.com">
-            </div>
-            <div class="form-group">
-              <label for="s_companyWebsite">Website</label>
-              <input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com">
-            </div>
-            <div class="form-group">
-              <label for="s_vatNumber">VAT number (optional)</label>
-              <input type="text" id="s_vatNumber" placeholder="e.g. GB123456789">
-            </div>
-            <div class="form-group">
-              <label for="s_quoteValidDays">Quote valid for (days)</label>
-              <input type="number" id="s_quoteValidDays" min="1" step="1" value="30">
-            </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label for="s_companyAddress">Address</label>
-              <textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea>
-            </div>
-            <div class="form-group" style="grid-column: 1 / -1;">
-              <label for="logoUpload">Company logo</label>
-              <input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif">
-              <div id="logoPreview" style="margin-top:0.5rem;"></div>
-            </div>
+            <div class="form-group"><label for="s_companyName">Company name</label><input type="text" id="s_companyName" placeholder="Kirkstone Calibration"></div>
+            <div class="form-group"><label for="s_companyPhone">Telephone</label><input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890"></div>
+            <div class="form-group"><label for="s_companyEmail">Email</label><input type="text" id="s_companyEmail" placeholder="e.g. info@example.com"></div>
+            <div class="form-group"><label for="s_companyWebsite">Website</label><input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com"></div>
+            <div class="form-group"><label for="s_vatNumber">VAT number (optional)</label><input type="text" id="s_vatNumber" placeholder="e.g. GB123456789"></div>
+            <div class="form-group"><label for="s_quoteValidDays">Quote valid for (days)</label><input type="number" id="s_quoteValidDays" min="1" step="1" value="30"></div>
+            <div class="form-group" style="grid-column: 1 / -1;"><label for="s_companyAddress">Address</label><textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea></div>
+            <div class="form-group" style="grid-column: 1 / -1;"><label for="logoUpload">Company logo</label><input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif"><div id="logoPreview" style="margin-top:0.5rem;"></div></div>
           </div>
         </div>
-
       </div>
 
       <div class="settings-actions">
@@ -448,33 +317,16 @@
       </div>
     </section>
 
-    <!-- ===== HISTORY TAB ===== -->
-    <section id="historyPanel" class="tab-panel">
-      <div class="card">
-        <h2>Saved Quotes</h2>
-        <div id="quoteHistory"></div>
-      </div>
-    </section>
-
-    <!-- ===== JOBS TAB ===== -->
-    <section id="jobsPanel" class="tab-panel">
-      <div class="card">
-        <h2>Job Sheets</h2>
-        <div id="jobSheets"></div>
-      </div>
-    </section>
-
+    <section id="historyPanel" class="tab-panel"><div class="card"><h2>Saved Quotes</h2><div id="quoteHistory"></div></div></section>
+    <section id="jobsPanel" class="tab-panel"><div class="card"><h2>Job Sheets</h2><div id="jobSheets"></div></div></section>
   </main>
 
-  <!-- Toast notification -->
   <div id="toast" class="toast"></div>
 
-  <!-- Firebase SDK (compat for no-bundler) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
-  <!-- App scripts (dependency order) -->
   <script src="js/data.js?v=20260803-1"></script>
   <script src="js/firebase.js?v=20260803-1"></script>
   <script src="js/routing.js?v=20260803-1"></script>
@@ -482,6 +334,7 @@
   <script src="js/ui.js?v=20260817-9"></script>
   <script src="js/app.js?v=20260818-2"></script>
   <script src="js/ui-state.js?v=20260820-1"></script>
+  <script src="js/customer-completed-quote.js?v=20260820-1"></script>
 
 </body>
 </html>
