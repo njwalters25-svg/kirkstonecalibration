@@ -90,6 +90,7 @@ function getInvoiceSpreadsheetJobs() {
 
 function getLiveInvoiceSpreadsheetValues(job) {
   const calc = calculateJobSheet(job);
+  const mileage = invoiceSpreadsheetRound(parseFloat(job.costs?.mileageMiles) || 0);
   return {
     company: job.customerName || '',
     invoiceNumber: job.invoiceNumber || createInvoiceNumberFromJob(job),
@@ -102,13 +103,18 @@ function getLiveInvoiceSpreadsheetValues(job) {
     tax: invoiceSpreadsheetRound(calc.taxAt40),
     postTaxProfit: invoiceSpreadsheetRound(calc.profitAfterTax),
     numberOfDays: calc.actualDays,
-    mileage: invoiceSpreadsheetRound(parseFloat(job.costs?.mileageMiles) || 0),
+    mileage,
+    fuel: invoiceSpreadsheetRound(mileage * 0.55),
   };
 }
 
 function getInvoiceSpreadsheetValues(job) {
   if (job.invoiceSpreadsheetLocked && job.invoiceSpreadsheetSnapshot) {
-    return job.invoiceSpreadsheetSnapshot;
+    const snapshot = { ...job.invoiceSpreadsheetSnapshot };
+    if (snapshot.fuel === undefined || snapshot.fuel === null) {
+      snapshot.fuel = invoiceSpreadsheetRound((parseFloat(snapshot.mileage) || 0) * 0.55);
+    }
+    return snapshot;
   }
   return getLiveInvoiceSpreadsheetValues(job);
 }
@@ -255,11 +261,11 @@ function renderInvoiceSpreadsheet() {
         <td>${escapeHtml(values.invoiceNumber || '')}</td>
         <td class="invoice-money">${invoiceSpreadsheetMoney(values.excVat)}</td>
         <td class="invoice-money">${invoiceSpreadsheetMoney(values.incVat)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(values.vat)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(values.cost)}</td>
+        <td class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(values.vat)}</td>
+        <td class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(values.cost)}</td>
         <td class="invoice-money">${invoiceSpreadsheetMoney(values.preTaxProfit)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(values.pension)}</td>
-        <td class="invoice-money">${invoiceSpreadsheetMoney(values.tax)}</td>
+        <td class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(values.pension)}</td>
+        <td class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(values.tax)}</td>
         <td class="invoice-money">${invoiceSpreadsheetMoney(values.postTaxProfit)}</td>
         <td class="invoice-number">${values.numberOfDays || 0}</td>
         <td>
@@ -274,6 +280,7 @@ function renderInvoiceSpreadsheet() {
         <td class="invoice-number">${daysToPay}</td>
         <td class="invoice-spacer"></td>
         <td class="invoice-number">${values.mileage || 0}</td>
+        <td class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(values.fuel)}</td>
       </tr>`;
   }).join('');
 
@@ -289,8 +296,9 @@ function renderInvoiceSpreadsheet() {
     sum.postTax += parseFloat(values.postTaxProfit) || 0;
     sum.days += parseFloat(values.numberOfDays) || 0;
     sum.mileage += parseFloat(values.mileage) || 0;
+    sum.fuel += parseFloat(values.fuel) || 0;
     return sum;
-  }, { excVat: 0, incVat: 0, vat: 0, cost: 0, preTax: 0, pension: 0, tax: 0, postTax: 0, days: 0, mileage: 0 });
+  }, { excVat: 0, incVat: 0, vat: 0, cost: 0, preTax: 0, pension: 0, tax: 0, postTax: 0, days: 0, mileage: 0, fuel: 0 });
 
   const liveCount = jobs.filter(job => !job.invoiceSpreadsheetLocked).length;
   const lockedCount = jobs.length - liveCount;
@@ -310,11 +318,11 @@ function renderInvoiceSpreadsheet() {
             <th>Invoice number</th>
             <th>Amount exc vat</th>
             <th>Amount inc vat</th>
-            <th>VAT</th>
-            <th>Cost</th>
+            <th class="invoice-highlight-heading">VAT</th>
+            <th class="invoice-highlight-heading">Cost</th>
             <th>Pre tax profit</th>
-            <th>Pension</th>
-            <th>Tax</th>
+            <th class="invoice-highlight-heading">Pension</th>
+            <th class="invoice-highlight-heading">Tax</th>
             <th>Post Tax Profit</th>
             <th>Number of days</th>
             <th>Clinic/Repair</th>
@@ -323,6 +331,7 @@ function renderInvoiceSpreadsheet() {
             <th>Days taken to pay</th>
             <th class="invoice-spacer"></th>
             <th>Mileage</th>
+            <th class="invoice-highlight-heading">Fuel</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -331,15 +340,16 @@ function renderInvoiceSpreadsheet() {
             <th colspan="2">TOTAL</th>
             <th class="invoice-money">${invoiceSpreadsheetMoney(totals.excVat)}</th>
             <th class="invoice-money">${invoiceSpreadsheetMoney(totals.incVat)}</th>
-            <th class="invoice-money">${invoiceSpreadsheetMoney(totals.vat)}</th>
-            <th class="invoice-money">${invoiceSpreadsheetMoney(totals.cost)}</th>
+            <th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.vat)}</th>
+            <th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.cost)}</th>
             <th class="invoice-money">${invoiceSpreadsheetMoney(totals.preTax)}</th>
-            <th class="invoice-money">${invoiceSpreadsheetMoney(totals.pension)}</th>
-            <th class="invoice-money">${invoiceSpreadsheetMoney(totals.tax)}</th>
+            <th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.pension)}</th>
+            <th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.tax)}</th>
             <th class="invoice-money">${invoiceSpreadsheetMoney(totals.postTax)}</th>
             <th class="invoice-number">${totals.days}</th>
             <th colspan="5"></th>
             <th class="invoice-number">${invoiceSpreadsheetRound(totals.mileage)}</th>
+            <th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.fuel)}</th>
           </tr>
         </tfoot>
       </table>
@@ -358,9 +368,12 @@ function installInvoiceSpreadsheetStyles() {
     .invoice-table { width:max-content; min-width:100%; border-collapse:collapse; font-size:12px; }
     .invoice-table th, .invoice-table td { padding:8px 9px; border-right:1px solid #edf2f7; border-bottom:1px solid #edf2f7; white-space:nowrap; vertical-align:middle; }
     .invoice-table thead th { position:sticky; top:0; z-index:1; background:var(--primary); color:#fff; font-weight:700; text-align:left; }
+    .invoice-table thead th.invoice-highlight-heading { background:#8a5a00; }
     .invoice-table tbody tr:nth-child(even) { background:#f8fafc; }
     .invoice-table tbody tr:hover { background:#eef4fb; }
     .invoice-table tbody tr.invoice-row-locked { background:#f1f5f9; }
+    .invoice-table td.invoice-highlight, .invoice-table tfoot th.invoice-highlight { background:#fff3bf; font-weight:700; }
+    .invoice-table tbody tr:hover td.invoice-highlight { background:#ffe69c; }
     .invoice-table tfoot th { background:#e8eef6; color:var(--text); font-weight:800; }
     .invoice-company { min-width:210px; }
     .invoice-money, .invoice-number { text-align:right !important; font-variant-numeric:tabular-nums; }
