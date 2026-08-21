@@ -257,7 +257,14 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!jobsContainer) return;
 
   installCustomerCompletedQuoteButtons();
-  const observer = new MutationObserver(installCustomerCompletedQuoteButtons);
+  const observer = new MutationObserver(() => {
+    // Job sheets are re-rendered after Firebase refreshes and invoice updates.
+    // Keep this observer active so the customer-facing completed quote button is
+    // always restored. Disconnect while inserting buttons so our own DOM changes
+    // do not trigger a recursive observer loop.
+    observer.disconnect();
+    installCustomerCompletedQuoteButtons();
+    observer.observe(jobsContainer, { childList: true, subtree: true });
+  });
   observer.observe(jobsContainer, { childList: true, subtree: true });
-  setTimeout(() => observer.disconnect(), 30000);
 });
