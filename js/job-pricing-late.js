@@ -11,7 +11,6 @@
     ['multi16', '16-channel', 'multiChannel16Count'],
   ];
 
-  // Ensure customer-facing completed quotes use job-specific amended prices.
   if (typeof getCompletedQuotePipetteRows === 'function' && typeof getJobUnitPrice === 'function') {
     window.getCompletedQuotePipetteRows = function (job) {
       const settings = typeof getSettingsForQuote === 'function'
@@ -42,7 +41,10 @@
         const catalogPart = catalog.find(item => item.id === part.catalogPartId);
         const name = catalogPart ? getCatalogPartName(catalogPart) : (part.name || part.description || part.catalogPartId || 'Part');
         const quantity = parseFloat(part.quantity) || 0;
-        const unitPrice = parseFloat(part.pricePerUnit) || 0;
+        const values = typeof getNormalisedPartValues === 'function'
+          ? getNormalisedPartValues(part)
+          : { pricePerUnit: parseFloat(part.pricePerUnit) || 0 };
+        const unitPrice = parseFloat(values.pricePerUnit) || 0;
         return { name, quantity, unitPrice, total: quantity * unitPrice };
       }).filter(row => row.quantity > 0);
     };
@@ -100,7 +102,6 @@
     });
   }
 
-  // Re-render once so all corrected calculations/part fields are visible immediately.
   if (typeof currentJobs !== 'undefined' && typeof renderJobSheets === 'function') renderJobSheets(currentJobs);
   if (typeof currentSettings !== 'undefined' && currentSettings && typeof populateSettingsForm === 'function') populateSettingsForm(currentSettings);
   installEditors();
