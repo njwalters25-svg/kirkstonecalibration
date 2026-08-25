@@ -63,7 +63,33 @@
     return ids;
   }
 
+  function installQuoteReferenceEditors() {
+    document.querySelectorAll('#jobSheets .job-card').forEach(card => {
+      const jobId = card.dataset.id;
+      const job = typeof getJobById === 'function' ? getJobById(jobId) : null;
+      const metaGrid = card.querySelector('.job-meta-grid');
+      if (!job || !metaGrid || metaGrid.querySelector('.job-quote-ref-field')) return;
+
+      const group = document.createElement('div');
+      group.className = 'form-group job-quote-ref-field';
+      group.innerHTML = `
+        <label>Quote reference</label>
+        <input type="text" value="${escapeHtml(job.quoteRef || '')}" placeholder="e.g. KCSYGHC101Q">
+        <span class="field-hint">Can be entered or corrected here if it did not pull through from the original quote.</span>`;
+
+      const input = group.querySelector('input');
+      input.addEventListener('change', () => {
+        const value = String(input.value || '').trim().toUpperCase();
+        input.value = value;
+        if (typeof updateJobField === 'function') updateJobField(job.id, 'quoteRef', value);
+      });
+
+      metaGrid.insertBefore(group, metaGrid.firstChild);
+    });
+  }
+
   function installEditors() {
+    installQuoteReferenceEditors();
     if (typeof getJobUnitPrice !== 'function') return;
     document.querySelectorAll('#jobSheets .job-card').forEach(card => {
       const jobId = card.dataset.id;
