@@ -105,14 +105,20 @@
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
 
-  // Load normal app-code corrections for editable job pricing and part values.
+  // Load normal app-code corrections in a controlled order.
   const pricingScript = document.createElement('script');
-  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-2';
+  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-3';
   pricingScript.async = false;
   pricingScript.onload = () => {
     const compatScript = document.createElement('script');
-    compatScript.src = 'js/part-price-compat.js?v=20260825-1';
+    compatScript.src = 'js/part-price-compat.js?v=20260825-2';
     compatScript.async = false;
+    compatScript.onload = () => {
+      const lateScript = document.createElement('script');
+      lateScript.src = 'js/job-pricing-late.js?v=20260825-2';
+      lateScript.async = false;
+      document.head.appendChild(lateScript);
+    };
     document.head.appendChild(compatScript);
   };
   document.head.appendChild(pricingScript);
