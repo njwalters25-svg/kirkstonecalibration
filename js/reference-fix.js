@@ -105,16 +105,15 @@
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
 
-  // Load normal app-code corrections for editable job pricing and part cost/price fields.
+  // Load normal app-code corrections for editable job pricing and part values.
   const pricingScript = document.createElement('script');
-  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-1';
+  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-2';
   pricingScript.async = false;
+  pricingScript.onload = () => {
+    const compatScript = document.createElement('script');
+    compatScript.src = 'js/part-price-compat.js?v=20260825-1';
+    compatScript.async = false;
+    document.head.appendChild(compatScript);
+  };
   document.head.appendChild(pricingScript);
-
-  // Once every parser-loaded app script is present, finalise the customer quote hooks and UI.
-  window.addEventListener('load', () => {
-    const lateScript = document.createElement('script');
-    lateScript.src = 'js/job-pricing-late.js?v=20260825-1';
-    document.head.appendChild(lateScript);
-  });
 })();
