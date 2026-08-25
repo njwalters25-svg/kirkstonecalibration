@@ -115,7 +115,7 @@
     compatScript.async = false;
     compatScript.onload = () => {
       const lateScript = document.createElement('script');
-      lateScript.src = 'js/job-pricing-late.js?v=20260825-2';
+      lateScript.src = 'js/job-pricing-late.js?v=20260825-3';
       lateScript.async = false;
       document.head.appendChild(lateScript);
     };
