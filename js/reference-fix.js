@@ -105,4 +105,11 @@
     // Handles a restored draft where Firebase finishes loading shortly after page load.
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
+
+  // Load normal app-code corrections for editable job pricing and part cost/price fields.
+  // This deliberately does not touch deployment/workflow configuration.
+  const pricingScript = document.createElement('script');
+  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-1';
+  pricingScript.async = false;
+  document.head.appendChild(pricingScript);
 })();
