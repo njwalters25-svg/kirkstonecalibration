@@ -102,14 +102,19 @@
       observer.observe(cloudStatus, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     }
 
-    // Handles a restored draft where Firebase finishes loading shortly after page load.
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
 
   // Load normal app-code corrections for editable job pricing and part cost/price fields.
-  // This deliberately does not touch deployment/workflow configuration.
   const pricingScript = document.createElement('script');
   pricingScript.src = 'js/job-pricing-fix.js?v=20260825-1';
   pricingScript.async = false;
   document.head.appendChild(pricingScript);
+
+  // Once every parser-loaded app script is present, finalise the customer quote hooks and UI.
+  window.addEventListener('load', () => {
+    const lateScript = document.createElement('script');
+    lateScript.src = 'js/job-pricing-late.js?v=20260825-1';
+    document.head.appendChild(lateScript);
+  });
 })();
