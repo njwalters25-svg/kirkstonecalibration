@@ -71,7 +71,7 @@
       ...(job.costs || {}),
       mileageMiles: snapshot.mileage,
     };
-    job.quoteSnapshot = job.quoteSnapshot || { vatExempt: vat === 0 };
+    job.quoteSnapshot = { ...(job.quoteSnapshot || {}), vatExempt: snapshot.vat === 0 };
     return job;
   }
 
@@ -254,7 +254,6 @@
     });
   }
 
-  // Give historical jobs meaningful figures in the normal Jobs card too.
   if (typeof calculateJobSheet === 'function') {
     const originalCalculateJobSheet = calculateJobSheet;
     window.calculateJobSheet = function (job) {
