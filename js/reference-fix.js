@@ -78,7 +78,7 @@
   pricingScript.src = 'js/job-pricing-fix.js?v=20260825-3'; pricingScript.async = false;
   pricingScript.onload = () => {
     const compatScript = document.createElement('script');
-    compatScript.src = 'js/part-price-compat.js?v=20260828-3'; compatScript.async = false;
+    compatScript.src = 'js/part-price-compat.js?v=20260828-4'; compatScript.async = false;
     compatScript.onload = () => {
       const lateScript = document.createElement('script');
       lateScript.src = 'js/job-pricing-late.js?v=20260825-3'; lateScript.async = false;
@@ -87,7 +87,7 @@
         jobRepairScript.src = 'js/job-repair.js?v=20260828-1'; jobRepairScript.async = false;
         jobRepairScript.onload = () => {
           const customPartsScript = document.createElement('script');
-          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-2'; customPartsScript.async = false;
+          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-3'; customPartsScript.async = false;
           customPartsScript.onload = () => {
             const closeJobScript = document.createElement('script');
             closeJobScript.src = 'js/job-close.js?v=20260828-1'; closeJobScript.async = false;
