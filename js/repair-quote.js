@@ -87,7 +87,7 @@
           </div>
           <div class="form-group repair-price-group">
             <label>Price</label>
-            <div class="currency-input"><span class="currency-prefix">£</span><input type="number" class="pl-repair-price" min="0" step="0.01" value="${parseFloat(line.repairPrice) || 0}"></div>
+            <div class="repair-currency-input"><span class="repair-currency-prefix">£</span><input type="number" class="pl-repair-price" min="0" step="0.01" value="${parseFloat(line.repairPrice) || 0}"></div>
           </div>
           ${repairLines.length > 1 ? `<button type="button" class="btn-small btn-delete pl-remove" data-index="${i}">Remove</button>` : '<span></span>'}
         </div>
@@ -212,6 +212,7 @@
     style.textContent = `
       .quote-mode-switch{display:flex;gap:.5rem;margin:0 0 .85rem}.quote-mode-switch .btn{padding:.45rem .9rem}.quote-mode-switch .active{background:var(--primary);color:#fff;border-color:var(--primary)}
       .repair-quote-grid{display:grid;grid-template-columns:minmax(0,1fr) 160px auto;gap:.75rem;align-items:end}.repair-quote-line{padding:.85rem}.repair-description-group{min-width:0}.repair-price-group{min-width:0}
+      .repair-currency-input{display:flex;align-items:center;width:100%;border:1px solid var(--border);border-radius:var(--radius);background:#fff;overflow:hidden}.repair-currency-prefix{flex:0 0 auto;padding:0 .45rem 0 .6rem;color:var(--text-light);font-weight:600;line-height:2.35}.repair-currency-input .pl-repair-price{flex:1 1 auto;min-width:0;width:100%;border:0!important;border-radius:0!important;padding-left:.15rem!important;box-shadow:none!important;background:transparent}.repair-currency-input .pl-repair-price:focus{outline:none;box-shadow:none!important}
       @media(max-width:650px){.repair-quote-grid{grid-template-columns:1fr}.repair-quote-grid .btn-delete{justify-self:start}}
     `;
     document.head.appendChild(style);
