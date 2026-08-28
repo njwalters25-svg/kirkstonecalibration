@@ -1,9 +1,10 @@
 // ============================================================
-// job-custom-parts.js — Custom cost-only part option on job sheets
+// job-custom-parts.js — Custom cost-only and priced part options
 // ============================================================
 
 (function () {
-  const CUSTOM_PART_ID = '__custom_part__';
+  const CUSTOM_COST_ID = '__custom_part__';
+  const CUSTOM_PRICED_ID = '__custom_priced_part__';
 
   window.selectJobPartOption = function (jobId, partId, value) {
     const job = typeof getJobById === 'function' ? getJobById(jobId) : null;
@@ -11,25 +12,24 @@
     const part = (job.parts || []).find(item => item.id === partId);
     if (!part) return;
 
-    if (value === CUSTOM_PART_ID) {
-      part.catalogPartId = CUSTOM_PART_ID;
+    if (value === CUSTOM_COST_ID || value === CUSTOM_PRICED_ID) {
+      part.catalogPartId = value;
       part.name = '';
       part.quantity = part.quantity || 1;
       part.costPerUnit = 0;
-      // Custom entries are expenses only and must never add customer revenue.
       part.pricePerUnit = 0;
       renderJobSheets(currentJobs);
       return;
     }
 
-    if (typeof updateJobPart === 'function') {
-      updateJobPart(jobId, partId, 'catalogPartId', value);
-    }
+    if (typeof updateJobPart === 'function') updateJobPart(jobId, partId, 'catalogPartId', value);
   };
 
   window.renderJobPartRow = function (job, part) {
     const catalog = typeof getJobPartsCatalog === 'function' ? getJobPartsCatalog(job) : [];
-    const isCustom = part.catalogPartId === CUSTOM_PART_ID;
+    const isCostOnly = part.catalogPartId === CUSTOM_COST_ID;
+    const isCustomPriced = part.catalogPartId === CUSTOM_PRICED_ID;
+    const isCustom = isCostOnly || isCustomPriced;
     const options = catalog.map(catalogPart =>
       `<option value="${escapeHtml(catalogPart.id)}" ${catalogPart.id === part.catalogPartId ? 'selected' : ''}>${escapeHtml(getCatalogPartName(catalogPart))}</option>`
     ).join('');
@@ -38,9 +38,8 @@
       ? getNormalisedPartValues(part)
       : { costPerUnit: parseFloat(part.costPerUnit) || 0, pricePerUnit: parseFloat(part.pricePerUnit) || 0 };
     const costPerUnit = parseFloat(values.costPerUnit) || 0;
-    const pricePerUnit = isCustom ? 0 : (parseFloat(values.pricePerUnit) || 0);
-    // Clean up any value entered before custom parts became cost-only.
-    if (isCustom && part.pricePerUnit !== 0) part.pricePerUnit = 0;
+    const pricePerUnit = isCostOnly ? 0 : (parseFloat(values.pricePerUnit) || 0);
+    if (isCostOnly && part.pricePerUnit !== 0) part.pricePerUnit = 0;
     const costTotal = quantity * costPerUnit;
     const priceTotal = quantity * pricePerUnit;
 
@@ -49,15 +48,16 @@
         <div class="job-part-selector-cell">
           <select onchange="selectJobPartOption('${escapeJsString(job.id)}','${escapeJsString(part.id)}',this.value)">
             ${options}
-            <option value="${CUSTOM_PART_ID}" ${isCustom ? 'selected' : ''}>Other / custom cost…</option>
+            <option value="${CUSTOM_COST_ID}" ${isCostOnly ? 'selected' : ''}>Other / custom cost…</option>
+            <option value="${CUSTOM_PRICED_ID}" ${isCustomPriced ? 'selected' : ''}>Other / custom part + price…</option>
           </select>
-          ${isCustom ? `<input class="job-custom-part-name" type="text" value="${escapeHtml(part.name || '')}" placeholder="Type cost / item" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">` : ''}
+          ${isCustom ? `<input class="job-custom-part-name" type="text" value="${escapeHtml(part.name || '')}" placeholder="Type part / item" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">` : ''}
         </div>
         <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">
         <input type="number" min="0" step="0.01" value="${costPerUnit}" placeholder="Cost" title="Your cost per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
-        ${isCustom ? '<span class="job-custom-cost-only">Cost only</span>' : `<input type="number" min="0" step="0.01" value="${pricePerUnit}" placeholder="Customer price" title="Customer price per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">`}
+        ${isCostOnly ? '<span class="job-custom-cost-only">Cost only</span>' : `<input type="number" min="0" step="0.01" value="${pricePerUnit}" placeholder="Customer price" title="Customer price per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">`}
         <span>${formatCurrency(costTotal)}</span>
-        <span>${isCustom ? '—' : formatCurrency(priceTotal)}</span>
+        <span>${isCostOnly ? '—' : formatCurrency(priceTotal)}</span>
         <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>
       </div>`;
   };
