@@ -1,5 +1,5 @@
 // ============================================================
-// job-custom-parts.js — Custom free-type part option on job sheets
+// job-custom-parts.js — Custom cost-only part option on job sheets
 // ============================================================
 
 (function () {
@@ -16,6 +16,7 @@
       part.name = '';
       part.quantity = part.quantity || 1;
       part.costPerUnit = 0;
+      // Custom entries are expenses only and must never add customer revenue.
       part.pricePerUnit = 0;
       renderJobSheets(currentJobs);
       return;
@@ -35,12 +36,11 @@
     const quantity = parseFloat(part.quantity) || 1;
     const values = typeof getNormalisedPartValues === 'function'
       ? getNormalisedPartValues(part)
-      : {
-          costPerUnit: parseFloat(part.costPerUnit) || 0,
-          pricePerUnit: parseFloat(part.pricePerUnit) || 0,
-        };
+      : { costPerUnit: parseFloat(part.costPerUnit) || 0, pricePerUnit: parseFloat(part.pricePerUnit) || 0 };
     const costPerUnit = parseFloat(values.costPerUnit) || 0;
-    const pricePerUnit = parseFloat(values.pricePerUnit) || 0;
+    const pricePerUnit = isCustom ? 0 : (parseFloat(values.pricePerUnit) || 0);
+    // Clean up any value entered before custom parts became cost-only.
+    if (isCustom && part.pricePerUnit !== 0) part.pricePerUnit = 0;
     const costTotal = quantity * costPerUnit;
     const priceTotal = quantity * pricePerUnit;
 
@@ -49,15 +49,15 @@
         <div class="job-part-selector-cell">
           <select onchange="selectJobPartOption('${escapeJsString(job.id)}','${escapeJsString(part.id)}',this.value)">
             ${options}
-            <option value="${CUSTOM_PART_ID}" ${isCustom ? 'selected' : ''}>Other / custom part…</option>
+            <option value="${CUSTOM_PART_ID}" ${isCustom ? 'selected' : ''}>Other / custom cost…</option>
           </select>
-          ${isCustom ? `<input class="job-custom-part-name" type="text" value="${escapeHtml(part.name || '')}" placeholder="Type part / item" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">` : ''}
+          ${isCustom ? `<input class="job-custom-part-name" type="text" value="${escapeHtml(part.name || '')}" placeholder="Type cost / item" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','name',this.value)">` : ''}
         </div>
         <input type="number" min="0" step="1" value="${quantity}" placeholder="Qty" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','quantity',this.value)">
         <input type="number" min="0" step="0.01" value="${costPerUnit}" placeholder="Cost" title="Your cost per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','costPerUnit',this.value)">
-        <input type="number" min="0" step="0.01" value="${pricePerUnit}" placeholder="Customer price" title="Customer price per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">
+        ${isCustom ? '<span class="job-custom-cost-only">Cost only</span>' : `<input type="number" min="0" step="0.01" value="${pricePerUnit}" placeholder="Customer price" title="Customer price per unit" onchange="updateJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}','pricePerUnit',this.value)">`}
         <span>${formatCurrency(costTotal)}</span>
-        <span>${formatCurrency(priceTotal)}</span>
+        <span>${isCustom ? '—' : formatCurrency(priceTotal)}</span>
         <button class="btn-small btn-delete" onclick="deleteJobPart('${escapeJsString(job.id)}','${escapeJsString(part.id)}')">Remove</button>
       </div>`;
   };
@@ -67,13 +67,11 @@
     const style = document.createElement('style');
     style.id = 'jobCustomPartStyles';
     style.textContent = `
-      .job-part-selector-cell{display:flex;flex-direction:column;gap:.35rem;min-width:180px}.job-custom-part-name{width:100%;min-width:0}.job-custom-part-row{align-items:end}
+      .job-part-selector-cell{display:flex;flex-direction:column;gap:.35rem;min-width:180px}.job-custom-part-name{width:100%;min-width:0}.job-custom-part-row{align-items:end}.job-custom-cost-only{display:flex;align-items:center;min-height:38px;font-size:.85rem;color:#64748b;font-weight:600}
     `;
     document.head.appendChild(style);
   }
 
   installStyles();
-  if (typeof currentJobs !== 'undefined' && typeof renderJobSheets === 'function') {
-    renderJobSheets(currentJobs);
-  }
+  if (typeof currentJobs !== 'undefined' && typeof renderJobSheets === 'function') renderJobSheets(currentJobs);
 })();
