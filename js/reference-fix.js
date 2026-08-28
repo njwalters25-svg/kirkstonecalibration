@@ -105,4 +105,10 @@
 
   const repairScript = document.createElement('script');
   repairScript.src = 'js/repair-quote.js?v=20260828-2'; repairScript.async = false; document.head.appendChild(repairScript);
+
+  // Saved/live quote pricing can be edited until a job sheet is raised.
+  const liveQuotePricingScript = document.createElement('script');
+  liveQuotePricingScript.src = 'js/live-quote-pricing.js?v=20260828-1';
+  liveQuotePricingScript.async = false;
+  document.head.appendChild(liveQuotePricingScript);
 })();
