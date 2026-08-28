@@ -117,6 +117,12 @@
       const lateScript = document.createElement('script');
       lateScript.src = 'js/job-pricing-late.js?v=20260825-3';
       lateScript.async = false;
+      lateScript.onload = () => {
+        const jobRepairScript = document.createElement('script');
+        jobRepairScript.src = 'js/job-repair.js?v=20260828-1';
+        jobRepairScript.async = false;
+        document.head.appendChild(jobRepairScript);
+      };
       document.head.appendChild(lateScript);
     };
     document.head.appendChild(compatScript);
