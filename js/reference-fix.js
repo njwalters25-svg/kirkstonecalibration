@@ -20,31 +20,22 @@
   window.getNextRefNumber = function getNextRefNumberFixed(prefix, quotes) {
     const upper = normalisePrefix(prefix);
     if (!upper) return 100;
-
     const used = [];
-
     (Array.isArray(quotes) ? quotes : []).forEach(q => {
-      if (normalisePrefix(q.refPrefix) === upper && Number.isInteger(q.refNumber)) {
-        used.push(q.refNumber);
-      }
+      if (normalisePrefix(q.refPrefix) === upper && Number.isInteger(q.refNumber)) used.push(q.refNumber);
       const parsed = extractRefNumber(q.quoteRef || q.reference || '', upper);
       if (Number.isInteger(parsed)) used.push(parsed);
     });
-
     if (typeof currentJobs !== 'undefined' && Array.isArray(currentJobs)) {
       currentJobs.forEach(job => {
-        const refs = [job.quoteRef, job.invoiceNumber];
-        refs.forEach(ref => {
+        [job.quoteRef, job.invoiceNumber].forEach(ref => {
           const parsed = extractRefNumber(ref, upper);
           if (Number.isInteger(parsed)) used.push(parsed);
         });
         const snap = job.quoteSnapshot || {};
-        if (normalisePrefix(snap.refPrefix) === upper && Number.isInteger(snap.refNumber)) {
-          used.push(snap.refNumber);
-        }
+        if (normalisePrefix(snap.refPrefix) === upper && Number.isInteger(snap.refNumber)) used.push(snap.refNumber);
       });
     }
-
     return used.length ? Math.max(...used) + 1 : 100;
   };
 
@@ -52,7 +43,6 @@
     const displayEl = document.getElementById('refDisplay');
     const numberEl = document.getElementById('refNumber');
     if (!displayEl || !numberEl) return;
-
     const upper = normalisePrefix(prefix);
     if (!upper) {
       displayEl.textContent = 'Enter a customer code';
@@ -60,7 +50,6 @@
       numberEl.value = '';
       return;
     }
-
     const num = window.getNextRefNumber(upper, typeof currentQuotes !== 'undefined' ? currentQuotes : []);
     numberEl.value = num;
     displayEl.textContent = buildRefCode(upper, num, true);
@@ -91,21 +80,16 @@
       prefixEl.addEventListener('input', handlePrefix);
       prefixEl.addEventListener('change', handlePrefix);
     }
-
     const cloudStatus = document.getElementById('cloudStatus');
     if (cloudStatus) {
       const observer = new MutationObserver(() => {
-        if (cloudStatus.classList.contains('cloud-status-ready')) {
-          refreshReferenceIfNewQuote();
-        }
+        if (cloudStatus.classList.contains('cloud-status-ready')) refreshReferenceIfNewQuote();
       });
       observer.observe(cloudStatus, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     }
-
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
 
-  // Load normal app-code corrections in a controlled order.
   const pricingScript = document.createElement('script');
   pricingScript.src = 'js/job-pricing-fix.js?v=20260825-3';
   pricingScript.async = false;
@@ -123,7 +107,7 @@
         jobRepairScript.async = false;
         jobRepairScript.onload = () => {
           const customPartsScript = document.createElement('script');
-          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-1';
+          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-2';
           customPartsScript.async = false;
           document.head.appendChild(customPartsScript);
         };
@@ -135,7 +119,6 @@
   };
   document.head.appendChild(pricingScript);
 
-  // New Quote repair mode: free-text repair description + editable price.
   const repairScript = document.createElement('script');
   repairScript.src = 'js/repair-quote.js?v=20260828-2';
   repairScript.async = false;
