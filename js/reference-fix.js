@@ -125,7 +125,7 @@
 
   // New Quote repair mode: free-text repair description + editable price.
   const repairScript = document.createElement('script');
-  repairScript.src = 'js/repair-quote.js?v=20260828-1';
+  repairScript.src = 'js/repair-quote.js?v=20260828-2';
   repairScript.async = false;
   document.head.appendChild(repairScript);
 })();
