@@ -121,6 +121,12 @@
         const jobRepairScript = document.createElement('script');
         jobRepairScript.src = 'js/job-repair.js?v=20260828-1';
         jobRepairScript.async = false;
+        jobRepairScript.onload = () => {
+          const customPartsScript = document.createElement('script');
+          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-1';
+          customPartsScript.async = false;
+          document.head.appendChild(customPartsScript);
+        };
         document.head.appendChild(jobRepairScript);
       };
       document.head.appendChild(lateScript);
