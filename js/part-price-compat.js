@@ -3,9 +3,18 @@
 // ============================================================
 
 (function () {
+  const CUSTOM_PART_ID = '__custom_part__';
+
   function normalisePartValues(part) {
     const rawCost = parseFloat(part?.costPerUnit) || 0;
     const rawPrice = parseFloat(part?.pricePerUnit) || 0;
+
+    // Custom job entries are deliberately cost-only. Never run them through
+    // the legacy cost/price reversal heuristic, otherwise a cost with £0
+    // customer price would be incorrectly converted into customer revenue.
+    if (part?.catalogPartId === CUSTOM_PART_ID) {
+      return { costPerUnit: rawCost, pricePerUnit: 0 };
+    }
 
     // Older saved catalog/job records used these fields backwards.
     // In this business the customer price should not be below Kirkstone's cost,
@@ -21,20 +30,14 @@
   if (typeof getEffectivePartsCatalog === 'function') {
     const originalGetEffectivePartsCatalog = getEffectivePartsCatalog;
     window.getEffectivePartsCatalog = function (settings) {
-      return originalGetEffectivePartsCatalog(settings).map(part => ({
-        ...part,
-        ...normalisePartValues(part),
-      }));
+      return originalGetEffectivePartsCatalog(settings).map(part => ({ ...part, ...normalisePartValues(part) }));
     };
   }
 
   if (typeof getJobPartsCatalog === 'function') {
     const originalGetJobPartsCatalog = getJobPartsCatalog;
     window.getJobPartsCatalog = function (job) {
-      return originalGetJobPartsCatalog(job).map(part => ({
-        ...part,
-        ...normalisePartValues(part),
-      }));
+      return originalGetJobPartsCatalog(job).map(part => ({ ...part, ...normalisePartValues(part) }));
     };
   }
 
@@ -98,7 +101,7 @@
   if (typeof getCompletedQuotePartRows === 'function') {
     window.getCompletedQuotePartRows = function (job) {
       const catalog = typeof getJobPartsCatalog === 'function' ? getJobPartsCatalog(job) : [];
-      return (job.parts || []).map(part => {
+      return (job.parts || []).filter(part => part.catalogPartId !== CUSTOM_PART_ID).map(part => {
         const catalogPart = catalog.find(item => item.id === part.catalogPartId);
         const name = catalogPart ? getCatalogPartName(catalogPart) : (part.name || part.description || part.catalogPartId || 'Part');
         const quantity = parseFloat(part.quantity) || 0;
