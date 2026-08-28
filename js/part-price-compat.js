@@ -3,22 +3,23 @@
 // ============================================================
 
 (function () {
-  const CUSTOM_PART_ID = '__custom_part__';
+  const CUSTOM_COST_ID = '__custom_part__';
+  const CUSTOM_PRICED_ID = '__custom_priced_part__';
 
   function normalisePartValues(part) {
     const rawCost = parseFloat(part?.costPerUnit) || 0;
     const rawPrice = parseFloat(part?.pricePerUnit) || 0;
 
-    // Custom job entries are deliberately cost-only. Never run them through
-    // the legacy cost/price reversal heuristic, otherwise a cost with £0
-    // customer price would be incorrectly converted into customer revenue.
-    if (part?.catalogPartId === CUSTOM_PART_ID) {
+    // Deliberate custom entries must preserve the values entered by the user.
+    // Cost-only custom entries always carry zero customer price.
+    if (part?.catalogPartId === CUSTOM_COST_ID) {
       return { costPerUnit: rawCost, pricePerUnit: 0 };
+    }
+    if (part?.catalogPartId === CUSTOM_PRICED_ID) {
+      return { costPerUnit: rawCost, pricePerUnit: rawPrice };
     }
 
     // Older saved catalog/job records used these fields backwards.
-    // In this business the customer price should not be below Kirkstone's cost,
-    // so treat cost > price as a legacy reversed record.
     if (rawCost > rawPrice && rawPrice >= 0) {
       return { costPerUnit: rawPrice, pricePerUnit: rawCost };
     }
@@ -101,13 +102,13 @@
   if (typeof getCompletedQuotePartRows === 'function') {
     window.getCompletedQuotePartRows = function (job) {
       const catalog = typeof getJobPartsCatalog === 'function' ? getJobPartsCatalog(job) : [];
-      return (job.parts || []).filter(part => part.catalogPartId !== CUSTOM_PART_ID).map(part => {
+      return (job.parts || []).filter(part => part.catalogPartId !== CUSTOM_COST_ID).map(part => {
         const catalogPart = catalog.find(item => item.id === part.catalogPartId);
         const name = catalogPart ? getCatalogPartName(catalogPart) : (part.name || part.description || part.catalogPartId || 'Part');
         const quantity = parseFloat(part.quantity) || 0;
         const values = normalisePartValues(part);
         return { name, quantity, unitPrice: values.pricePerUnit, total: quantity * values.pricePerUnit };
-      }).filter(row => row.quantity > 0);
+      }).filter(row => row.quantity > 0 && row.total > 0);
     };
   }
 })();
