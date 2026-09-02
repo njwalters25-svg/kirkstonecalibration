@@ -111,4 +111,10 @@
   liveQuotePricingScript.src = 'js/live-quote-pricing.js?v=20260828-1';
   liveQuotePricingScript.async = false;
   document.head.appendChild(liveQuotePricingScript);
+
+  // Invoice numbers can be corrected directly on the Invoice Spreadsheet.
+  const invoiceNumberEditScript = document.createElement('script');
+  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
+  invoiceNumberEditScript.async = false;
+  document.head.appendChild(invoiceNumberEditScript);
 })();
