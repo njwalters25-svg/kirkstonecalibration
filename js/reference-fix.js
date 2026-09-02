@@ -130,9 +130,22 @@
   invoicePaidDateSyncScript.async = false;
   document.head.appendChild(invoicePaidDateSyncScript);
 
-  // Live charts for the Annual Summary business dashboard.
-  const annualChartsScript = document.createElement('script');
-  annualChartsScript.src = 'js/annual-summary-charts.js?v=20260902-1';
-  annualChartsScript.async = false;
-  document.head.appendChild(annualChartsScript);
+  // Load Annual Summary charts only after the full page (including annual-summary.js) is ready.
+  function loadAnnualCharts() {
+    if (window.renderAnnualSummaryCharts || document.querySelector('script[data-annual-charts]')) {
+      if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
+      return;
+    }
+    const annualChartsScript = document.createElement('script');
+    annualChartsScript.src = 'js/annual-summary-charts.js?v=20260902-3';
+    annualChartsScript.async = false;
+    annualChartsScript.dataset.annualCharts = 'true';
+    annualChartsScript.onload = () => {
+      if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
+    };
+    document.head.appendChild(annualChartsScript);
+  }
+
+  if (document.readyState === 'complete') loadAnnualCharts();
+  else window.addEventListener('load', loadAnnualCharts, { once: true });
 })();
