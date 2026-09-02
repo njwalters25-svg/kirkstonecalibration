@@ -90,7 +90,7 @@
           customPartsScript.src = 'js/job-custom-parts.js?v=20260828-3'; customPartsScript.async = false;
           customPartsScript.onload = () => {
             const closeJobScript = document.createElement('script');
-            closeJobScript.src = 'js/job-close.js?v=20260828-1'; closeJobScript.async = false;
+            closeJobScript.src = 'js/job-close.js?v=20260902-2'; closeJobScript.async = false;
             document.head.appendChild(closeJobScript);
           };
           document.head.appendChild(customPartsScript);
@@ -106,31 +106,26 @@
   const repairScript = document.createElement('script');
   repairScript.src = 'js/repair-quote.js?v=20260828-2'; repairScript.async = false; document.head.appendChild(repairScript);
 
-  // Saved/live quote pricing can be edited until a job sheet is raised.
   const liveQuotePricingScript = document.createElement('script');
   liveQuotePricingScript.src = 'js/live-quote-pricing.js?v=20260828-1';
   liveQuotePricingScript.async = false;
   document.head.appendChild(liveQuotePricingScript);
 
-  // Invoice numbers can be corrected directly on the Invoice Spreadsheet.
   const invoiceNumberEditScript = document.createElement('script');
   invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
   invoiceNumberEditScript.async = false;
   document.head.appendChild(invoiceNumberEditScript);
 
-  // Keep the invoice heading row and first two columns visible while scrolling.
   const invoiceStickyScript = document.createElement('script');
   invoiceStickyScript.src = 'js/invoice-spreadsheet-sticky.js?v=20260902-2';
   invoiceStickyScript.async = false;
   document.head.appendChild(invoiceStickyScript);
 
-  // One-time sync of Date Paid values from the updated 2026-27 invoice spreadsheet.
   const invoicePaidDateSyncScript = document.createElement('script');
   invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-2';
   invoicePaidDateSyncScript.async = false;
   document.head.appendChild(invoicePaidDateSyncScript);
 
-  // Load Annual Summary charts only after the full page (including annual-summary.js) is ready.
   function loadAnnualCharts() {
     if (window.renderAnnualSummaryCharts || document.querySelector('script[data-annual-charts]')) {
       if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
