@@ -117,4 +117,10 @@
   invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
   invoiceNumberEditScript.async = false;
   document.head.appendChild(invoiceNumberEditScript);
+
+  // One-time sync of Date Paid values from the updated 2026-27 invoice spreadsheet.
+  const invoicePaidDateSyncScript = document.createElement('script');
+  invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-1';
+  invoicePaidDateSyncScript.async = false;
+  document.head.appendChild(invoicePaidDateSyncScript);
 })();
