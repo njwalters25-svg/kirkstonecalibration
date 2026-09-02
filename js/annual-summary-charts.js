@@ -143,7 +143,7 @@
 
   function render() {
     const summary = document.getElementById('annualSummary');
-    if (!summary) return;
+    if (!summary) return false;
     let dashboard = document.getElementById('annualChartsDashboard');
     if (!dashboard) {
       dashboard = document.createElement('div');
@@ -163,6 +163,7 @@
     monthlyBars(document.getElementById('monthlyBusinessChart'), d.monthly);
     lineChart(document.getElementById('cumulativeProfitChart'), d.monthly);
     customerBars(document.getElementById('customerRevenueChart'), d.customerRows);
+    return true;
   }
 
   function styles() {
@@ -176,16 +177,35 @@
 
   window.renderAnnualSummaryCharts = render;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  let hooked = false;
+  function initialise() {
     styles();
-    const original = window.renderAnnualSummary;
-    if (typeof original === 'function') {
+
+    if (!hooked && typeof window.renderAnnualSummary === 'function') {
+      const original = window.renderAnnualSummary;
       window.renderAnnualSummary = function () {
         const result = original.apply(this, arguments);
         render();
         return result;
       };
+      hooked = true;
     }
-    render();
-  });
+
+    return render();
+  }
+
+  function start() {
+    if (initialise() && hooked) return;
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if ((initialise() && hooked) || attempts >= 120) clearInterval(timer);
+    }, 250);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
 })();
