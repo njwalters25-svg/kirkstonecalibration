@@ -65,4 +65,11 @@
   }
 
   restoreReadOnlyInvoiceNumbers();
+
+  // Load the one-time historical spreadsheet import. The importer is idempotent,
+  // so it safely skips any invoice number that is already present in the app.
+  const importScript = document.createElement('script');
+  importScript.src = 'js/invoice-spreadsheet-import-2026-27.js?v=20260902-1';
+  importScript.async = false;
+  document.head.appendChild(importScript);
 })();
