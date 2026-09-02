@@ -17,6 +17,19 @@
     return currentJobs.find(job => String(job.id) === String(jobId)) || null;
   }
 
+  function isCompletedJob(job) {
+    return String(job?.status || '').toLowerCase() === 'completed';
+  }
+
+  async function persistJob(job) {
+    if (typeof StorageManager !== 'undefined' && typeof StorageManager.saveJob === 'function') {
+      StorageManager.saveJob(job);
+    }
+    if (typeof saveJobToFirestore === 'function' && !(typeof isLocalPreviewMode !== 'undefined' && isLocalPreviewMode)) {
+      await saveJobToFirestore(job);
+    }
+  }
+
   window.completeAndArchiveJob = async function (jobId, button) {
     const job = findJob(jobId);
     if (!job) return;
@@ -32,13 +45,7 @@
       job.status = 'completed';
       job.completedAt = job.completedAt || new Date().toISOString();
       job.updatedAt = new Date().toISOString();
-
-      if (typeof StorageManager !== 'undefined' && typeof StorageManager.saveJob === 'function') {
-        StorageManager.saveJob(job);
-      }
-      if (typeof saveJobToFirestore === 'function' && !(typeof isLocalPreviewMode !== 'undefined' && isLocalPreviewMode)) {
-        await saveJobToFirestore(job);
-      }
+      await persistJob(job);
 
       if (typeof expandedJobIds !== 'undefined' && expandedJobIds?.delete) expandedJobIds.delete(jobId);
       if (typeof renderJobSheets === 'function') renderJobSheets(currentJobs);
@@ -53,6 +60,38 @@
       }
       if (typeof showToast === 'function') showToast('Could not archive job. Please try again.');
       else window.alert('Could not archive job. Please try again.');
+    }
+  };
+
+  window.restoreArchivedJob = async function (jobId, button) {
+    const job = findJob(jobId);
+    if (!job) return;
+    if (!window.confirm(`Restore ${job.customerName || job.invoiceNumber || 'this job'} to Live Jobs?`)) return;
+
+    const originalText = button?.textContent;
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Restoring...';
+    }
+
+    try {
+      job.status = 'active';
+      job.completedAt = null;
+      job.updatedAt = new Date().toISOString();
+      await persistJob(job);
+
+      if (typeof renderJobSheets === 'function') renderJobSheets(currentJobs);
+      if (typeof renderInvoiceSpreadsheet === 'function') renderInvoiceSpreadsheet();
+      if (typeof renderAnnualSummary === 'function') renderAnnualSummary();
+      if (typeof showToast === 'function') showToast('Job restored to Live Jobs.');
+    } catch (error) {
+      console.error('Could not restore archived job', error);
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText || 'Restore to Live Jobs';
+      }
+      if (typeof showToast === 'function') showToast('Could not restore job. Please try again.');
+      else window.alert('Could not restore job. Please try again.');
     }
   };
 
@@ -89,11 +128,16 @@
         completeButton.addEventListener('click', () => window.completeAndArchiveJob(jobId, completeButton));
         target.appendChild(completeButton);
       }
-    });
-  }
 
-  function isCompletedJob(job) {
-    return String(job?.status || '').toLowerCase() === 'completed';
+      if (rootSelector === '#archiveJobSheets' && job && isCompletedJob(job) && !editor.querySelector('.restore-archive-job-btn')) {
+        const restoreButton = document.createElement('button');
+        restoreButton.type = 'button';
+        restoreButton.className = 'btn btn-secondary restore-archive-job-btn';
+        restoreButton.textContent = 'Restore to Live Jobs';
+        restoreButton.addEventListener('click', () => window.restoreArchivedJob(jobId, restoreButton));
+        target.appendChild(restoreButton);
+      }
+    });
   }
 
   function ensureArchiveUi() {
@@ -136,7 +180,7 @@
     const style = document.createElement('style');
     style.id = 'jobArchiveStyles';
     style.textContent = `
-      .job-close-row{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:1rem}.close-job-sheet-btn,.complete-archive-job-btn{white-space:nowrap}
+      .job-close-row{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:1rem}.close-job-sheet-btn,.complete-archive-job-btn,.restore-archive-job-btn{white-space:nowrap}
       .job-archive-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}.job-archive-heading h2{margin:0}.job-archive-heading p{margin:.35rem 0 0;color:var(--text-light);font-size:13px}.job-archive-count{background:#edf2f7;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:700;white-space:nowrap}
       @media(max-width:650px){.job-archive-heading{flex-direction:column}.job-archive-count{align-self:flex-start}}
     `;
