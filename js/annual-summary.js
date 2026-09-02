@@ -151,6 +151,22 @@
     }
   }
 
+  function ensureChartsLoaded() {
+    if (typeof window.renderAnnualSummaryCharts === 'function') {
+      window.renderAnnualSummaryCharts();
+      return;
+    }
+    if (document.querySelector('script[data-annual-summary-charts-direct]')) return;
+    const script = document.createElement('script');
+    script.src = 'js/annual-summary-charts.js?v=20260902-4';
+    script.async = false;
+    script.dataset.annualSummaryChartsDirect = 'true';
+    script.onload = () => {
+      if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
+    };
+    document.head.appendChild(script);
+  }
+
   function renderAnnualSummary() {
     const container = document.getElementById('annualSummary');
     if (!container) return;
@@ -211,6 +227,8 @@
       </div>
 
       <p class="annual-tax-note">Tax & NI are a rough 2026-27 estimate only: personal allowance £12,570, 40% from £50,270, 45% from £125,140, Class 4 NI 6% then 2%. Figures are for guidance; the accountant does the real return.</p>`;
+
+    setTimeout(ensureChartsLoaded, 0);
   }
 
   function installStyles() {
