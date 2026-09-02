@@ -25,320 +25,51 @@
   <main class="main" id="appMain">
     <div id="cloudStatus" class="cloud-status cloud-status-loading">Connecting to Firebase...</div>
 
-    <div class="print-header">
-      <h1>Kirkstone Calibration</h1>
-      <p>Pipette Calibration Quote</p>
-    </div>
+    <div class="print-header"><h1>Kirkstone Calibration</h1><p>Pipette Calibration Quote</p></div>
 
     <section id="quotePanel" class="tab-panel active">
       <div class="quote-layout">
         <div class="form-column">
           <form id="quoteForm" autocomplete="off">
-            <div class="card">
-              <h2>Job Details</h2>
-              <div class="form-group">
-                <label for="customerName">Customer Name</label>
-                <input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd" list="customerList" autocomplete="off">
-                <datalist id="customerList"></datalist>
-              </div>
-              <div class="form-group">
-                <label for="customerAddress">Customer Address <span style="font-weight:400;color:#718096;">(optional — shown on quote)</span></label>
-                <textarea id="customerAddress" rows="3" placeholder="e.g. 12 Science Park&#10;Cambridge&#10;CB4 0WA"></textarea>
-              </div>
-              <div class="form-group">
-                <label for="proposedDate">Proposed date</label>
-                <input type="month" id="proposedDate">
-                <span class="field-hint">Month and year the work is being quoted for</span>
-              </div>
-              <div class="form-row" style="margin-top:0.25rem;">
-                <div class="form-group">
-                  <label for="refPrefix">Customer code</label>
-                  <input type="text" id="refPrefix" placeholder="e.g. SYGDC" list="refPrefixList" maxlength="10" autocomplete="off">
-                  <datalist id="refPrefixList"></datalist>
-                  <span class="field-hint">Letters &amp; numbers, no spaces — used to build the reference</span>
-                </div>
-                <div class="form-group">
-                  <label>Quote reference</label>
-                  <div id="refDisplay" class="ref-display ref-display-empty">Enter a customer code</div>
-                  <input type="hidden" id="refNumber">
-                </div>
-              </div>
+            <div class="card"><h2>Job Details</h2>
+              <div class="form-group"><label for="customerName">Customer Name</label><input type="text" id="customerName" placeholder="e.g. ABC Pharma Ltd" list="customerList" autocomplete="off"><datalist id="customerList"></datalist></div>
+              <div class="form-group"><label for="customerAddress">Customer Address <span style="font-weight:400;color:#718096;">(optional — shown on quote)</span></label><textarea id="customerAddress" rows="3" placeholder="e.g. 12 Science Park&#10;Cambridge&#10;CB4 0WA"></textarea></div>
+              <div class="form-group"><label for="proposedDate">Proposed date</label><input type="month" id="proposedDate"><span class="field-hint">Month and year the work is being quoted for</span></div>
+              <div class="form-row" style="margin-top:0.25rem;"><div class="form-group"><label for="refPrefix">Customer code</label><input type="text" id="refPrefix" placeholder="e.g. SYGDC" list="refPrefixList" maxlength="10" autocomplete="off"><datalist id="refPrefixList"></datalist><span class="field-hint">Letters &amp; numbers, no spaces — used to build the reference</span></div><div class="form-group"><label>Quote reference</label><div id="refDisplay" class="ref-display ref-display-empty">Enter a customer code</div><input type="hidden" id="refNumber"></div></div>
             </div>
-
-            <div class="card">
-              <h2>Pipettes</h2>
-              <div id="pipetteLines"></div>
-              <button type="button" id="addPipetteLine" class="btn btn-secondary" style="margin-top:0.5rem;">+ Add line</button>
-            </div>
-
-            <div class="card">
-              <h2>Travel</h2>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="destinationPostcode">Destination postcode</label>
-                  <input type="text" id="destinationPostcode" placeholder="e.g. SW1A 1AA">
-                </div>
-                <div class="form-group" style="display:flex; align-items:flex-end;">
-                  <button type="button" id="calcRoute" class="btn btn-secondary" style="width:100%;">Calculate route</button>
-                </div>
-              </div>
-              <div id="routeStatus" class="route-status"></div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="travelDistance">Distance (miles, one way)</label>
-                  <input type="number" id="travelDistance" min="0" value="0" step="0.1">
-                </div>
-                <div class="form-group">
-                  <label for="travelTime">Travel time (mins, one way)</label>
-                  <input type="number" id="travelTime" min="0" value="0">
-                </div>
-              </div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="travelDayBefore">
-                <label for="travelDayBefore">Travel the day before</label>
-              </div>
-            </div>
-
-            <div class="card">
-              <h2>Location</h2>
-              <div class="checkbox-group">
-                <input type="checkbox" id="isLondon">
-                <label for="isLondon">London job</label>
-              </div>
-              <div id="londonNote" class="info-note">
-                London jobs often need extra planning. Consider travelling the day before
-                to avoid driving into London during rush hour. Factor in congestion charges
-                and parking. You may want to use public transport for the last leg.
-              </div>
-            </div>
-
-            <div class="card">
-              <h2>Accommodation</h2>
-              <div id="overnightHint" class="info-note" style="display:none; background:#fffff0; border-color:#ecc94b; color:#975a16;"></div>
-              <div class="checkbox-group">
-                <input type="checkbox" id="overnightStay">
-                <label for="overnightStay">Overnight stay required</label>
-              </div>
-              <div id="hotelFields" style="display:none">
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="hotelCost">Hotel cost per night (GBP)</label>
-                    <input type="number" id="hotelCost" min="0" step="1" placeholder="Per night">
-                  </div>
-                  <div class="form-group">
-                    <label for="nights">Number of nights</label>
-                    <input type="number" id="nights" min="1" value="1">
-                    <span id="nightsSuggestion" class="nights-suggestion" style="display:none"></span>
-                  </div>
-                </div>
-                <div class="form-row" style="margin-top:0.5rem;">
-                  <div class="form-group">
-                    <label for="hotelPostcode">Hotel postcode</label>
-                    <input type="text" id="hotelPostcode" placeholder="e.g. WD17 1HP">
-                  </div>
-                  <div class="form-group" style="display:flex; align-items:flex-end;">
-                    <button type="button" id="calcHotelRoute" class="btn btn-secondary" style="width:100%;">Hotel → work route</button>
-                  </div>
-                </div>
-                <div id="hotelRouteStatus" class="route-status"></div>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="hotelToWorkDistance">Hotel to work (miles)</label>
-                    <input type="number" id="hotelToWorkDistance" min="0" value="0" step="0.1">
-                  </div>
-                  <div class="form-group">
-                    <label for="hotelToWorkTime">Hotel to work (mins)</label>
-                    <input type="number" id="hotelToWorkTime" min="0" value="0">
-                  </div>
-                </div>
-                <div class="checkbox-group" style="margin-top:0.5rem;">
-                  <input type="checkbox" id="returnHome">
-                  <label for="returnHome">Return home mid-job</label>
-                </div>
-                <div id="returnHomeFields" style="display:none; margin-top:0.5rem;">
-                  <div class="form-group">
-                    <label for="returnHomeTrips">Number of return trips</label>
-                    <input type="number" id="returnHomeTrips" min="1" value="1">
-                  </div>
-                </div>
-                <div id="hotelEstimate" class="hotel-estimate"></div>
-              </div>
-            </div>
-
-            <div class="card">
-              <h2>On-site Time</h2>
-              <div class="form-group">
-                <label for="calibrationTime">Calibration time (minutes)</label>
-                <input type="number" id="calibrationTime" min="0" value="0">
-              </div>
-              <button type="button" id="autoEstimate" class="btn-link">Auto-estimate from pipette count</button>
-              <div class="checkbox-group" style="margin-top:0.75rem;">
-                <input type="checkbox" id="newJob">
-                <label for="newJob">New job</label>
-              </div>
-              <div id="newJobNote" class="info-note" style="display:none; background:#eff6ff; border-color:#93c5fd; color:#1e40af;">
-                Adds 2 minutes per pipette to allow time for adding them onto the system.
-              </div>
-              <div class="checkbox-group" style="margin-top:0.75rem;">
-                <input type="checkbox" id="secondPerson">
-                <label for="secondPerson">Second person on job</label>
-              </div>
-              <div id="secondPersonNote" class="info-note" style="display:none; background:#f0fff4; border-color:#9ae6b4; color:#276749;"></div>
-            </div>
-
-            <div class="card">
-              <h2>Notes</h2>
-              <div class="form-group">
-                <label for="quoteNotes">Travel logistics, hotel details, parking, route planning, etc.</label>
-                <textarea id="quoteNotes" rows="4" placeholder="e.g. Drive to Watford day before, stay at Premier Inn Watford (£85). Train into London from Watford Junction — avoid driving into central. Congestion charge zone — check if site is inside."></textarea>
-              </div>
-            </div>
-
-            <div class="card">
-              <h2>Discount</h2>
-              <div class="radio-group" style="flex-direction: column; gap: 0.5rem;">
-                <label><input type="radio" name="discountType" value="none" checked> No discount</label>
-                <label><input type="radio" name="discountType" value="regular"> Regular customer</label>
-                <label><input type="radio" name="discountType" value="contract"> Contract-winning rate</label>
-                <label><input type="radio" name="discountType" value="custom" id="discountCustom"> Custom</label>
-              </div>
-              <div id="customDiscountField" style="display:none; margin-top: 0.5rem;">
-                <div class="form-group">
-                  <label for="customDiscount">Custom discount (%)</label>
-                  <input type="number" id="customDiscount" min="0" max="100" value="0" step="0.5">
-                </div>
-              </div>
-            </div>
-
-            <div class="card">
-              <h2>VAT</h2>
-              <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;">
-                <input type="checkbox" id="vatExempt">
-                VAT exempt — do not add VAT to this quote
-              </label>
-            </div>
+            <div class="card"><h2>Pipettes</h2><div id="pipetteLines"></div><button type="button" id="addPipetteLine" class="btn btn-secondary" style="margin-top:0.5rem;">+ Add line</button></div>
+            <div class="card"><h2>Travel</h2><div class="form-row"><div class="form-group"><label for="destinationPostcode">Destination postcode</label><input type="text" id="destinationPostcode" placeholder="e.g. SW1A 1AA"></div><div class="form-group" style="display:flex; align-items:flex-end;"><button type="button" id="calcRoute" class="btn btn-secondary" style="width:100%;">Calculate route</button></div></div><div id="routeStatus" class="route-status"></div><div class="form-row"><div class="form-group"><label for="travelDistance">Distance (miles, one way)</label><input type="number" id="travelDistance" min="0" value="0" step="0.1"></div><div class="form-group"><label for="travelTime">Travel time (mins, one way)</label><input type="number" id="travelTime" min="0" value="0"></div></div><div class="checkbox-group"><input type="checkbox" id="travelDayBefore"><label for="travelDayBefore">Travel the day before</label></div></div>
+            <div class="card"><h2>Location</h2><div class="checkbox-group"><input type="checkbox" id="isLondon"><label for="isLondon">London job</label></div><div id="londonNote" class="info-note">London jobs often need extra planning. Consider travelling the day before to avoid driving into London during rush hour. Factor in congestion charges and parking. You may want to use public transport for the last leg.</div></div>
+            <div class="card"><h2>Accommodation</h2><div id="overnightHint" class="info-note" style="display:none; background:#fffff0; border-color:#ecc94b; color:#975a16;"></div><div class="checkbox-group"><input type="checkbox" id="overnightStay"><label for="overnightStay">Overnight stay required</label></div><div id="hotelFields" style="display:none"><div class="form-row"><div class="form-group"><label for="hotelCost">Hotel cost per night (GBP)</label><input type="number" id="hotelCost" min="0" step="1" placeholder="Per night"></div><div class="form-group"><label for="nights">Number of nights</label><input type="number" id="nights" min="1" value="1"><span id="nightsSuggestion" class="nights-suggestion" style="display:none"></span></div></div><div class="form-row" style="margin-top:0.5rem;"><div class="form-group"><label for="hotelPostcode">Hotel postcode</label><input type="text" id="hotelPostcode" placeholder="e.g. WD17 1HP"></div><div class="form-group" style="display:flex; align-items:flex-end;"><button type="button" id="calcHotelRoute" class="btn btn-secondary" style="width:100%;">Hotel → work route</button></div></div><div id="hotelRouteStatus" class="route-status"></div><div class="form-row"><div class="form-group"><label for="hotelToWorkDistance">Hotel to work (miles)</label><input type="number" id="hotelToWorkDistance" min="0" value="0" step="0.1"></div><div class="form-group"><label for="hotelToWorkTime">Hotel to work (mins)</label><input type="number" id="hotelToWorkTime" min="0" value="0"></div></div><div class="checkbox-group" style="margin-top:0.5rem;"><input type="checkbox" id="returnHome"><label for="returnHome">Return home mid-job</label></div><div id="returnHomeFields" style="display:none; margin-top:0.5rem;"><div class="form-group"><label for="returnHomeTrips">Number of return trips</label><input type="number" id="returnHomeTrips" min="1" value="1"></div></div><div id="hotelEstimate" class="hotel-estimate"></div></div></div>
+            <div class="card"><h2>On-site Time</h2><div class="form-group"><label for="calibrationTime">Calibration time (minutes)</label><input type="number" id="calibrationTime" min="0" value="0"></div><button type="button" id="autoEstimate" class="btn-link">Auto-estimate from pipette count</button><div class="checkbox-group" style="margin-top:0.75rem;"><input type="checkbox" id="newJob"><label for="newJob">New job</label></div><div id="newJobNote" class="info-note" style="display:none; background:#eff6ff; border-color:#93c5fd; color:#1e40af;">Adds 2 minutes per pipette to allow time for adding them onto the system.</div><div class="checkbox-group" style="margin-top:0.75rem;"><input type="checkbox" id="secondPerson"><label for="secondPerson">Second person on job</label></div><div id="secondPersonNote" class="info-note" style="display:none; background:#f0fff4; border-color:#9ae6b4; color:#276749;"></div></div>
+            <div class="card"><h2>Notes</h2><div class="form-group"><label for="quoteNotes">Travel logistics, hotel details, parking, route planning, etc.</label><textarea id="quoteNotes" rows="4"></textarea></div></div>
+            <div class="card"><h2>Discount</h2><div class="radio-group" style="flex-direction: column; gap: 0.5rem;"><label><input type="radio" name="discountType" value="none" checked> No discount</label><label><input type="radio" name="discountType" value="regular"> Regular customer</label><label><input type="radio" name="discountType" value="contract"> Contract-winning rate</label><label><input type="radio" name="discountType" value="custom" id="discountCustom"> Custom</label></div><div id="customDiscountField" style="display:none; margin-top: 0.5rem;"><div class="form-group"><label for="customDiscount">Custom discount (%)</label><input type="number" id="customDiscount" min="0" max="100" value="0" step="0.5"></div></div></div>
+            <div class="card"><h2>VAT</h2><label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="vatExempt">VAT exempt — do not add VAT to this quote</label></div>
           </form>
         </div>
-
-        <div class="summary-column">
-          <div class="card">
-            <h2>Quote Summary</h2>
-            <div id="quoteSummary"></div>
-            <div class="actions-bar">
-              <button id="saveQuote" class="btn btn-primary">Save Quote</button>
-              <button id="updateSavedQuote" class="btn btn-primary" style="display:none;">Update Saved Quote</button>
-              <button id="generateCustomerQuote" class="btn btn-secondary">Customer Quote</button>
-              <button id="printQuote" class="btn btn-secondary">Print / PDF</button>
-              <button id="clearForm" class="btn btn-secondary">Clear Form</button>
-            </div>
-          </div>
-        </div>
+        <div class="summary-column"><div class="card"><h2>Quote Summary</h2><div id="quoteSummary"></div><div class="actions-bar"><button id="saveQuote" class="btn btn-primary">Save Quote</button><button id="updateSavedQuote" class="btn btn-primary" style="display:none;">Update Saved Quote</button><button id="generateCustomerQuote" class="btn btn-secondary">Customer Quote</button><button id="printQuote" class="btn btn-secondary">Print / PDF</button><button id="clearForm" class="btn btn-secondary">Clear Form</button></div></div></div>
       </div>
     </section>
 
     <section id="settingsPanel" class="tab-panel">
-      <details class="settings-card settings-full-width collapsible-settings">
-        <summary><h3>Service Levels</h3><span>Show / hide</span></summary>
-        <p class="settings-hint">Each level defines the readings, volumes, per-pipette charges, and time estimates. These appear as options in the quote form.</p>
-        <div id="serviceLevelsEditor"></div>
-        <div style="margin-top: 0.75rem;"><button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button></div>
-      </details>
-
-      <details class="settings-card settings-full-width collapsible-settings">
-        <summary><h3>Parts Catalogue</h3><span>Show / hide</span></summary>
-        <p class="settings-hint">These parts appear in the job sheet dropdown. Costs and customer prices are copied into each job sheet when a part is added.</p>
-        <div id="partsCatalogEditor"></div>
-        <div style="margin-top: 0.75rem;"><button type="button" id="addCatalogPart" class="btn btn-secondary">+ Add Part</button></div>
-      </details>
-
+      <details class="settings-card settings-full-width collapsible-settings"><summary><h3>Service Levels</h3><span>Show / hide</span></summary><p class="settings-hint">Each level defines the readings, volumes, per-pipette charges, and time estimates. These appear as options in the quote form.</p><div id="serviceLevelsEditor"></div><div style="margin-top: 0.75rem;"><button type="button" id="addServiceLevel" class="btn btn-secondary">+ Add Service Level</button></div></details>
+      <details class="settings-card settings-full-width collapsible-settings"><summary><h3>Parts Catalogue</h3><span>Show / hide</span></summary><p class="settings-hint">These parts appear in the job sheet dropdown. Costs and customer prices are copied into each job sheet when a part is added.</p><div id="partsCatalogEditor"></div><div style="margin-top: 0.75rem;"><button type="button" id="addCatalogPart" class="btn btn-secondary">+ Add Part</button></div></details>
       <div class="settings-grid">
-        <div class="settings-card">
-          <h3>Internal Costs (per pipette)</h3>
-          <div class="setting-row"><label>Single-channel</label><input type="number" id="s_costSingleChannel" step="0.50" min="0"><span class="unit">GBP</span></div>
-          <div class="setting-row"><label>Multi-channel (6-ch)</label><input type="number" id="s_costMultiChannel6" step="0.50" min="0"><span class="unit">GBP</span></div>
-          <div class="setting-row"><label>Multi-channel (8-ch)</label><input type="number" id="s_costMultiChannel8" step="0.50" min="0"><span class="unit">GBP</span></div>
-          <div class="setting-row"><label>Multi-channel (12-ch)</label><input type="number" id="s_costMultiChannel12" step="0.50" min="0"><span class="unit">GBP</span></div>
-          <div class="setting-row"><label>Multi-channel (16-ch)</label><input type="number" id="s_costMultiChannel16" step="0.50" min="0"><span class="unit">GBP</span></div>
-          <div class="setting-row"><label>Sticker cost per pipette</label><input type="number" id="s_stickerCostPerPipette" step="0.01" min="0"><span class="unit">GBP</span></div>
-        </div>
-
-        <div class="settings-card">
-          <h3>Labour</h3>
-          <div class="setting-row"><label>Hourly rate (internal cost)</label><input type="number" id="s_labourHourlyRate" step="1" min="0"><span class="unit">GBP/hr</span></div>
-          <div class="setting-row"><label>Daily overheads</label><input type="number" id="s_dailyOverheads" step="1" min="0"><span class="unit">GBP/day</span></div>
-          <div class="setting-row"><label>Working day length</label><input type="number" id="s_workingDayHours" step="0.5" min="1"><span class="unit">hours</span></div>
-        </div>
-
-        <div class="settings-card">
-          <h3>Travel</h3>
-          <div class="setting-row"><label>Mileage rate</label><input type="number" id="s_mileageRate" step="0.01" min="0"><span class="unit">GBP/mile</span></div>
-          <div class="setting-row"><label>Travel time value</label><input type="number" id="s_travelTimeRate" step="1" min="0"><span class="unit">GBP/hr</span></div>
-        </div>
-
-        <div class="settings-card">
-          <h3>Profit Thresholds</h3>
-          <div class="setting-row"><label>Good profit</label><input type="number" id="s_profitGood" step="1" min="0"><span class="unit">GBP/day</span></div>
-          <div class="setting-row"><label>OK profit</label><input type="number" id="s_profitOk" step="1" min="0"><span class="unit">GBP/day</span></div>
-          <div class="setting-row"><label>Target profit</label><input type="number" id="s_profitTarget" step="1" min="0"><span class="unit">GBP/day</span></div>
-        </div>
-
-        <div class="settings-card">
-          <h3>Home Base</h3>
-          <div class="setting-row"><label>Postcode</label><input type="text" id="s_homePostcode" style="width:110px;"></div>
-          <p class="settings-hint">Used for route calculations to customer sites.</p>
-        </div>
-
-        <div class="settings-card">
-          <h3>Discounts</h3>
-          <div class="setting-row"><label>Regular customer</label><input type="number" id="s_discountRegular" step="0.5" min="0" max="100"><span class="unit">%</span></div>
-          <div class="setting-row"><label>Contract-winning</label><input type="number" id="s_discountContract" step="0.5" min="0" max="100"><span class="unit">%</span></div>
-        </div>
-
-        <div class="settings-card settings-full-width">
-          <h3>Company Details (Customer Quotes)</h3>
-          <p class="settings-hint">These details appear on customer-facing quote documents.</p>
-          <div class="cq-settings-grid">
-            <div class="form-group"><label for="s_companyName">Company name</label><input type="text" id="s_companyName" placeholder="Kirkstone Calibration"></div>
-            <div class="form-group"><label for="s_companyPhone">Telephone</label><input type="text" id="s_companyPhone" placeholder="e.g. 01234 567890"></div>
-            <div class="form-group"><label for="s_companyEmail">Email</label><input type="text" id="s_companyEmail" placeholder="e.g. info@example.com"></div>
-            <div class="form-group"><label for="s_companyWebsite">Website</label><input type="text" id="s_companyWebsite" placeholder="e.g. www.example.com"></div>
-            <div class="form-group"><label for="s_vatNumber">VAT number (optional)</label><input type="text" id="s_vatNumber" placeholder="e.g. GB123456789"></div>
-            <div class="form-group"><label for="s_quoteValidDays">Quote valid for (days)</label><input type="number" id="s_quoteValidDays" min="1" step="1" value="30"></div>
-            <div class="form-group" style="grid-column: 1 / -1;"><label for="s_companyAddress">Address</label><textarea id="s_companyAddress" rows="3" placeholder="e.g. 1 High Street&#10;Kirkby&#10;DE75 7UJ"></textarea></div>
-            <div class="form-group" style="grid-column: 1 / -1;"><label for="logoUpload">Company logo</label><input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif"><div id="logoPreview" style="margin-top:0.5rem;"></div></div>
-          </div>
-        </div>
+        <div class="settings-card"><h3>Internal Costs (per pipette)</h3><div class="setting-row"><label>Single-channel</label><input type="number" id="s_costSingleChannel" step="0.50" min="0"><span class="unit">GBP</span></div><div class="setting-row"><label>Multi-channel (6-ch)</label><input type="number" id="s_costMultiChannel6" step="0.50" min="0"><span class="unit">GBP</span></div><div class="setting-row"><label>Multi-channel (8-ch)</label><input type="number" id="s_costMultiChannel8" step="0.50" min="0"><span class="unit">GBP</span></div><div class="setting-row"><label>Multi-channel (12-ch)</label><input type="number" id="s_costMultiChannel12" step="0.50" min="0"><span class="unit">GBP</span></div><div class="setting-row"><label>Multi-channel (16-ch)</label><input type="number" id="s_costMultiChannel16" step="0.50" min="0"><span class="unit">GBP</span></div><div class="setting-row"><label>Sticker cost per pipette</label><input type="number" id="s_stickerCostPerPipette" step="0.01" min="0"><span class="unit">GBP</span></div></div>
+        <div class="settings-card"><h3>Labour</h3><div class="setting-row"><label>Hourly rate (internal cost)</label><input type="number" id="s_labourHourlyRate" step="1" min="0"><span class="unit">GBP/hr</span></div><div class="setting-row"><label>Daily overheads</label><input type="number" id="s_dailyOverheads" step="1" min="0"><span class="unit">GBP/day</span></div><div class="setting-row"><label>Working day length</label><input type="number" id="s_workingDayHours" step="0.5" min="1"><span class="unit">hours</span></div></div>
+        <div class="settings-card"><h3>Travel</h3><div class="setting-row"><label>Mileage rate</label><input type="number" id="s_mileageRate" step="0.01" min="0"><span class="unit">GBP/mile</span></div><div class="setting-row"><label>Travel time value</label><input type="number" id="s_travelTimeRate" step="1" min="0"><span class="unit">GBP/hr</span></div></div>
+        <div class="settings-card"><h3>Profit Thresholds</h3><div class="setting-row"><label>Good profit</label><input type="number" id="s_profitGood" step="1" min="0"><span class="unit">GBP/day</span></div><div class="setting-row"><label>OK profit</label><input type="number" id="s_profitOk" step="1" min="0"><span class="unit">GBP/day</span></div><div class="setting-row"><label>Target profit</label><input type="number" id="s_profitTarget" step="1" min="0"><span class="unit">GBP/day</span></div></div>
+        <div class="settings-card"><h3>Home Base</h3><div class="setting-row"><label>Postcode</label><input type="text" id="s_homePostcode" style="width:110px;"></div><p class="settings-hint">Used for route calculations to customer sites.</p></div>
+        <div class="settings-card"><h3>Discounts</h3><div class="setting-row"><label>Regular customer</label><input type="number" id="s_discountRegular" step="0.5" min="0" max="100"><span class="unit">%</span></div><div class="setting-row"><label>Contract-winning</label><input type="number" id="s_discountContract" step="0.5" min="0" max="100"><span class="unit">%</span></div></div>
+        <div class="settings-card settings-full-width"><h3>Company Details (Customer Quotes)</h3><p class="settings-hint">These details appear on customer-facing quote documents.</p><div class="cq-settings-grid"><div class="form-group"><label for="s_companyName">Company name</label><input type="text" id="s_companyName" placeholder="Kirkstone Calibration"></div><div class="form-group"><label for="s_companyPhone">Telephone</label><input type="text" id="s_companyPhone"></div><div class="form-group"><label for="s_companyEmail">Email</label><input type="text" id="s_companyEmail"></div><div class="form-group"><label for="s_companyWebsite">Website</label><input type="text" id="s_companyWebsite"></div><div class="form-group"><label for="s_vatNumber">VAT number (optional)</label><input type="text" id="s_vatNumber"></div><div class="form-group"><label for="s_quoteValidDays">Quote valid for (days)</label><input type="number" id="s_quoteValidDays" min="1" step="1" value="30"></div><div class="form-group" style="grid-column: 1 / -1;"><label for="s_companyAddress">Address</label><textarea id="s_companyAddress" rows="3"></textarea></div><div class="form-group" style="grid-column: 1 / -1;"><label for="logoUpload">Company logo</label><input type="file" id="logoUpload" accept="image/png,image/jpeg,image/svg+xml,image/gif"><div id="logoPreview" style="margin-top:0.5rem;"></div></div></div></div>
       </div>
-
-      <div class="settings-actions">
-        <button id="saveSettings" class="btn btn-primary">Save Settings</button>
-        <button id="setDefaultSettings" class="btn btn-secondary">Set as Default</button>
-        <button id="resetSettings" class="btn btn-danger">Reset to Defaults</button>
-      </div>
+      <div class="settings-actions"><button id="saveSettings" class="btn btn-primary">Save Settings</button><button id="setDefaultSettings" class="btn btn-secondary">Set as Default</button><button id="resetSettings" class="btn btn-danger">Reset to Defaults</button></div>
     </section>
-
     <section id="historyPanel" class="tab-panel"><div class="card"><h2>Saved Quotes</h2><div id="quoteHistory"></div></div></section>
     <section id="jobsPanel" class="tab-panel"><div class="card"><h2>Job Sheets</h2><div id="jobSheets"></div></div></section>
   </main>
-
   <div id="toast" class="toast"></div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-
-  <script src="js/data.js?v=20260803-1"></script>
-  <script src="js/firebase.js?v=20260803-1"></script>
-  <script src="js/routing.js?v=20260803-1"></script>
-  <script src="js/quote.js?v=20260803-1"></script>
-  <script src="js/ui.js?v=20260817-9"></script>
-  <script src="js/app.js?v=20260818-2"></script>
-  <script src="js/reference-fix.js?v=20260823-1"></script>
-  <script src="js/ui-state.js?v=20260820-1"></script>
-  <script src="js/customer-completed-quote.js?v=20260821-1"></script>
-  <script src="js/invoice-spreadsheet.js?v=20260820-4"></script>
-  <script src="js/job-recovery.js?v=20260827-1"></script>
-  <script src="js/historical-jobs.js?v=20260827-1"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/data.js?v=20260803-1"></script><script src="js/firebase.js?v=20260803-1"></script><script src="js/routing.js?v=20260803-1"></script><script src="js/quote.js?v=20260803-1"></script><script src="js/ui.js?v=20260817-9"></script><script src="js/app.js?v=20260818-2"></script><script src="js/reference-fix.js?v=20260823-1"></script><script src="js/ui-state.js?v=20260820-1"></script><script src="js/customer-completed-quote.js?v=20260821-1"></script><script src="js/invoice-spreadsheet.js?v=20260902-1"></script><script src="js/job-recovery.js?v=20260827-1"></script><script src="js/historical-jobs.js?v=20260827-1"></script>
 </body>
 </html>
