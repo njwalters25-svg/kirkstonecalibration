@@ -46,12 +46,16 @@
 
   const SYNC_MARKER = 'invoicePaidDateSyncedFrom2026_27Spreadsheet';
 
+  function jobsReady() {
+    return typeof currentJobs !== 'undefined' && Array.isArray(currentJobs);
+  }
+
   function invoiceNumber(job) {
     return String(job?.invoiceNumber || job?.invoiceSpreadsheetSnapshot?.invoiceNumber || '').trim().toUpperCase();
   }
 
   async function syncPaidDates() {
-    if (!Array.isArray(window.currentJobs)) return false;
+    if (!jobsReady()) return false;
     if (typeof StorageManager === 'undefined' || typeof StorageManager.saveJob !== 'function') return false;
     if (typeof saveJobToFirestore !== 'function') return false;
 
@@ -84,6 +88,7 @@
   }
 
   function trySync() {
+    if (!jobsReady()) return false;
     const cloudStatus = document.getElementById('cloudStatus');
     if (cloudStatus && !cloudStatus.classList.contains('cloud-status-ready')) return false;
     syncPaidDates().catch(error => {
@@ -93,16 +98,18 @@
     return true;
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
+  function start() {
     if (trySync()) return;
-    const cloudStatus = document.getElementById('cloudStatus');
-    if (!cloudStatus) return;
-    const observer = new MutationObserver(() => {
-      if (cloudStatus.classList.contains('cloud-status-ready')) {
-        observer.disconnect();
-        trySync();
-      }
-    });
-    observer.observe(cloudStatus, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
-  });
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (trySync() || attempts >= 120) clearInterval(timer);
+    }, 250);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
 })();
