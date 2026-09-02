@@ -129,4 +129,10 @@
   invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-2';
   invoicePaidDateSyncScript.async = false;
   document.head.appendChild(invoicePaidDateSyncScript);
+
+  // Live charts for the Annual Summary business dashboard.
+  const annualChartsScript = document.createElement('script');
+  annualChartsScript.src = 'js/annual-summary-charts.js?v=20260902-1';
+  annualChartsScript.async = false;
+  document.head.appendChild(annualChartsScript);
 })();
