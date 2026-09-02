@@ -126,6 +126,12 @@
   invoicePaidDateSyncScript.async = false;
   document.head.appendChild(invoicePaidDateSyncScript);
 
+  // Informational wage-allocation columns. These are kept separate from P&L.
+  const invoiceWageAllocationScript = document.createElement('script');
+  invoiceWageAllocationScript.src = 'js/invoice-wage-allocation.js?v=20260902-1';
+  invoiceWageAllocationScript.async = false;
+  document.head.appendChild(invoiceWageAllocationScript);
+
   function loadAnnualCharts() {
     if (window.renderAnnualSummaryCharts || document.querySelector('script[data-annual-charts]')) {
       if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
