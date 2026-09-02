@@ -118,9 +118,15 @@
   invoiceNumberEditScript.async = false;
   document.head.appendChild(invoiceNumberEditScript);
 
+  // Keep the invoice heading row and first two columns visible while scrolling.
+  const invoiceStickyScript = document.createElement('script');
+  invoiceStickyScript.src = 'js/invoice-spreadsheet-sticky.js?v=20260902-2';
+  invoiceStickyScript.async = false;
+  document.head.appendChild(invoiceStickyScript);
+
   // One-time sync of Date Paid values from the updated 2026-27 invoice spreadsheet.
   const invoicePaidDateSyncScript = document.createElement('script');
-  invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-1';
+  invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-2';
   invoicePaidDateSyncScript.async = false;
   document.head.appendChild(invoicePaidDateSyncScript);
 })();
