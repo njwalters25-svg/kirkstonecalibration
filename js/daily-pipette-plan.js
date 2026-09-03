@@ -35,17 +35,8 @@
   }
 
   function dailyRequirement(total, days) {
-    if (days <= 1) return `${total}`;
-    const base = Math.floor(total / days);
-    const remainder = total % days;
-
-    if (remainder === 0) return `${base} per day`;
-    if (base === 0) return `1 on ${remainder} of the ${days} days`;
-
-    const high = base + 1;
-    const lowDays = days - remainder;
-    if (lowDays <= 0) return `${high} per day`;
-    return `${high} on ${remainder} day${remainder === 1 ? '' : 's'}, then ${base} on ${lowDays} day${lowDays === 1 ? '' : 's'}`;
+    if (days <= 1) return `roughly ${total} per day`;
+    return `roughly ${Math.ceil(total / days)} per day`;
   }
 
   function buildInternalSection(result) {
@@ -104,7 +95,7 @@
       section.innerHTML = `
         <div style="margin:1.35rem 2.5rem 0;padding:1rem 1.15rem;background:#f7fafc;border:1px solid #dbe3ee;border-radius:6px;">
           <div style="font-size:11pt;font-weight:700;color:#1a365d;margin-bottom:.35rem;">Pipettes required each day</div>
-          <div style="font-size:9pt;color:#4a5568;line-height:1.5;margin-bottom:.65rem;">To allow the work to be completed within the quoted ${plan.days} working day${plan.days === 1 ? '' : 's'}, please make the following pipettes available during the visit.</div>
+          <div style="font-size:9pt;color:#4a5568;line-height:1.5;margin-bottom:.65rem;">To allow the work to be completed within the quoted ${plan.days} working day${plan.days === 1 ? '' : 's'}, please make approximately the following pipettes available during the visit.</div>
           <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
             <thead><tr><th style="text-align:left;padding:.4rem .5rem;border-bottom:1px solid #cbd5e1;">Pipette type</th><th style="text-align:right;padding:.4rem .5rem;border-bottom:1px solid #cbd5e1;">Total</th><th style="text-align:right;padding:.4rem .5rem;border-bottom:1px solid #cbd5e1;">Daily requirement</th></tr></thead>
             <tbody>${plan.rows.map(row => `<tr><td style="padding:.45rem .5rem;border-bottom:1px solid #edf2f7;">${esc(row.label)}</td><td style="text-align:right;padding:.45rem .5rem;border-bottom:1px solid #edf2f7;">${row.total}</td><td style="text-align:right;padding:.45rem .5rem;border-bottom:1px solid #edf2f7;">${esc(dailyRequirement(row.total, plan.days))}</td></tr>`).join('')}</tbody>
