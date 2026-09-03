@@ -111,6 +111,11 @@
   liveQuotePricingScript.async = false;
   document.head.appendChild(liveQuotePricingScript);
 
+  const dailyPipettePlanScript = document.createElement('script');
+  dailyPipettePlanScript.src = 'js/daily-pipette-plan.js?v=20260903-1';
+  dailyPipettePlanScript.async = false;
+  document.head.appendChild(dailyPipettePlanScript);
+
   const invoiceNumberEditScript = document.createElement('script');
   invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
   invoiceNumberEditScript.async = false;
