@@ -104,7 +104,15 @@
   document.head.appendChild(pricingScript);
 
   const repairScript = document.createElement('script');
-  repairScript.src = 'js/repair-quote.js?v=20260828-2'; repairScript.async = false; document.head.appendChild(repairScript);
+  repairScript.src = 'js/repair-quote.js?v=20260828-2';
+  repairScript.async = false;
+  repairScript.onload = () => {
+    const repairCustomerQuoteScript = document.createElement('script');
+    repairCustomerQuoteScript.src = 'js/repair-customer-quote.js?v=20260907-1';
+    repairCustomerQuoteScript.async = false;
+    document.head.appendChild(repairCustomerQuoteScript);
+  };
+  document.head.appendChild(repairScript);
 
   const liveQuotePricingScript = document.createElement('script');
   liveQuotePricingScript.src = 'js/live-quote-pricing.js?v=20260828-1';
