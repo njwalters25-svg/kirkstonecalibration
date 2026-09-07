@@ -124,6 +124,11 @@
   dailyPipettePlanScript.async = false;
   document.head.appendChild(dailyPipettePlanScript);
 
+  const dayRateOverrideScript = document.createElement('script');
+  dayRateOverrideScript.src = 'js/day-rate-override.js?v=20260907-1';
+  dayRateOverrideScript.async = false;
+  document.head.appendChild(dayRateOverrideScript);
+
   const invoiceNumberEditScript = document.createElement('script');
   invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
   invoiceNumberEditScript.async = false;
