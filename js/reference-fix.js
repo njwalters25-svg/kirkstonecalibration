@@ -127,6 +127,12 @@
   const dayRateOverrideScript = document.createElement('script');
   dayRateOverrideScript.src = 'js/day-rate-override.js?v=20260907-1';
   dayRateOverrideScript.async = false;
+  dayRateOverrideScript.onload = () => {
+    const plannedDaysOverrideScript = document.createElement('script');
+    plannedDaysOverrideScript.src = 'js/planned-days-override.js?v=20260907-1';
+    plannedDaysOverrideScript.async = false;
+    document.head.appendChild(plannedDaysOverrideScript);
+  };
   document.head.appendChild(dayRateOverrideScript);
 
   const invoiceNumberEditScript = document.createElement('script');
