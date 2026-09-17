@@ -144,7 +144,7 @@
     duplicateJobGuardScript.async = false;
     duplicateJobGuardScript.onload = () => {
       const bioscienceReferenceRepairScript = document.createElement('script');
-      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20260917-1';
+      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20260917-2';
       bioscienceReferenceRepairScript.async = false;
       document.head.appendChild(bioscienceReferenceRepairScript);
     };
