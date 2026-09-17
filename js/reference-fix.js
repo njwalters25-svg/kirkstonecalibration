@@ -142,6 +142,12 @@
     const duplicateJobGuardScript = document.createElement('script');
     duplicateJobGuardScript.src = 'js/duplicate-job-guard.js?v=20260917-1';
     duplicateJobGuardScript.async = false;
+    duplicateJobGuardScript.onload = () => {
+      const bioscienceReferenceRepairScript = document.createElement('script');
+      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20260917-1';
+      bioscienceReferenceRepairScript.async = false;
+      document.head.appendChild(bioscienceReferenceRepairScript);
+    };
     document.head.appendChild(duplicateJobGuardScript);
   };
   document.head.appendChild(invoiceNumberEditScript);
