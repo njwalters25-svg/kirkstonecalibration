@@ -29,11 +29,8 @@
   }
 
   function quoteText(quote) {
-    return [
-      quote?.customerName,
-      quote?.customerAddress,
-      quote?.notes,
-    ].filter(Boolean).join(' ').toLowerCase();
+    return [quote?.customerName, quote?.customerAddress, quote?.notes]
+      .filter(Boolean).join(' ').toLowerCase();
   }
 
   function isBioscienceJob(job) {
@@ -122,47 +119,47 @@
     if (typeof StorageManager !== 'undefined' && StorageManager.deleteJob) StorageManager.deleteJob(job.id);
   }
 
-  function findSafe105Quote(bioscienceJobs, quotes) {
+  function findSafe105Quote(bioscienceJobs, quotes, canonicalJob) {
     const candidateIds = new Set(bioscienceJobs.map(job => job?.quoteId).filter(Boolean));
+
+    // Best case: the job already points at the quote that was partially moved to 105.
+    const directlyLinked = quotes.find(quote => quote?.id === canonicalJob?.quoteId && quoteNumber(quote) === NEW_INVOICE);
+    if (directlyLinked) return directlyLinked;
+
+    // Next prefer a 105 quote linked to any Bioscience duplicate record.
     const linked = quotes.find(quote => candidateIds.has(quote?.id) && quoteNumber(quote) === NEW_INVOICE);
     if (linked) return linked;
 
     const matches105 = quotes.filter(quote => quoteNumber(quote) === NEW_INVOICE);
-    if (matches105.length === 1) return matches105[0];
-
     const bioscienceMatches = matches105.filter(quote => /bioscience/.test(quoteText(quote)));
-    return bioscienceMatches.length === 1 ? bioscienceMatches[0] : null;
+    if (bioscienceMatches.length === 1) return bioscienceMatches[0];
+
+    // A single saved quote at 105 is not an invoice-number conflict. In this
+    // legacy case it is very likely the quote record that was already corrected
+    // while the spreadsheet/job record remained on 104, so link the job to it.
+    if (matches105.length === 1) return matches105[0];
+    return null;
   }
 
-  function describeConflict(item) {
-    if (!item) return 'unknown record';
-    if (item.type === 'job') {
-      const text = jobText(item.value);
-      const site = /bioscience/.test(text) ? 'Bioscience Nottingham' : (/\bivp\b/.test(text) ? 'Nottingham IVP' : 'another job');
-      return `${item.value.customerName || 'job'} (${site})`;
-    }
-    return `${item.value.customerName || 'saved quote'} (saved quote)`;
-  }
-
-  function findReal105Conflict(canonicalJob, bioscienceJobs, quotes) {
+  function findReal105JobConflict(bioscienceJobs) {
     const bioscienceIds = new Set(bioscienceJobs.map(job => job?.id).filter(Boolean));
-    const bioscienceQuoteIds = new Set(bioscienceJobs.map(job => job?.quoteId).filter(Boolean));
-
-    const otherJobs = (typeof currentJobs !== 'undefined' && Array.isArray(currentJobs) ? currentJobs : [])
+    const others = (typeof currentJobs !== 'undefined' && Array.isArray(currentJobs) ? currentJobs : [])
       .filter(job => job && !bioscienceIds.has(job.id) && jobHasNumber(job, NEW_INVOICE));
-    const realJob = otherJobs.find(job => !isBioscienceJob(job));
-    if (realJob) return { type: 'job', value: realJob };
+    return others.find(job => !isBioscienceJob(job)) || null;
+  }
 
-    const quote105 = quotes.filter(quote => quoteNumber(quote) === NEW_INVOICE);
-    const realQuote = quote105.find(quote => {
-      if (!quote) return false;
-      if (quote.id === canonicalJob?.quoteId || bioscienceQuoteIds.has(quote.id)) return false;
-      const text = quoteText(quote);
-      if (/bioscience/.test(text)) return false;
-      const linkedOnlyToBioscience = bioscienceJobs.some(job => job?.quoteId === quote.id);
-      return !linkedOnlyToBioscience;
-    });
-    return realQuote ? { type: 'quote', value: realQuote } : null;
+  async function persistQuoteAs105(quote) {
+    if (!quote) return;
+    quote.refPrefix = 'SYGDC';
+    quote.refNumber = 105;
+    quote.updatedAt = new Date().toISOString();
+    if (quote.quoteRef) quote.quoteRef = NEW_QUOTE_REF;
+    if (quote.reference) quote.reference = NEW_QUOTE_REF;
+    if (typeof StorageManager !== 'undefined' && StorageManager.updateQuote) StorageManager.updateQuote(quote);
+    if ((typeof isLocalPreviewMode === 'undefined' || !isLocalPreviewMode)
+      && typeof updateQuoteInFirestore === 'function') {
+      await updateQuoteInFirestore(quote);
+    }
   }
 
   async function persistCanonicalJob(job) {
@@ -197,18 +194,21 @@
     );
     if (!bioscienceJobs.length) return;
 
-    // Do not run until the known IVP 104 record is visible as well. This makes
-    // the repair specific to the user's reported 104/105 split.
     const ivp104 = currentJobs.find(job => isIvpJob(job) && jobHasNumber(job, OLD_INVOICE));
     if (!ivp104) return;
 
     const canonicalJob = chooseCanonicalJob(bioscienceJobs);
     if (!canonicalJob) return;
 
-    const conflict = findReal105Conflict(canonicalJob, bioscienceJobs, currentQuotes);
-    if (conflict) {
-      const message = `${NEW_INVOICE} is genuinely used by ${describeConflict(conflict)} — Bioscience was not changed automatically`;
-      console.warn(message, conflict.value);
+    // Only another JOB using 105 is a genuine invoice conflict. A saved quote at
+    // 105 is expected to share its base number with the eventual invoice and must
+    // not block the repair.
+    const jobConflict = findReal105JobConflict(bioscienceJobs);
+    if (jobConflict) {
+      const text = jobText(jobConflict);
+      const site = /\bivp\b/.test(text) ? 'Nottingham IVP' : (jobConflict.customerName || 'another job');
+      const message = `${NEW_INVOICE} is already attached to ${site}; Bioscience was not changed automatically`;
+      console.warn(message, jobConflict);
       if (typeof showToast === 'function') showToast(message);
       completed = true;
       return;
@@ -216,19 +216,17 @@
 
     running = true;
     try {
-      const quote105 = findSafe105Quote(bioscienceJobs, currentQuotes);
-      if (quote105) {
+      let quote105 = findSafe105Quote(bioscienceJobs, currentQuotes, canonicalJob);
+      const linkedQuote = currentQuotes.find(quote => quote?.id === canonicalJob.quoteId) || null;
+
+      if (!quote105 && linkedQuote) {
+        // No saved 105 quote exists, so move the Bioscience quote that this job
+        // already belongs to. This keeps quote and invoice numbers aligned.
+        await persistQuoteAs105(linkedQuote);
+        quote105 = linkedQuote;
+      } else if (quote105) {
+        await persistQuoteAs105(quote105);
         canonicalJob.quoteId = quote105.id;
-        quote105.refPrefix = 'SYGDC';
-        quote105.refNumber = 105;
-        quote105.updatedAt = new Date().toISOString();
-        if (quote105.quoteRef) quote105.quoteRef = NEW_QUOTE_REF;
-        if (quote105.reference) quote105.reference = NEW_QUOTE_REF;
-        if (typeof StorageManager !== 'undefined' && StorageManager.updateQuote) StorageManager.updateQuote(quote105);
-        if ((typeof isLocalPreviewMode === 'undefined' || !isLocalPreviewMode)
-          && typeof updateQuoteInFirestore === 'function') {
-          await updateQuoteInFirestore(quote105);
-        }
       }
 
       await persistCanonicalJob(canonicalJob);
@@ -243,7 +241,7 @@
       if (typeof renderInvoiceSpreadsheet === 'function') renderInvoiceSpreadsheet();
       if (typeof renderAnnualSummary === 'function') renderAnnualSummary();
       if (typeof showToast === 'function') {
-        showToast(`Bioscience Nottingham reconciled to ${NEW_INVOICE}${duplicates.length ? `; ${duplicates.length} duplicate job moved to Recently Deleted` : ''}`);
+        showToast(`Bioscience Nottingham corrected to ${NEW_INVOICE}${duplicates.length ? `; ${duplicates.length} duplicate job moved to Recently Deleted` : ''}`);
       }
       completed = true;
     } catch (error) {
