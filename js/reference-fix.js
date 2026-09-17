@@ -136,8 +136,14 @@
   document.head.appendChild(dayRateOverrideScript);
 
   const invoiceNumberEditScript = document.createElement('script');
-  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260902-1';
+  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260917-1';
   invoiceNumberEditScript.async = false;
+  invoiceNumberEditScript.onload = () => {
+    const duplicateJobGuardScript = document.createElement('script');
+    duplicateJobGuardScript.src = 'js/duplicate-job-guard.js?v=20260917-1';
+    duplicateJobGuardScript.async = false;
+    document.head.appendChild(duplicateJobGuardScript);
+  };
   document.head.appendChild(invoiceNumberEditScript);
 
   const invoiceStickyScript = document.createElement('script');
