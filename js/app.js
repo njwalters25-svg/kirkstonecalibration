@@ -178,13 +178,8 @@ async function initialiseFirebaseData() {
   renderJobSheets(currentJobs);
   renderQuoteHistory(currentQuotes, currentSettings);
 
-  try {
-    await signInAnonymously();
-    isSignedIn = true;
-  } catch (error) {
-    isSignedIn = false;
-    console.warn('Firebase auth unavailable; trying Firestore directly', error);
-  }
+  requireOwnerAccess();
+  isSignedIn = true;
 
   const cloudSettings = await loadSettingsFromFirestore();
   if (cloudSettings) {
@@ -1041,6 +1036,12 @@ function exportJobSheetCsv(jobId) {
     add([entry.date, sl?.name || entry.serviceLevelId, entry.singleChannelCount || 0, entry.multiChannel6Count || 0, entry.multiChannel8Count || 0, entry.multiChannel12Count || 0, entry.multiChannel16Count || 0]);
   });
   add([]);
+  add(['Staff daily records']);
+  add(['Staff account', 'Date', 'Service level', 'Single', '6ch', '8ch', '12ch', '16ch', 'Expense', 'Expense description', 'Parts used', 'Quantity']);
+  (job.staffReports || []).forEach(row => add([row.uid, row.date, row.serviceLevelId,
+    row.singleChannelCount, row.multiChannel6Count, row.multiChannel8Count, row.multiChannel12Count,
+    row.multiChannel16Count, row.expense, row.expenseDescription, row.partsUsed, row.partsQuantity]));
+  add([]);
   add(['Parts']);
   add(['Quantity', 'Part', 'Cost per unit', 'Customer price per unit', 'Total cost', 'Total price']);
   (job.parts || []).forEach(part => {
@@ -1519,3 +1520,4 @@ function generateCustomerQuoteWindow(result, input, quoteSettings = currentSetti
     showToast('Pop-up blocked — please allow pop-ups for this site');
   }
 }
+

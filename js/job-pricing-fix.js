@@ -39,7 +39,7 @@
         : (job.settingsSnapshot || DEFAULT_SETTINGS);
 
       let pipetteRevenue = 0;
-      (job.actualEntries || []).forEach(entry => {
+      [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
         PRICE_FIELDS.forEach(([key, , , countField]) => {
           const qty = parseFloat(entry[countField]) || 0;
           pipetteRevenue += qty * getJobUnitPrice(job, entry.serviceLevelId, key, settings);
@@ -62,7 +62,8 @@
         (parseFloat(costs.shipping) || 0) +
         (parseFloat(costs.secondPerson) || 0) +
         (parseFloat(costs.other) || 0);
-      const totalCosts = (parseFloat(base.mileageCost) || 0) + otherCosts + partsCost;
+      const staffExpenses = (job.staffReports || []).reduce((sum, row) => sum + (Number(row.expense) || 0), 0);
+      const totalCosts = (parseFloat(base.mileageCost) || 0) + otherCosts + partsCost + staffExpenses;
       const profit = actualRevenue - totalCosts;
       const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
       const taxAt40 = Math.max(profit, 0) * 0.40;
@@ -154,7 +155,7 @@
         ? getSettingsForQuote(job.quoteSnapshot || {}, job.settingsSnapshot || DEFAULT_SETTINGS)
         : (job.settingsSnapshot || DEFAULT_SETTINGS);
       const grouped = new Map();
-      (job.actualEntries || []).forEach(entry => {
+      [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
         const serviceLevel = getServiceLevel(entry.serviceLevelId, settings);
         PRICE_FIELDS.forEach(([key, typeLabel, , countField]) => {
           const quantity = parseInt(entry[countField]) || 0;
@@ -186,7 +187,7 @@
 
   function serviceIdsForJob(job) {
     const ids = [];
-    (job.actualEntries || []).forEach(entry => {
+    [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
       if (entry.serviceLevelId && !ids.includes(entry.serviceLevelId)) ids.push(entry.serviceLevelId);
     });
     if (!ids.length) {
@@ -243,3 +244,4 @@
     observer.observe(jobsContainer, { childList: true, subtree: true });
   });
 })();
+

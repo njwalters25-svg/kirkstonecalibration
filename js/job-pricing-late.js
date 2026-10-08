@@ -17,7 +17,7 @@
         ? getSettingsForQuote(job.quoteSnapshot || {}, job.settingsSnapshot || DEFAULT_SETTINGS)
         : (job.settingsSnapshot || DEFAULT_SETTINGS);
       const grouped = new Map();
-      (job.actualEntries || []).forEach(entry => {
+      [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
         const serviceLevel = getServiceLevel(entry.serviceLevelId, settings);
         PRICE_FIELDS.forEach(([key, typeLabel, countField]) => {
           const quantity = parseInt(entry[countField]) || 0;
@@ -52,7 +52,7 @@
 
   function serviceIdsForJob(job) {
     const ids = [];
-    (job.actualEntries || []).forEach(entry => {
+    [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
       if (entry.serviceLevelId && !ids.includes(entry.serviceLevelId)) ids.push(entry.serviceLevelId);
     });
     if (!ids.length) {
@@ -138,3 +138,4 @@
     observer.observe(jobsContainer, { childList: true, subtree: true });
   }
 })();
+

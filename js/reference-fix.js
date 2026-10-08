@@ -74,115 +74,15 @@
     setTimeout(refreshReferenceIfNewQuote, 1500);
   });
 
-  const pricingScript = document.createElement('script');
-  pricingScript.src = 'js/job-pricing-fix.js?v=20260825-3'; pricingScript.async = false;
-  pricingScript.onload = () => {
-    const compatScript = document.createElement('script');
-    compatScript.src = 'js/part-price-compat.js?v=20260828-4'; compatScript.async = false;
-    compatScript.onload = () => {
-      const lateScript = document.createElement('script');
-      lateScript.src = 'js/job-pricing-late.js?v=20260825-3'; lateScript.async = false;
-      lateScript.onload = () => {
-        const jobRepairScript = document.createElement('script');
-        jobRepairScript.src = 'js/job-repair.js?v=20260828-1'; jobRepairScript.async = false;
-        jobRepairScript.onload = () => {
-          const customPartsScript = document.createElement('script');
-          customPartsScript.src = 'js/job-custom-parts.js?v=20260828-3'; customPartsScript.async = false;
-          customPartsScript.onload = () => {
-            const closeJobScript = document.createElement('script');
-            closeJobScript.src = 'js/job-close.js?v=20260902-2'; closeJobScript.async = false;
-            document.head.appendChild(closeJobScript);
-          };
-          document.head.appendChild(customPartsScript);
-        };
-        document.head.appendChild(jobRepairScript);
-      };
-      document.head.appendChild(lateScript);
-    };
-    document.head.appendChild(compatScript);
-  };
-  document.head.appendChild(pricingScript);
-
-  const repairScript = document.createElement('script');
-  repairScript.src = 'js/repair-quote.js?v=20260828-2';
-  repairScript.async = false;
-  repairScript.onload = () => {
-    const repairCustomerQuoteScript = document.createElement('script');
-    repairCustomerQuoteScript.src = 'js/repair-customer-quote.js?v=20260907-1';
-    repairCustomerQuoteScript.async = false;
-    document.head.appendChild(repairCustomerQuoteScript);
-  };
-  document.head.appendChild(repairScript);
-
-  const liveQuotePricingScript = document.createElement('script');
-  liveQuotePricingScript.src = 'js/live-quote-pricing.js?v=20260828-1';
-  liveQuotePricingScript.async = false;
-  document.head.appendChild(liveQuotePricingScript);
-
-  const dailyPipettePlanScript = document.createElement('script');
-  dailyPipettePlanScript.src = 'js/daily-pipette-plan.js?v=20260903-1';
-  dailyPipettePlanScript.async = false;
-  document.head.appendChild(dailyPipettePlanScript);
-
-  const dayRateOverrideScript = document.createElement('script');
-  dayRateOverrideScript.src = 'js/day-rate-override.js?v=20260907-1';
-  dayRateOverrideScript.async = false;
-  dayRateOverrideScript.onload = () => {
-    const plannedDaysOverrideScript = document.createElement('script');
-    plannedDaysOverrideScript.src = 'js/planned-days-override.js?v=20260907-1';
-    plannedDaysOverrideScript.async = false;
-    document.head.appendChild(plannedDaysOverrideScript);
-  };
-  document.head.appendChild(dayRateOverrideScript);
-
-  const invoiceNumberEditScript = document.createElement('script');
-  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260917-1';
-  invoiceNumberEditScript.async = false;
-  invoiceNumberEditScript.onload = () => {
-    const duplicateJobGuardScript = document.createElement('script');
-    duplicateJobGuardScript.src = 'js/duplicate-job-guard.js?v=20260917-1';
-    duplicateJobGuardScript.async = false;
-    duplicateJobGuardScript.onload = () => {
-      const bioscienceReferenceRepairScript = document.createElement('script');
-      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20260917-2';
-      bioscienceReferenceRepairScript.async = false;
-      document.head.appendChild(bioscienceReferenceRepairScript);
-    };
-    document.head.appendChild(duplicateJobGuardScript);
-  };
-  document.head.appendChild(invoiceNumberEditScript);
-
-  const invoiceStickyScript = document.createElement('script');
-  invoiceStickyScript.src = 'js/invoice-spreadsheet-sticky.js?v=20260902-2';
-  invoiceStickyScript.async = false;
-  document.head.appendChild(invoiceStickyScript);
-
-  const invoicePaidDateSyncScript = document.createElement('script');
-  invoicePaidDateSyncScript.src = 'js/invoice-paid-date-sync-2026-27.js?v=20260902-2';
-  invoicePaidDateSyncScript.async = false;
-  document.head.appendChild(invoicePaidDateSyncScript);
-
-  // Informational wage-allocation columns. These are kept separate from P&L.
-  const invoiceWageAllocationScript = document.createElement('script');
-  invoiceWageAllocationScript.src = 'js/invoice-wage-allocation.js?v=20260902-1';
-  invoiceWageAllocationScript.async = false;
-  document.head.appendChild(invoiceWageAllocationScript);
-
-  function loadAnnualCharts() {
-    if (window.renderAnnualSummaryCharts || document.querySelector('script[data-annual-charts]')) {
-      if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
-      return;
+  // Authenticated startup waits for dependent extension chains before boot hooks.
+  window.loadOwnerExtensions = async function () {
+    const chains = [["js/job-pricing-fix.js?v=20261008-1","js/part-price-compat.js?v=20260828-4","js/job-pricing-late.js?v=20261008-1","js/job-repair.js?v=20260828-1","js/job-custom-parts.js?v=20260828-3","js/job-close.js?v=20260902-2"],["js/repair-quote.js?v=20260828-2","js/repair-customer-quote.js?v=20260907-1"],["js/live-quote-pricing.js?v=20260828-1"],["js/daily-pipette-plan.js?v=20260903-1"],["js/day-rate-override.js?v=20260907-1","js/planned-days-override.js?v=20260907-1"],["js/invoice-number-edit.js?v=20260917-1","js/duplicate-job-guard.js?v=20260917-1","js/bioscience-reference-repair.js?v=20260917-2"],["js/invoice-spreadsheet-sticky.js?v=20260902-2"],["js/invoice-paid-date-sync-2026-27.js?v=20260902-2"],["js/invoice-wage-allocation.js?v=20260902-1"]];
+    await Promise.all(chains.map(async chain => {
+      for (const src of chain) await loadAccessScript(src);
+    }));
+    if (!window.renderAnnualSummaryCharts && !document.querySelector('script[data-annual-charts]')) {
+      await loadAccessScript('js/annual-summary-charts.js?v=20260902-4');
     }
-    const annualChartsScript = document.createElement('script');
-    annualChartsScript.src = 'js/annual-summary-charts.js?v=20260902-3';
-    annualChartsScript.async = false;
-    annualChartsScript.dataset.annualCharts = 'true';
-    annualChartsScript.onload = () => {
-      if (typeof window.renderAnnualSummaryCharts === 'function') window.renderAnnualSummaryCharts();
-    };
-    document.head.appendChild(annualChartsScript);
-  }
-
-  if (document.readyState === 'complete') loadAnnualCharts();
-  else window.addEventListener('load', loadAnnualCharts, { once: true });
+  };
 })();
+
