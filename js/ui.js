@@ -641,7 +641,7 @@ function getJobPlannedTotals(job) {
 
 function getJobActualTotals(job) {
   const totals = getEmptyPipetteTotals();
-  [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => addLineToTotals(totals, entry));
+  (job.actualEntries || []).forEach(entry => addLineToTotals(totals, entry));
   return totals;
 }
 
@@ -663,7 +663,7 @@ function calculateJobSheet(job) {
   };
 
   let pipetteRevenue = 0;
-  [...(job.actualEntries || []), ...(job.staffReports || [])].forEach(entry => {
+  (job.actualEntries || []).forEach(entry => {
     const sl = getServiceLevel(entry.serviceLevelId, settings);
     pipetteRevenue += (entry.singleChannelCount || 0) * (sl?.chargeSingleChannel || 0);
     pipetteRevenue += (entry.multiChannel6Count || 0) * (sl?.chargeMultiChannel6 || 0);
@@ -698,15 +698,14 @@ function calculateJobSheet(job) {
     (parseFloat(costs.shipping) || 0) +
     (parseFloat(costs.secondPerson) || 0) +
     (parseFloat(costs.other) || 0);
-  const staffExpenses = (job.staffReports || []).reduce((sum, row) => sum + (Number(row.expense) || 0), 0);
-  const totalCosts = mileageCost + otherCosts + partsCost + staffExpenses;
+  const totalCosts = mileageCost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
   const profitMarginPercent = actualRevenue > 0 ? (profit / actualRevenue) * 100 : 0;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
   const revenueIncVat = actualRevenue + vatAmount;
   const taxAt40 = Math.max(profit, 0) * 0.40;
   const profitAfterTax = profit - taxAt40;
-  const actualDays = new Set([...(job.actualEntries || []), ...(job.staffReports || [])].map(entry => entry.date).filter(Boolean)).size;
+  const actualDays = new Set((job.actualEntries || []).map(entry => entry.date).filter(Boolean)).size;
   return {
     plannedTotals,
     actualTotals,
@@ -830,7 +829,6 @@ function renderJobSheets(jobs) {
           </div>
           <button class="btn-small" onclick="addJobEntry('${escapeJsString(job.id)}')">Add day / service row</button>
 
-          ${renderOwnerStaffReports(job)}
           <h3>Costs</h3>
           <div class="job-cost-grid">
             ${renderJobCostInput(job.id, 'hotel', 'Hotel', job.costs?.hotel, true)}
@@ -1023,21 +1021,3 @@ function renderQuoteHistory(quotes, settings) {
     </div>`;
   }).join('');
 }
-
-function renderOwnerStaffReports(job) {
-  if (!(job.staffReports || []).length) return '';
-  return '<h3>Staff daily records</h3><p>Counts and expenses below are included in actual totals and job costs. Add customer pricing for reported parts through the Parts editor.</p>'
-    + job.staffReports.map(row => '<div class="settings-card"><strong>' + escapeHtml(row.date)
-      + '</strong><p>Staff account: ' + escapeHtml(row.uid) + '</p><p>Service level: '
-      + escapeHtml(getServiceLevel(row.serviceLevelId, job.settingsSnapshot || DEFAULT_SETTINGS)?.name || row.serviceLevelId)
-      + '</p>' + renderMiniTotals('Completed', getStaffReportTotals(row))
-      + '<p>Expense: ' + formatCurrency(row.expense || 0) + ' — ' + escapeHtml(row.expenseDescription || '')
-      + '</p><p>Parts used: ' + escapeHtml(row.partsUsed || 'None') + ' · Quantity: '
-      + escapeHtml(String(row.partsQuantity || 0)) + '</p></div>').join('');
-}
-function getStaffReportTotals(row) {
-  return { single: row.singleChannelCount || 0, multi6: row.multiChannel6Count || 0,
-    multi8: row.multiChannel8Count || 0, multi12: row.multiChannel12Count || 0,
-    multi16: row.multiChannel16Count || 0 };
-}
-

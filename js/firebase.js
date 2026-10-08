@@ -40,27 +40,17 @@ function requireFirebase(service) {
 
 // --- Allowed users (stored in Firestore > config/allowedUsers) ---
 
-let currentAccessRole = null;
-async function resolveUserAccess(user) {
-  currentAccessRole = null;
-  if (isLocalPreviewMode) return (currentAccessRole = 'owner');
-  if (!user?.email || !user.emailVerified || user.isAnonymous) return null;
-  const doc = await requireFirebase(db).collection('config').doc('allowedusers').get();
-  if (!doc.exists) return null;
-  const data = doc.data();
-  const email = user.email.toLowerCase();
-  const explicit = data.roles?.[email];
-  // Explicit roles override the legacy owner allow-list, including removal.
-  const role = explicit !== undefined ? explicit
-    : ((data.emails || []).some(e => e.toLowerCase() === email) ? 'owner' : null);
-  if (role === 'staff' && data.staffAccessReady !== true) {
-    throw new Error('Staff access is awaiting Firebase security setup.');
+async function isUserAllowed(user) {
+  if (isLocalPreviewMode) return true;
+  try {
+    const doc = await requireFirebase(db).collection('config').doc('allowedusers').get();
+    if (!doc.exists) return false;
+    const data = doc.data();
+    const emails = (data.emails || []).map(e => e.toLowerCase());
+    return emails.includes(user.email.toLowerCase());
+  } catch {
+    return false;
   }
-  return (currentAccessRole = ['owner', 'staff'].includes(role) ? role : null);
-}
-async function isUserAllowed(user) { return Boolean(await resolveUserAccess(user)); }
-function requireOwnerAccess() {
-  if (currentAccessRole !== 'owner') throw new Error('Owner access required.');
 }
 
 // --- Auth ---
@@ -117,7 +107,6 @@ function getCurrentUser() {
 // --- Firestore: Quotes (shared between all users) ---
 
 function getQuotesRef() {
-  requireOwnerAccess();
   return requireFirebase(db).collection('quotes');
 }
 
@@ -153,44 +142,28 @@ async function updateQuoteSettingsSnapshotInFirestore(id, settingsSnapshot) {
 // --- Firestore: Jobs ---
 
 function getJobsRef() {
-  requireOwnerAccess();
   return requireFirebase(db).collection('jobs');
 }
 
 async function saveJobToFirestore(job) {
   if (isLocalPreviewMode || !job.id) return;
-  requireOwnerAccess();
-  const { staffReports, ...ownerJob } = job;
-  const batch = db.batch();
-  batch.set(getJobsRef().doc(job.id), ownerJob, { merge: true });
-  batch.set(db.collection('staffJobSheets').doc(job.id), buildStaffJobSheet(ownerJob));
-  await batch.commit();
+  await getJobsRef().doc(job.id).set(job, { merge: true });
 }
 
 async function loadJobsFromFirestore() {
   if (isLocalPreviewMode) return StorageManager.loadJobs();
   const snapshot = await getJobsRef().orderBy('updatedAt', 'desc').get();
-  const jobs = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-  for (const job of jobs) {
-    const reports = await db.collection('staffJobSheets').doc(job.id).collection('reports').get();
-    job.staffReports = reports.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-    // Replace, never merge: projections must contain only the safe allow-list.
-    await db.collection('staffJobSheets').doc(job.id).set(buildStaffJobSheet(job));
-  }
-  return jobs;
+  return snapshot.docs.map(doc => doc.data());
 }
 
 async function deleteJobFromFirestore(id) {
-  requireOwnerAccess();
   if (isLocalPreviewMode || !id) return;
-  await db.collection('staffJobSheets').doc(id).delete();
   await getJobsRef().doc(id).delete();
 }
 
 // --- Firestore: Customers ---
 
 function getCustomersRef() {
-  requireOwnerAccess();
   return requireFirebase(db).collection('customers');
 }
 
@@ -208,13 +181,11 @@ async function loadCustomersFromFirestore() {
 // --- Firestore: Settings (shared) ---
 
 async function saveSettingsToFirestore(settings) {
-  requireOwnerAccess();
   if (isLocalPreviewMode) return;
   await requireFirebase(db).collection('config').doc('settings').set(settings);
 }
 
 async function loadSettingsFromFirestore() {
-  requireOwnerAccess();
   if (isLocalPreviewMode) return null;
   const doc = await requireFirebase(db).collection('config').doc('settings').get();
   if (doc.exists) {
@@ -222,18 +193,3 @@ async function loadSettingsFromFirestore() {
   }
   return null;
 }
-
-function buildStaffJobSheet(job) {
-  const fields = ['singleChannelCount', 'multiChannel6Count', 'multiChannel8Count',
-    'multiChannel12Count', 'multiChannel16Count'];
-  const total = lines => Object.fromEntries(fields.map(field => [field,
-    (lines || []).reduce((sum, line) => sum + (Number(line[field]) || 0), 0)]));
-  return {
-    customerName: job.customerName || '', quoteRef: job.quoteRef || '',
-    proposedDate: job.proposedDate || '', status: !job.historicalJob && ['open', 'active'].includes(job.status || 'open') ? 'open' : 'closed',
-    expected: total(job.plannedLines), ownerActual: total(job.actualEntries),
-    serviceLevelIds: (job.settingsSnapshot?.serviceLevels || []).map(sl => sl.id),
-    serviceLevels: (job.settingsSnapshot?.serviceLevels || []).map(sl => ({ id: sl.id, name: sl.name })),
-  };
-}
-
