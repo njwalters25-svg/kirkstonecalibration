@@ -67,11 +67,11 @@ test('Outlook all-day end dates are interpreted as exclusive',()=>{
 
 
 test('named participants preserve one lead and support both owner/Shelley directions and Phil',()=>{
- assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley'}),'Owner + Shelley');
- assert.equal(P.teamName({assignedPerson:'shelley',secondPerson:true,secondPersonKind:'owner'}),'Shelley + Owner');
+ assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley'}),'Dan + Shelley');
+ assert.equal(P.teamName({assignedPerson:'shelley',secondPerson:true,secondPersonKind:'owner'}),'Shelley + Dan');
  assert.equal(P.teamName({assignedPerson:'shelley',quoteSnapshot:{secondPerson:true}}),'Shelley + Phil');
- assert.equal(P.teamName({secondPerson:false,quoteSnapshot:{secondPerson:true}}),'Owner');
- assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'owner'}),'Owner + Phil');
+ assert.equal(P.teamName({secondPerson:false,quoteSnapshot:{secondPerson:true}}),'Dan');
+ assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'owner'}),'Dan + Phil');
 });
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/data.js'),'utf8'),context);
 vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/quote.js'),'utf8'),context);

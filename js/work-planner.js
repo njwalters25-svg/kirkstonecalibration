@@ -45,7 +45,7 @@ window.KirkstoneWork = (() => {
   const field=(job,name,label,type,value,extra='')=>'<label>'+label+'<input data-plan-field="'+name+'" type="'+type+'" value="'+esc(value)+'" '+extra+'></label>';
   function controls(job){
     return '<div class="planning-controls"><div class="planner-fields"><label>Assigned to<select data-plan-field="assignedPerson">'
-      +'<option value="owner" '+(P.person(job)==='owner'?'selected':'')+'>Owner</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
+      +'<option value="owner" '+(P.person(job)==='owner'?'selected':'')+'>Dan</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<label>Also working on this job<select data-plan-field="secondPersonKind"><option value="none" '+(!P.hasSecondPerson(job)?'selected':'')+'>No additional worker</option>'+workerOptions(P.person(job),P.hasSecondPerson(job)?P.secondWorker(job):'none')+'</select></label>'
       +(P.participants(job).includes('shelley') && P.availability(job) !== null?'<p>Shelley available: '+esc(P.availability(job))+' days (set on quote)</p>':'')
       +field(job,'travelOriginPostcode','Travel starting postcode','text',P.origin(job,currentSettings))

@@ -398,7 +398,7 @@ function applyTeamCosting(result, input, settings) {
   const shelleyPresent = lead === 'shelley' || (result.secondPerson && other === 'shelley');
   const ownerPresent = lead === 'owner' || (result.secondPerson && other === 'owner');
   const nonnegative = value => Math.max(0, Number(value) || 0);
-  result.secondPersonName = other === 'phil' ? 'Phil' : other === 'shelley' ? 'Shelley' : 'Owner';
+  result.secondPersonName = other === 'phil' ? 'Phil' : other === 'shelley' ? 'Shelley' : 'Dan';
   result.costPhil = result.secondPerson && other === 'phil'
     ? result.timePlan.totalDays * (settings.secondPersonDayCost || 350) : 0;
   result.costShelleyPay = result.costShelleyHotel = result.costShelleyFuel = result.costShelleyFood = 0;

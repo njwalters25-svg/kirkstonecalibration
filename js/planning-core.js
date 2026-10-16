@@ -3,7 +3,7 @@ window.KirkstonePlanning = (() => {
   const fields = ['singleChannelCount','multiChannel6Count','multiChannel8Count','multiChannel12Count','multiChannel16Count'];
   const labels = ['Single','6-channel','8-channel','12-channel','16-channel'];
   const person = job => job?.assignedPerson === 'shelley' ? 'shelley' : 'owner';
-  const personName = value => value === 'shelley' ? 'Shelley' : value === 'phil' ? 'Phil' : 'Owner';
+  const personName = value => value === 'shelley' ? 'Shelley' : value === 'phil' ? 'Phil' : 'Dan';
   const hasSecondPerson = job => Boolean(job?.secondPerson ?? job?.quoteSnapshot?.secondPerson);
   // Old second-person quotes used the day-rate worker (Phil).
   const secondWorker = job => {

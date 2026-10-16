@@ -118,7 +118,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'shelley');
   await card.locator('[data-plan-field=assignedPerson]').selectOption('shelley');
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'owner');
-  assert((await card.locator('.work-assignee').innerText()).includes('Shelley + Owner'));
+  assert((await card.locator('.work-assignee').innerText()).includes('Shelley + Dan'));
   assert(await card.locator('.operational-detail').isVisible());
   await page.waitForFunction(()=>typeof window.getJobUnitPrice==='function'&&window.__kirkstoneJobArchiveInstalled===true);
   assert.equal(await card.locator('.job-profit-section,.job-unit-price-editor,.kirkstone-job-summary-panel').count(),0);

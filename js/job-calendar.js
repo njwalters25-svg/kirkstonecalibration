@@ -22,7 +22,7 @@
     root.innerHTML='<div class="calendar-heading"><div><h2>Work calendar</h2><p>Booked dates, provisional work and upcoming Outlook events.</p></div>'
       +'<div class="planner-actions"><button class="btn-small" data-cal-action="previous" aria-label="Previous month">←</button><strong>'+esc(title)+'</strong>'
       +'<button class="btn-small" data-cal-action="next" aria-label="Next month">→</button><button class="btn-small" data-cal-action="today">Today</button></div></div>'
-      +'<div class="planner-actions"><label>Show jobs for <select id="calendarPerson"><option value="all">Everyone</option><option value="owner" '+(filter==='owner'?'selected':'')+'>Owner</option>'
+      +'<div class="planner-actions"><label>Show jobs for <select id="calendarPerson"><option value="all">Everyone</option><option value="owner" '+(filter==='owner'?'selected':'')+'>Dan</option>'
       +'<option value="shelley" '+(filter==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<button class="btn-small" data-cal-action="export">Export jobs for Outlook (.ics)</button></div>'
       +'<div class="outlook-controls"><p role="status">'+esc(outlook.status)+'</p><div class="planner-actions">'
@@ -45,7 +45,7 @@
           +items.map(job=>'<button class="calendar-event '+P.person(job)+(job.scheduleStatus==='provisional'?' provisional':'')+'" data-cal-job="'+esc(job.id)+'">'+esc(job.customerName || 'Unnamed job')+'<small>'+P.teamName(job)+' · '+esc(job.quoteRef || '')+'</small></button>').join('')
           +other.map(event=>'<button class="calendar-event outlook" data-cal-event="'+esc(event.id)+'">'+esc(event.subject || 'Outlook event')+'</button>').join('')+'</div>';
       }).join('')+'</div></div>'
-      +'<div class="calendar-legend"><span>Owner</span><span>Shelley</span><span>Outlook</span><span>Dashed: provisional</span></div>'
+      +'<div class="calendar-legend"><span>Dan</span><span>Shelley</span><span>Outlook</span><span>Dashed: provisional</span></div>'
       +'<h3>Work dates</h3><div class="calendar-agenda">'+scheduled.filter(job=>{const dates=P.schedule(job);return dates.start<=range.end&&dates.end>=range.start;})
       .sort((a,b)=>P.schedule(a).start.localeCompare(P.schedule(b).start)).map(job=>agenda(job,true)).join('')
       +'<h3>Needs exact dates</h3>'+(!undated.length?'<p>No undated jobs for this month.</p>':undated.map(job=>agenda(job,false)).join(''))+'</div>'
@@ -56,7 +56,7 @@
     return '<article class="calendar-job" data-id="'+esc(job.id)+'"><div><strong>'+esc(job.customerName || 'Unnamed job')+'</strong> · '+esc(job.quoteRef || '')+' · Lead: '+P.personName(P.person(job))+' · Team: '+P.teamName(job)
       +'<p>'+(dated?esc(dates.start+' to '+dates.end)+(job.scheduleStatus==='provisional'?' · Provisional':''):
         job.proposedDate?'Proposed '+esc(job.proposedDate)+' — exact dates not set':'No dates set')+'</p></div>'
-      +'<div class="planner-fields"><label>Assigned to<select data-calendar-field="assignedPerson"><option value="owner">Owner</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
+      +'<div class="planner-fields"><label>Assigned to<select data-calendar-field="assignedPerson"><option value="owner">Dan</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<label>Start date<input type="date" data-calendar-field="scheduleStartDate" value="'+esc(job.scheduleStartDate || '')+'"></label>'
       +'<label>End date<input type="date" data-calendar-field="scheduleEndDate" value="'+esc(job.scheduleEndDate || '')+'"></label></div>'
       +'<div class="planner-actions"><button class="btn-small" data-cal-action="save" data-job-id="'+esc(job.id)+'">Save schedule</button>'
