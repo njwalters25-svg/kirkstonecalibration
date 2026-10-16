@@ -327,11 +327,13 @@ function renderQuoteSummary(result) {
         <span>Labour — travel${result.commuteTrips > 1 ? ` (${result.commuteTrips} days)` : ''}</span>
         <span>${formatCurrency(result.costLabourTravel)}</span>
       </div>
-      ${result.costSecondPerson > 0 ? `
+      ${(result.costPhil ?? result.costSecondPerson) > 0 ? `
       <div class="summary-row">
-        <span>2nd person (${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''})</span>
-        <span>${formatCurrency(result.costSecondPerson)}</span>
+        <span>${result.costPhil == null ? '2nd person' : 'Phil'} (${result.secondPersonDays} day${result.secondPersonDays !== 1 ? 's' : ''})</span>
+        <span>${formatCurrency(result.costPhil ?? result.costSecondPerson)}</span>
       </div>` : ''}
+      ${result.costShelleyPay > 0 ? `<div class="summary-row"><span>Shelley (${result.shelleyPaidHours.toFixed(2)} hours work + travel @ ${formatCurrency(result.shelleyHourlyRate)}/hour)</span><span>${formatCurrency(result.costShelleyPay)}</span></div>` : ''}
+      ${[['Hotel',result.costShelleyHotel],['Fuel',result.costShelleyFuel],['Food',result.costShelleyFood]].filter(([,cost])=>cost>0).map(([label,cost])=>`<div class="summary-row"><span>Shelley — additional ${label.toLowerCase()}</span><span>${formatCurrency(cost)}</span></div>`).join('')}
       ${result.costSubsistence > 0 ? `
       <div class="summary-row">
         <span>Subsistence (${result.subsistenceDays} day${result.subsistenceDays !== 1 ? 's' : ''} @ ${formatCurrency(result.subsistenceRate)}/day)</span>
@@ -1021,3 +1023,4 @@ function renderQuoteHistory(quotes, settings) {
     </div>`;
   }).join('');
 }
+

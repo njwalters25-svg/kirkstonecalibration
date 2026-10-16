@@ -1,18 +1,39 @@
 // Assignment, travel defaults and an operational Job Sheet view. This is not an access-control boundary.
 window.KirkstoneWork = (() => {
-  const P=KirkstonePlanning, ownerViews=new Set();let quoteOriginExplicit=false;
+  const P=KirkstonePlanning, ownerViews=new Set();let quoteOriginExplicit=false,teamCostingVersion=1;
   const esc=value=>escapeHtml(String(value??''));
   const costNames={hotel:'Hotel',food:'Food',fuel:'Other travel',shipping:'Shipping',secondPerson:'Second person job cost',other:'Other',mileageMiles:'Total mileage (miles)'};
   function quoteOrigin(){return document.getElementById('quoteTravelOrigin')?.value.trim()
     || P.defaultOrigin(document.getElementById('quoteAssignee')?.value,currentSettings);}
+  function workerOptions(lead,selected){return ['phil','shelley','owner'].filter(who=>who!==lead)
+    .map(who=>'<option value="'+who+'" '+(selected===who?'selected':'')+'>'+P.personName(who)+'</option>').join('');}
+  function restoreTeam(quote={}){
+    const select=document.getElementById('secondPersonKind');if(!select)return;
+    select.innerHTML=workerOptions(P.person(quote),P.secondWorker(quote));
+    for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:0,shelleyFoodCost:0})){
+      const field=document.getElementById(key);if(field)field.value=quote[key] ?? fallback;
+    }
+    showShelleyCosts();
+    queueMicrotask(showShelleyCosts);
+  }
+  function showShelleyCosts(){
+    const lead=document.getElementById('quoteAssignee').value,other=document.getElementById('secondPersonKind').value;
+    document.getElementById('shelleyQuoteCosts').hidden=!(lead==='shelley'||(document.getElementById('secondPerson').checked&&other==='shelley'));
+  }
   function restoreQuote(quote={}){
+    teamCostingVersion=quote.teamCostingVersion===1?1:(quote.id||quote.pipetteLines?0:1);
     quoteOriginExplicit=Boolean(quote.travelOriginPostcode);
     const who=quote.assignedPerson==='shelley'?'shelley':'owner';
     const select=document.getElementById('quoteAssignee'),input=document.getElementById('quoteTravelOrigin');
     if(select)select.value=who;if(input)input.value=quote.travelOriginPostcode || P.defaultOrigin(who,currentSettings);
+    restoreTeam(quote);
   }
   const collectQuote=collectQuoteInputFromForm;
-  window.collectQuoteInputFromForm=()=>({...collectQuote(),assignedPerson:document.getElementById('quoteAssignee')?.value || 'owner',travelOriginPostcode:quoteOrigin()});
+  window.collectQuoteInputFromForm=()=>({...collectQuote(),assignedPerson:document.getElementById('quoteAssignee')?.value || 'owner',
+    secondPersonKind:document.getElementById('secondPersonKind')?.value || 'phil',teamCostingVersion,
+    ...Object.fromEntries(['shelleyHourlyRate','shelleyHotelCost','shelleyFuelCost','shelleyFoodCost'].map(key=>[key,Math.max(0,Number(document.getElementById(key)?.value)||0)])),
+    shelleyPaidHours:document.getElementById('shelleyPaidHours')?.value === '' ? null : Math.max(0,Number(document.getElementById('shelleyPaidHours')?.value)||0),
+    travelOriginPostcode:quoteOrigin()});
   window.getQuoteTravelOrigin=quoteOrigin;window.restoreQuotePlanning=restoreQuote;
   function sheet(job){
     const safe=P.operational(job,calculateJobSheet(job),currentSettings);
@@ -24,6 +45,7 @@ window.KirkstoneWork = (() => {
   function controls(job){
     return '<div class="planning-controls"><div class="planner-fields"><label>Assigned to<select data-plan-field="assignedPerson">'
       +'<option value="owner" '+(P.person(job)==='owner'?'selected':'')+'>Owner</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
+      +'<label>Also working on this job<select data-plan-field="secondPersonKind"><option value="none" '+(!P.hasSecondPerson(job)?'selected':'')+'>No additional worker</option>'+workerOptions(P.person(job),P.hasSecondPerson(job)?P.secondWorker(job):'none')+'</select></label>'
       +field(job,'travelOriginPostcode','Travel starting postcode','text',P.origin(job,currentSettings))
       +field(job,'destinationPostcode','Job destination postcode','text',job.destinationPostcode || job.quoteSnapshot?.destinationPostcode || '')
       +field(job,'scheduleStartDate','Work start date','date',job.scheduleStartDate || '')
@@ -41,7 +63,7 @@ window.KirkstoneWork = (() => {
     const safe=sheet(job),expanded=expandedJobIds.has(job.id),root=document.createElement('article');
     root.id='job-card-'+job.id;root.dataset.id=job.id;root.className='work-sheet-card';
     const catalog=typeof getJobPartsCatalog==='function'?getJobPartsCatalog(job):[];
-    root.innerHTML='<div class="history-header"><strong>'+esc(safe.customerName)+'</strong><span class="ref-badge">'+esc(safe.quoteRef)+'</span><span class="work-assignee">Shelley</span></div>'
+    root.innerHTML='<div class="history-header"><strong>'+esc(safe.customerName)+'</strong><span class="ref-badge">'+esc(safe.quoteRef)+'</span><span class="work-assignee">'+esc(P.teamName(job))+'</span></div>'
       +'<div class="job-summary-grid">'+totals('Expected',safe.expected)+totals('Actual',safe.actual)+totals('Remaining',safe.remaining)+'</div>'
       +'<div class="planner-actions"><button class="btn-small" data-work-action="expand">'+(expanded?'Close work sheet':'Open work sheet')+'</button>'
       +'<button class="btn-small" data-work-action="finance">Owner financial view</button></div>'
@@ -98,7 +120,7 @@ window.KirkstoneWork = (() => {
   function print(job){
     const safe=sheet(job),date=safe.schedule?safe.schedule.start+' to '+safe.schedule.end:'Dates not set';
     const html='<!doctype html><html><head><meta charset="utf-8"><title>Work sheet '+esc(safe.quoteRef)+'</title><style>body{font:14px Arial;max-width:900px;margin:2rem auto;padding:1rem}table{border-collapse:collapse;width:100%;margin:1rem 0}td,th{padding:.5rem;border:1px solid #ccc;text-align:left}pre{white-space:pre-wrap}@media print{button{display:none}}</style></head><body>'
-      +'<button onclick="window.print()">Print / PDF</button><h1>Kirkstone Calibration — Work sheet</h1><h2>'+esc(safe.customerName)+'</h2><p>Quote reference: '+esc(safe.quoteRef)+' · Assigned to Shelley</p><p>'+esc(date)+'</p><p>Customer address: '+esc(safe.customerAddress)+'</p><p>Travel start: '+esc(safe.travelOriginPostcode)+'</p>'
+      +'<button onclick="window.print()">Print / PDF</button><h1>Kirkstone Calibration — Work sheet</h1><h2>'+esc(safe.customerName)+'</h2><p>Quote reference: '+esc(safe.quoteRef)+' · Assigned to '+P.personName(safe.assignedPerson)+'</p><p>Working on job: '+esc(P.teamName(safe))+'</p><p>'+esc(date)+'</p><p>Customer address: '+esc(safe.customerAddress)+'</p><p>Travel start: '+esc(safe.travelOriginPostcode)+'</p>'
       +'<table><tr><th>Pipettes</th>'+P.labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>'
       +[['Expected',safe.expected],['Actual',safe.actual],['Remaining',safe.remaining]].map(([label,values])=>'<tr><th>'+label+'</th>'+P.fields.map(k=>'<td>'+values[k]+'</td>').join('')+'</tr>').join('')+'</table>'
       +'<h3>Daily work</h3><table><tr><th>Date</th><th>Service level</th>'+P.labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>'
@@ -118,8 +140,14 @@ window.KirkstoneWork = (() => {
   }
   function change(job,name,value){
     if(name==='assignedPerson'){
+      const previousLead=P.person(job),previousOther=P.secondWorker(job);
+      job.secondPerson=P.hasSecondPerson(job);
       job.assignedPerson=value==='shelley'?'shelley':'owner';job.travelOriginPostcode=P.defaultOrigin(job.assignedPerson,currentSettings);
+      job.secondPersonKind=previousOther===job.assignedPerson?previousLead:previousOther;
       job.travelNeedsReview=true;delete job.travelPlan;ownerViews.delete(job.id);
+      renderJobSheets(currentJobs);
+    }else if(name==='secondPersonKind'){
+      job.secondPerson=value!=='none';job.secondPersonKind=value==='none'?'phil':value;
       renderJobSheets(currentJobs);
     }else if(['scheduleStartDate','scheduleEndDate','scheduleStatus','travelOriginPostcode','destinationPostcode','workCarriedOut','operationalNotes'].includes(name)){
       job[name]=value;
@@ -165,10 +193,21 @@ window.KirkstoneWork = (() => {
   document.addEventListener('DOMContentLoaded',()=>{
     settings();if(!document.getElementById('quoteTravelOrigin').value)restoreQuote(StorageManager.loadFormState() || {});
     document.getElementById('quoteAssignee').addEventListener('change',()=>{
+      teamCostingVersion=1;
+      const selected=document.getElementById('secondPersonKind').value,lead=document.getElementById('quoteAssignee').value;
+      const selector=document.getElementById('secondPersonKind');
+      selector.innerHTML=workerOptions(lead,selected===lead?(lead==='owner'?'shelley':'owner'):selected);
+      showShelleyCosts();
       quoteOriginExplicit=false;
       document.getElementById('quoteTravelOrigin').value=P.defaultOrigin(document.getElementById('quoteAssignee').value,currentSettings);
-      document.getElementById('routeStatus').textContent='Travel start changed. Recalculate the route if needed.';autoSaveForm();
+      document.getElementById('routeStatus').textContent='Travel start changed. Recalculate the route if needed.';recalculate();autoSaveForm();
     });
+    for(const key of ['secondPerson','secondPersonKind'])document.getElementById(key).addEventListener('change',()=>{teamCostingVersion=1;showShelleyCosts();recalculate();autoSaveForm();});
+    for(const event of ['input','change'])document.getElementById('quoteForm').addEventListener(event,e=>{
+      if(e.target.closest('#shelleyQuoteCosts'))teamCostingVersion=1;
+    },true);
+    // The main form restores its checkbox after restoreQuotePlanning is called.
+    queueMicrotask(showShelleyCosts);
     document.getElementById('quoteTravelOrigin').addEventListener('change',()=>{quoteOriginExplicit=true;autoSaveForm();});
     document.addEventListener('change',event=>{
       const root=event.target.closest('[data-id]');if(!root)return;const job=getJobById(root.dataset.id);if(!job)return;

@@ -359,5 +359,39 @@ function calculateQuote(input, settings) {
   // --- Notes ---
   result.notes = input.notes || '';
 
+  return applyTeamCosting(result, input, settings);
+}
+
+
+// Called again after manual-day overrides so pay uses the final work/travel plan.
+function applyTeamCosting(result, input, settings) {
+  if (input.teamCostingVersion !== 1) return result;
+  const lead = input.assignedPerson === 'shelley' ? 'shelley' : 'owner';
+  const other = ['phil','shelley','owner'].includes(input.secondPersonKind) && input.secondPersonKind !== lead
+    ? input.secondPersonKind : 'phil';
+  const shelleyPresent = lead === 'shelley' || (result.secondPerson && other === 'shelley');
+  const ownerPresent = lead === 'owner' || (result.secondPerson && other === 'owner');
+  const nonnegative = value => Math.max(0, Number(value) || 0);
+  result.secondPersonName = other === 'phil' ? 'Phil' : other === 'shelley' ? 'Shelley' : 'Owner';
+  result.costPhil = result.secondPerson && other === 'phil'
+    ? result.timePlan.totalDays * (settings.secondPersonDayCost || 350) : 0;
+  result.costShelleyPay = result.costShelleyHotel = result.costShelleyFuel = result.costShelleyFood = 0;
+  if (shelleyPresent) {
+    result.shelleyHourlyRate = input.shelleyHourlyRate == null ? 15.87 : nonnegative(input.shelleyHourlyRate);
+    result.shelleyPaidHours = input.shelleyPaidHours == null || input.shelleyPaidHours === ''
+      ? (nonnegative(result.timePlan.jobMins) + nonnegative(result.timePlan.travelOutMins) * 2 * (result.commuteTrips ?? 1)
+        + nonnegative(result.timePlan.totalHotelCommuteMins) + nonnegative(result.returnHomeTimeMins)) / 60 : nonnegative(input.shelleyPaidHours);
+    result.costShelleyPay = result.shelleyPaidHours * result.shelleyHourlyRate;
+    result.costShelleyHotel = nonnegative(input.shelleyHotelCost);
+    result.costShelleyFuel = nonnegative(input.shelleyFuelCost);
+    result.costShelleyFood = nonnegative(input.shelleyFoodCost);
+  }
+  if (!ownerPresent) { result.costLabourCalibration = 0; result.costLabourTravel = 0; }
+  result.costSecondPerson = result.costPhil + result.costShelleyPay;
+  result.totalInternalCost = ['costPipettesTotal','costTravel','costAccommodation','costLabourCalibration','costLabourTravel',
+    'costSecondPerson','costShelleyHotel','costShelleyFuel','costShelleyFood','costSubsistence'].reduce((sum,key)=>sum+(result[key]||0),0);
+  result.profitAmount = result.totalQuotePrice - result.totalInternalCost;
+  result.profitMarginPercent = result.totalQuotePrice > 0 ? result.profitAmount / result.totalQuotePrice * 100 : 0;
+  result.profitPerDay = result.timePlan.totalDays > 0 ? result.profitAmount / result.timePlan.totalDays : result.profitAmount;
   return result;
 }

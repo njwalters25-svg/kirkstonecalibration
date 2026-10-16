@@ -129,7 +129,7 @@
   dayRateOverrideScript.async = false;
   dayRateOverrideScript.onload = () => {
     const plannedDaysOverrideScript = document.createElement('script');
-    plannedDaysOverrideScript.src = 'js/planned-days-override.js?v=20260907-1';
+    plannedDaysOverrideScript.src = 'js/planned-days-override.js?v=20261016-2';
     plannedDaysOverrideScript.async = false;
     document.head.appendChild(plannedDaysOverrideScript);
   };

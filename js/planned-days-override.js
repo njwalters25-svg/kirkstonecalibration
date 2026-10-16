@@ -227,7 +227,7 @@
           ? result.profitAmount / result.timePlan.totalDays
           : result.profitAmount;
       }
-      return result;
+      return applyTeamCosting(result, input, settings);
     };
   }
 
@@ -300,3 +300,4 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialise);
   else initialise();
 })();
+

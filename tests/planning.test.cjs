@@ -65,3 +65,48 @@ test('Outlook all-day end dates are interpreted as exclusive',()=>{
  assert.equal(result.start,'2026-10-24');assert.equal(result.end,'2026-10-26');
 });
 
+
+test('named participants preserve one lead and support both owner/Shelley directions and Phil',()=>{
+ assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley'}),'Owner + Shelley');
+ assert.equal(P.teamName({assignedPerson:'shelley',secondPerson:true,secondPersonKind:'owner'}),'Shelley + Owner');
+ assert.equal(P.teamName({assignedPerson:'shelley',quoteSnapshot:{secondPerson:true}}),'Shelley + Phil');
+ assert.equal(P.teamName({secondPerson:false,quoteSnapshot:{secondPerson:true}}),'Owner');
+ assert.equal(P.teamName({assignedPerson:'owner',secondPerson:true,secondPersonKind:'owner'}),'Owner + Phil');
+});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/data.js'),'utf8'),context);
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/quote.js'),'utf8'),context);
+const settings=vm.runInContext('({...DEFAULT_SETTINGS})',context);
+test('Shelley work and daily travel hours use 15.87; expenses are added exactly once',()=>{
+ const input={teamCostingVersion:1,assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',calibrationTimeMinutes:600,travelTimeMinutes:60,
+  shelleyHotelCost:80,shelleyFuelCost:25,shelleyFoodCost:15};
+ const r=context.calculateQuote(input,settings);
+ const hours=(r.timePlan.jobMins+120*r.commuteTrips)/60;
+ assert.equal(r.shelleyPaidHours,hours);assert.equal(r.costShelleyPay,hours*15.87);assert.equal(r.costPhil,0);
+ const noExpenses=context.calculateQuote({...input,shelleyHotelCost:0,shelleyFuelCost:0,shelleyFoodCost:0},settings);
+ assert(Math.abs(r.totalInternalCost-noExpenses.totalInternalCost-120)<1e-8);
+ assert.equal(r.totalQuotePrice,noExpenses.totalQuotePrice);
+ const manual=context.calculateQuote({...input,shelleyPaidHours:12},settings);assert.equal(manual.costShelleyPay,12*15.87);
+ const zero=context.calculateQuote({...input,shelleyPaidHours:0},settings);assert.equal(zero.costShelleyPay,0);
+});
+test('Phil day rate and old saved quotes retain their existing costing',()=>{
+ const old={secondPerson:true,calibrationTimeMinutes:600,travelTimeMinutes:30};
+ const a=context.calculateQuote(old,settings),b=context.calculateQuote({...old,teamCostingVersion:1,secondPersonKind:'phil'},settings);
+ assert.equal(a.costSecondPerson,b.costPhil);assert.equal(a.totalInternalCost,b.totalInternalCost);
+ const stored=context.calculateQuote({...old,secondPersonKind:'shelley',shelleyHourlyRate:999,shelleyHotelCost:10000},settings);
+ assert.equal(stored.totalInternalCost,a.totalInternalCost);
+});
+test('Shelley lead is paid once; adding Owner does not charge a Phil day rate',()=>{
+ const r=context.calculateQuote({teamCostingVersion:1,assignedPerson:'shelley',secondPerson:true,secondPersonKind:'owner',calibrationTimeMinutes:600,travelTimeMinutes:30},settings);
+ assert.equal(r.costSecondPerson,r.costShelleyPay);assert.equal(r.costPhil,0);assert(r.costLabourTravel>0);
+ const solo=context.calculateQuote({teamCostingVersion:1,assignedPerson:'shelley',secondPerson:false,calibrationTimeMinutes:600,travelTimeMinutes:30},settings);
+ assert.equal(solo.costLabourCalibration,0);assert.equal(solo.costLabourTravel,0);assert(solo.costShelleyPay>0);
+});
+
+test('Shelley hours include overnight hotel commutes, travel day before, and return-home trips',()=>{
+ const r=context.calculateQuote({teamCostingVersion:1,assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',
+  calibrationTimeMinutes:1800,travelTimeMinutes:120,overnightStay:true,travelDayBefore:true,hotelToWorkMinutes:20,
+  returnHome:true,returnHomeTrips:1},settings);
+ const expected=(r.timePlan.jobMins+240*r.commuteTrips+r.timePlan.totalHotelCommuteMins+r.returnHomeTimeMins)/60;
+ assert.equal(r.shelleyPaidHours,expected);assert(r.timePlan.totalHotelCommuteMins>0);assert(r.returnHomeTimeMins>0);
+ assert.equal(r.costShelleyPay,expected*15.87);
+});

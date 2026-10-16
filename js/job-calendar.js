@@ -8,7 +8,7 @@
     const first=month+'-01',d=new Date(first+'T12:00:00Z'),offset=(d.getUTCDay()+6)%7;
     const start=P.addDays(first,-offset),end=P.addDays(start,41);return {start,end};
   }
-  const shownJobs=()=>currentJobs.filter(job=>P.active(job)&&(filter==='all'||P.person(job)===filter));
+  const shownJobs=()=>currentJobs.filter(job=>P.active(job)&&(filter==='all'||P.participants(job).includes(filter)));
   const linkedJob=event=>currentJobs.find(job=>job.outlookLink?.eventId===event.id
     && job.outlookLink?.accountId===KirkstoneOutlook.profile?.id&&job.outlookLink?.calendarId===KirkstoneOutlook.selected?.id);
   function jump(nextMonth){month=nextMonth;render();refreshOutlook();}
@@ -42,7 +42,7 @@
         });
         return '<div class="calendar-day '+(date.slice(0,7)!==month?'outside-month ':'')+(date===now()?'today':'')+'" role="gridcell" aria-label="'+date+'">'
           +'<span class="calendar-date">'+Number(date.slice(-2))+'</span>'
-          +items.map(job=>'<button class="calendar-event '+P.person(job)+(job.scheduleStatus==='provisional'?' provisional':'')+'" data-cal-job="'+esc(job.id)+'">'+esc(job.customerName || 'Unnamed job')+'<small>'+P.personName(P.person(job))+' · '+esc(job.quoteRef || '')+'</small></button>').join('')
+          +items.map(job=>'<button class="calendar-event '+P.person(job)+(job.scheduleStatus==='provisional'?' provisional':'')+'" data-cal-job="'+esc(job.id)+'">'+esc(job.customerName || 'Unnamed job')+'<small>'+P.teamName(job)+' · '+esc(job.quoteRef || '')+'</small></button>').join('')
           +other.map(event=>'<button class="calendar-event outlook" data-cal-event="'+esc(event.id)+'">'+esc(event.subject || 'Outlook event')+'</button>').join('')+'</div>';
       }).join('')+'</div></div>'
       +'<div class="calendar-legend"><span>Owner</span><span>Shelley</span><span>Outlook</span><span>Dashed: provisional</span></div>'
@@ -53,7 +53,7 @@
   }
   function agenda(job,dated){
     const dates=P.schedule(job);
-    return '<article class="calendar-job" data-id="'+esc(job.id)+'"><div><strong>'+esc(job.customerName || 'Unnamed job')+'</strong> · '+esc(job.quoteRef || '')+' · '+P.personName(P.person(job))
+    return '<article class="calendar-job" data-id="'+esc(job.id)+'"><div><strong>'+esc(job.customerName || 'Unnamed job')+'</strong> · '+esc(job.quoteRef || '')+' · Lead: '+P.personName(P.person(job))+' · Team: '+P.teamName(job)
       +'<p>'+(dated?esc(dates.start+' to '+dates.end)+(job.scheduleStatus==='provisional'?' · Provisional':''):
         job.proposedDate?'Proposed '+esc(job.proposedDate)+' — exact dates not set':'No dates set')+'</p></div>'
       +'<div class="planner-fields"><label>Assigned to<select data-calendar-field="assignedPerson"><option value="owner">Owner</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'

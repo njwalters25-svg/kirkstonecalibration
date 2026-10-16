@@ -3,7 +3,15 @@ window.KirkstonePlanning = (() => {
   const fields = ['singleChannelCount','multiChannel6Count','multiChannel8Count','multiChannel12Count','multiChannel16Count'];
   const labels = ['Single','6-channel','8-channel','12-channel','16-channel'];
   const person = job => job?.assignedPerson === 'shelley' ? 'shelley' : 'owner';
-  const personName = value => value === 'shelley' ? 'Shelley' : 'Owner';
+  const personName = value => value === 'shelley' ? 'Shelley' : value === 'phil' ? 'Phil' : 'Owner';
+  const hasSecondPerson = job => Boolean(job?.secondPerson ?? job?.quoteSnapshot?.secondPerson);
+  // Old second-person quotes used the day-rate worker (Phil).
+  const secondWorker = job => {
+    const value = job?.secondPersonKind ?? job?.quoteSnapshot?.secondPersonKind ?? 'phil';
+    return ['owner','shelley','phil'].includes(value) && value !== person(job) ? value : 'phil';
+  };
+  const participants = job => hasSecondPerson(job) ? [person(job),secondWorker(job)] : [person(job)];
+  const teamName = job => participants(job).map(personName).join(' + ');
   const defaultOrigin = (who, settings = {}) => who === 'shelley'
     ? (settings.shelleyHomePostcode || 'NE32 5QA') : (settings.homePostcode || 'DE75 7UJ');
   const origin = (job, settings) => job?.travelOriginPostcode?.trim() || defaultOrigin(person(job), settings);
@@ -34,7 +42,7 @@ window.KirkstonePlanning = (() => {
     const allowedCosts = ['hotel','food','fuel','shipping','secondPerson','other','mileageMiles'];
     return {
       id:job.id, customerName:job.customerName || '', customerAddress:job.customerAddress || '',
-      quoteRef:job.quoteRef || '', assignedPerson:person(job), travelOriginPostcode:origin(job,settings),
+      quoteRef:job.quoteRef || '', assignedPerson:person(job), secondPerson:hasSecondPerson(job), secondPersonKind:secondWorker(job), travelOriginPostcode:origin(job,settings),
       destinationPostcode:job.destinationPostcode || job.quoteSnapshot?.destinationPostcode || '',
       expected, actual, remaining:Object.fromEntries(fields.map(field=>[field,expected[field]-actual[field]])),
       actualEntries:countRows, schedule:schedule(job),
@@ -51,7 +59,7 @@ window.KirkstonePlanning = (() => {
     const dates=schedule(job); if(!dates)throw new Error('Set valid start and end dates first.');
     return {
       subject:'Kirkstone · ' + (job.customerName || 'Calibration job') + (job.quoteRef ? ' · ' + job.quoteRef : ''),
-      body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job))},
+      body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job)) + '\nWorking on job: ' + teamName(job)},
       location:{displayName:job.customerAddress || ''},isAllDay:true,isReminderOn:false,
       showAs:job.scheduleStatus === 'provisional' ? 'tentative' : 'busy',
       start:{dateTime:dates.start+'T00:00:00',timeZone:'GMT Standard Time'},
@@ -95,7 +103,7 @@ window.KirkstonePlanning = (() => {
   }
   function operationalCsv(sheet) {
     const rows=[['Job sheet',sheet.customerName],['Quote reference',sheet.quoteRef],['Assigned to',personName(sheet.assignedPerson)],
-      ['Customer address',sheet.customerAddress],['Travel start',sheet.travelOriginPostcode],
+      ['Working on job',teamName(sheet)],['Customer address',sheet.customerAddress],['Travel start',sheet.travelOriginPostcode],
       ['Start date',sheet.schedule?.start || ''],['End date',sheet.schedule?.end || ''],
       ['Pipettes',...labels],['Expected',...fields.map(f=>sheet.expected[f])],['Actual',...fields.map(f=>sheet.actual[f])],
       ['Remaining',...fields.map(f=>sheet.remaining[f])],[],['Date','Service level',...labels]];
@@ -105,6 +113,6 @@ window.KirkstonePlanning = (() => {
     rows.push(['Total job costs',sheet.calculatedCosts.total],['Work carried out',sheet.workCarriedOut],['Work notes',sheet.operationalNotes]);
     return '\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   }
-  return {fields,labels,person,personName,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
+  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
 })();
 

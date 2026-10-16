@@ -688,7 +688,7 @@ function recalculate() {
   // Second person note
   const spNote = document.getElementById('secondPersonNote');
   if (finalResult.secondPerson && finalResult.secondPersonDays > 0) {
-    spNote.textContent = `2nd person: ${finalResult.secondPersonDays} day${finalResult.secondPersonDays !== 1 ? 's' : ''} on site (${formatCurrency(finalResult.costSecondPerson)}). Calibration time reduced by ${finalResult.timeReductionPercent}%.`;
+    spNote.textContent = `Additional worker: ${finalResult.secondPersonName || 'second person'}. Calibration time reduced by ${finalResult.timeReductionPercent}%. See internal costs for the pay and expense breakdown.`;
     spNote.style.display = 'block';
   } else {
     spNote.style.display = 'none';
@@ -831,6 +831,8 @@ async function createJobSheetFromQuote(id) {
     customerAddress: quote.customerAddress || '',
     proposedDate: quote.proposedDate || '',
     assignedPerson: quote.assignedPerson === 'shelley' ? 'shelley' : 'owner',
+    secondPerson: !!quote.secondPerson,
+    secondPersonKind: quote.secondPersonKind || 'phil',
     travelOriginPostcode: quote.travelOriginPostcode || (quote.assignedPerson === 'shelley' ? (currentSettings.shelleyHomePostcode || 'NE32 5QA') : currentSettings.homePostcode),
     destinationPostcode: quote.destinationPostcode || '',
     settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings),
@@ -841,8 +843,8 @@ async function createJobSheetFromQuote(id) {
     quotedAssumptions: {
       totalTripMiles: quoteResult.totalTripMiles || 0,
       mileageRatePence: normalizeMileageRatePence(quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence),
-      hotelCost: quoteResult.costAccommodation || 0,
-      foodCost: quoteResult.costSubsistence || 0,
+      hotelCost: (quoteResult.costAccommodation || 0) + (quoteResult.costShelleyHotel || 0),
+      foodCost: (quoteResult.costSubsistence || 0) + (quoteResult.costShelleyFood || 0),
       secondPersonCost: quoteResult.costSecondPerson || 0,
       stickerCostPerPipette,
       stickerCost: (quoteResult.totalPipettes || 0) * stickerCostPerPipette,
@@ -855,9 +857,9 @@ async function createJobSheetFromQuote(id) {
     invoiceNumber: '',
     workCarriedOut: '',
     costs: {
-      hotel: quoteResult.costAccommodation || 0,
-      food: quoteResult.costSubsistence || 0,
-      fuel: 0,
+      hotel: (quoteResult.costAccommodation || 0) + (quoteResult.costShelleyHotel || 0),
+      food: (quoteResult.costSubsistence || 0) + (quoteResult.costShelleyFood || 0),
+      fuel: quoteResult.costShelleyFuel || 0,
       parts: 0,
       shipping: 0,
       secondPerson: quoteResult.costSecondPerson || 0,
@@ -1156,7 +1158,9 @@ function toggleQuoteDetail(id) {
         ${result.costAccommodation > 0 ? `<div class="summary-row"><span>Accommodation</span><span>${formatCurrency(result.costAccommodation)}</span></div>` : ''}
         <div class="summary-row"><span>Labour — calibration</span><span>${formatCurrency(result.costLabourCalibration)}</span></div>
         <div class="summary-row"><span>Labour — travel</span><span>${formatCurrency(result.costLabourTravel)}</span></div>
-        ${result.costSecondPerson > 0 ? `<div class="summary-row"><span>2nd person (${result.secondPersonDays} days)</span><span>${formatCurrency(result.costSecondPerson)}</span></div>` : ''}
+        ${(result.costPhil ?? result.costSecondPerson) > 0 ? `<div class="summary-row"><span>${result.costPhil == null ? "2nd person" : "Phil"} (${result.secondPersonDays} days)</span><span>${formatCurrency(result.costPhil ?? result.costSecondPerson)}</span></div>` : ''}
+        ${result.costShelleyPay > 0 ? `<div class="summary-row"><span>Shelley (${result.shelleyPaidHours.toFixed(2)} hours @ ${formatCurrency(result.shelleyHourlyRate)}/hour)</span><span>${formatCurrency(result.costShelleyPay)}</span></div>` : ''}
+        ${[["hotel",result.costShelleyHotel],["fuel",result.costShelleyFuel],["food",result.costShelleyFood]].filter(([,cost])=>cost>0).map(([label,cost])=>`<div class="summary-row"><span>Shelley — additional ${label}</span><span>${formatCurrency(cost)}</span></div>`).join('')}
         ${result.costSubsistence > 0 ? `<div class="summary-row"><span>Subsistence (${result.subsistenceDays} days)</span><span>${formatCurrency(result.costSubsistence)}</span></div>` : ''}
         <div class="summary-row total"><span>TOTAL COST</span><span>${formatCurrency(result.totalInternalCost)}</span></div>
       </div>
