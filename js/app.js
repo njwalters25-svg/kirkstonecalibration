@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const home = currentSettings.homePostcode || 'DE75 7UJ';
+    const home = typeof getQuoteTravelOrigin === 'function' ? getQuoteTravelOrigin() : (currentSettings.homePostcode || 'DE75 7UJ');
     statusEl.textContent = 'Calculating route...';
     statusEl.className = 'route-status route-loading';
 
@@ -602,6 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('clearForm').addEventListener('click', () => {
     startFreshQuotePricing();
     document.getElementById('quoteForm').reset();
+    if (typeof restoreQuotePlanning === 'function') restoreQuotePlanning({});
     document.getElementById('hotelFields').style.display = 'none';
     document.getElementById('returnHomeFields').style.display = 'none';
     document.getElementById('londonNote').style.display = 'none';
@@ -720,6 +721,7 @@ function restoreFormState() {
   setVal('customerName', saved.customerName);
   setVal('customerAddress', saved.customerAddress);
   setVal('proposedDate', saved.proposedDate);
+  if (typeof restoreQuotePlanning === 'function') restoreQuotePlanning(saved);
   restoreRefFields(saved.refPrefix, saved.refNumber);
   setVal('destinationPostcode', saved.destinationPostcode);
   setVal('travelDistance', saved.travelDistanceMiles);
@@ -828,6 +830,9 @@ async function createJobSheetFromQuote(id) {
     customerName: quote.customerName || '',
     customerAddress: quote.customerAddress || '',
     proposedDate: quote.proposedDate || '',
+    assignedPerson: quote.assignedPerson === 'shelley' ? 'shelley' : 'owner',
+    travelOriginPostcode: quote.travelOriginPostcode || (quote.assignedPerson === 'shelley' ? (currentSettings.shelleyHomePostcode || 'NE32 5QA') : currentSettings.homePostcode),
+    destinationPostcode: quote.destinationPostcode || '',
     settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings),
     quoteSnapshot: { ...quote, settingsSnapshot: createQuoteSettingsSnapshot(quoteSettings) },
     partsCatalogSnapshot: cloneSettings(currentSettings?.partsCatalog || DEFAULT_SETTINGS.partsCatalog),
@@ -864,6 +869,7 @@ async function createJobSheetFromQuote(id) {
   };
   await persistJob(job, 'Job sheet created');
   expandedJobIds.add(job.id);
+  renderJobSheets(currentJobs);
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelector('[data-tab="jobsPanel"]').classList.add('active');
@@ -1191,6 +1197,7 @@ function loadQuote(id) {
   setVal('customerName', q.customerName);
   setVal('customerAddress', q.customerAddress);
   setVal('proposedDate', q.proposedDate);
+  if (typeof restoreQuotePlanning === 'function') restoreQuotePlanning(q);
   restoreRefFields(q.refPrefix, q.refNumber);
   setVal('destinationPostcode', q.destinationPostcode);
   setVal('travelDistance', q.travelDistanceMiles);
@@ -1519,3 +1526,4 @@ function generateCustomerQuoteWindow(result, input, quoteSettings = currentSetti
     showToast('Pop-up blocked — please allow pop-ups for this site');
   }
 }
+

@@ -1,0 +1,35 @@
+/* Operational sheets and planning calendar; existing owner screens keep their styles. */
+.work-sheet-card{border:1px solid #dbe3ee;border-radius:10px;padding:1rem;margin:1rem 0;background:#fff}
+.work-assignee{background:#e6f7ee;color:#166042;border-radius:999px;padding:.25rem .65rem;font-size:.8rem}
+.planning-controls{padding:1rem;margin:1rem 0;border:1px solid #dbe3ee;border-radius:8px;background:#f8fafc}
+.planner-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.8rem}
+.planner-fields label,.work-part-row label,.work-note{display:flex;flex-direction:column;gap:.35rem;font-size:.85rem;font-weight:600}
+.planner-fields input,.planner-fields select,.work-part-row input,.work-part-row select,.work-note textarea{box-sizing:border-box;width:100%;min-width:0;padding:.55rem;border:1px solid #cbd5e1;border-radius:6px;background:white;font:inherit}
+.planner-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.65rem;margin:.8rem 0}
+.planner-actions label{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.work-entry-scroll{overflow-x:auto;max-width:100%;margin:1rem 0}
+.work-entry-scroll .job-entry-row{min-width:800px}
+.work-cost-totals{display:flex;flex-wrap:wrap;gap:1rem;padding:1rem 0}
+.work-part-row{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:.7rem;align-items:end;margin:.8rem 0}
+.work-note{margin:1rem 0}.work-note textarea{font-weight:400}
+.calendar-heading{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+.calendar-heading p{font-size:.9rem;color:#64748b;margin:.4rem 0}
+.outlook-controls{border:1px solid #dbe3ee;border-radius:8px;padding:.8rem;margin:1rem 0;background:#f8fafc}
+.calendar-scroll{overflow-x:auto;max-width:100%}
+.work-calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));min-width:700px;border-top:1px solid #dbe3ee;border-left:1px solid #dbe3ee}
+.calendar-weekday{font-weight:700;text-align:center;padding:.6rem;background:#edf2f7}
+.calendar-day{min-height:110px;min-width:0;padding:.4rem;border-right:1px solid #dbe3ee;border-bottom:1px solid #dbe3ee}
+.calendar-day.outside-month{background:#f8fafc;color:#94a3b8}.calendar-day.today{box-shadow:inset 0 0 0 2px #1f4f7a}
+.calendar-date{font-size:.8rem;font-weight:600}
+.calendar-event{display:block;width:100%;text-align:left;border:0;border-left:3px solid #2563eb;border-radius:4px;margin:.3rem 0;padding:.35rem;background:#e8f0ff;color:#153d7b;font-size:.75rem;line-height:1.35;cursor:pointer;overflow-wrap:anywhere}
+.calendar-event small{display:block;font-size:.65rem}.calendar-event.shelley{border-color:#169969;background:#e5f6ee;color:#14543c}
+.calendar-event.outlook{border-color:#8b5cf6;background:#f0eaff;color:#5b3397}
+.calendar-event.provisional{border:1px dashed #64748b;border-left-width:3px}
+.calendar-legend{display:flex;flex-wrap:wrap;gap:1rem;font-size:.75rem;color:#475569;margin:.6rem 0 1.5rem}
+.calendar-legend span:nth-child(1){color:#153d7b}.calendar-legend span:nth-child(2){color:#14543c}.calendar-legend span:nth-child(3){color:#5b3397}
+.calendar-job{padding:1rem;margin:.8rem 0;border:1px solid #dbe3ee;border-radius:8px}
+.calendar-job p{margin:.4rem 0 .8rem;color:#64748b}
+@media(max-width:650px){.work-part-row{grid-template-columns:1fr 1fr}.work-part-row label:first-child{grid-column:1/-1}.planner-fields{grid-template-columns:1fr 1fr}.calendar-heading .planner-actions{width:100%}}
+@media(max-width:420px){.planner-fields{grid-template-columns:1fr}.planning-controls,.calendar-job{padding:.75rem}}
+@media print{.work-sheet-card .planner-actions,.work-sheet-card .planning-controls{display:none}}
+

@@ -94,6 +94,8 @@ const DEFAULT_SETTINGS = {
 
   // Location & routing
   homePostcode: 'DE75 7UJ',
+  shelleyHomePostcode: 'NE32 5QA',
+  outlookClientId: '',
   londonPremiumPercent: 15,
 
   // Accommodation
@@ -273,3 +275,4 @@ const StorageManager = {
     return customers;
   },
 };
+
