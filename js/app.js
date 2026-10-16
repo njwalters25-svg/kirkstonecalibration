@@ -833,6 +833,7 @@ async function createJobSheetFromQuote(id) {
     assignedPerson: quote.assignedPerson === 'shelley' ? 'shelley' : 'owner',
     secondPerson: !!quote.secondPerson,
     shelleyAvailableDays: quote.shelleyAvailableDays ?? null,
+    shelleyJoiningDates: KirkstonePlanning.joiningDates(quote),
     secondPersonKind: quote.secondPersonKind || 'phil',
     travelOriginPostcode: quote.travelOriginPostcode || (quote.assignedPerson === 'shelley' ? (currentSettings.shelleyHomePostcode || 'NE32 5QA') : currentSettings.homePostcode),
     destinationPostcode: quote.destinationPostcode || '',

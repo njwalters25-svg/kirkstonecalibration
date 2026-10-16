@@ -15,7 +15,7 @@
   async function refreshOutlook(){if(!KirkstoneOutlook.connected)return;const range=bounds();try{await KirkstoneOutlook.load(range.start,range.end);}catch{}}
   function render(){
     const root=document.getElementById('jobCalendar');if(!root)return;
-    const jobs=shownJobs(),range=bounds(),scheduled=jobs.filter(job=>P.schedule(job)),undated=jobs.filter(job=>!P.schedule(job)
+    const jobs=shownJobs(),range=bounds(),scheduled=jobs.filter(job=>P.calendarBounds(job)),undated=jobs.filter(job=>!P.calendarBounds(job)
       &&(!job.proposedDate || job.proposedDate.slice(0,7)===month));
     const title=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(month+'-01T12:00:00Z'));
     const outlook=KirkstoneOutlook,external=externalVisible?outlook.events:[];
@@ -34,7 +34,7 @@
       +'<div class="calendar-scroll"><div class="work-calendar-grid" role="grid" aria-label="'+esc(title)+'">'
       +['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(day=>'<div class="calendar-weekday" role="columnheader">'+day+'</div>').join('')
       +Array.from({length:42},(_,i)=>{
-        const date=P.addDays(range.start,i),items=scheduled.filter(job=>{const dates=P.schedule(job);return date>=dates.start&&date<=dates.end;});
+        const date=P.addDays(range.start,i),items=scheduled.filter(job=>P.onDate(job,date,filter));
         const other=external.filter(event=>{
           const dates=P.outlookDates(event);if(!dates||date<dates.start||date>dates.end)return false;
           const linked=linkedJob(event),planned=linked&&P.schedule(linked);
@@ -42,20 +42,20 @@
         });
         return '<div class="calendar-day '+(date.slice(0,7)!==month?'outside-month ':'')+(date===now()?'today':'')+'" role="gridcell" aria-label="'+date+'">'
           +'<span class="calendar-date">'+Number(date.slice(-2))+'</span>'
-          +items.map(job=>'<button class="calendar-event '+P.person(job)+(job.scheduleStatus==='provisional'?' provisional':'')+'" data-cal-job="'+esc(job.id)+'">'+esc(job.customerName || 'Unnamed job')+'<small>'+P.teamName(job)+' · '+esc(job.quoteRef || '')+'</small></button>').join('')
+          +items.map(job=>'<button class="calendar-event '+P.person(job)+(job.scheduleStatus==='provisional'?' provisional':'')+'" data-cal-job="'+esc(job.id)+'">'+esc(job.customerName || 'Unnamed job')+'<small>'+P.dayTeamName(job,date)+' · '+esc(job.quoteRef || '')+'</small></button>').join('')
           +other.map(event=>'<button class="calendar-event outlook" data-cal-event="'+esc(event.id)+'">'+esc(event.subject || 'Outlook event')+'</button>').join('')+'</div>';
       }).join('')+'</div></div>'
       +'<div class="calendar-legend"><span>Dan</span><span>Shelley</span><span>Outlook</span><span>Dashed: provisional</span></div>'
-      +'<h3>Work dates</h3><div class="calendar-agenda">'+scheduled.filter(job=>{const dates=P.schedule(job);return dates.start<=range.end&&dates.end>=range.start;})
-      .sort((a,b)=>P.schedule(a).start.localeCompare(P.schedule(b).start)).map(job=>agenda(job,true)).join('')
+      +'<h3>Work dates</h3><div class="calendar-agenda">'+scheduled.filter(job=>{const dates=P.calendarBounds(job);return dates.start<=range.end&&dates.end>=range.start;})
+      .sort((a,b)=>P.calendarBounds(a).start.localeCompare(P.calendarBounds(b).start)).map(job=>agenda(job,true)).join('')
       +'<h3>Needs exact dates</h3>'+(!undated.length?'<p>No undated jobs for this month.</p>':undated.map(job=>agenda(job,false)).join(''))+'</div>'
       +'<div id="outlookEventDetail"></div>';
   }
   function agenda(job,dated){
     const dates=P.schedule(job);
     return '<article class="calendar-job" data-id="'+esc(job.id)+'"><div><strong>'+esc(job.customerName || 'Unnamed job')+'</strong> · '+esc(job.quoteRef || '')+' · Lead: '+P.personName(P.person(job))+' · Team: '+P.teamName(job)
-      +'<p>'+(dated?esc(dates.start+' to '+dates.end)+(job.scheduleStatus==='provisional'?' · Provisional':''):
-        job.proposedDate?'Proposed '+esc(job.proposedDate)+' — exact dates not set':'No dates set')+'</p></div>'
+      +'<p>'+(dated&&dates?esc(dates.start+' to '+dates.end)+(job.scheduleStatus==='provisional'?' · Provisional':''):
+        job.proposedDate?'Proposed '+esc(job.proposedDate)+' — exact dates not set':'No dates set')+'</p>'+(P.joiningDates(job).length?'<p>Shelley joining: '+P.joiningDates(job).join(', ')+'</p>':'')+'</div>'
       +'<div class="planner-fields"><label>Assigned to<select data-calendar-field="assignedPerson"><option value="owner">Dan</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<label>Start date<input type="date" data-calendar-field="scheduleStartDate" value="'+esc(job.scheduleStartDate || '')+'"></label>'
       +'<label>End date<input type="date" data-calendar-field="scheduleEndDate" value="'+esc(job.scheduleEndDate || '')+'"></label></div>'
@@ -89,7 +89,7 @@
         case 'previous':{const date=new Date(month+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()-1);jump(date.toISOString().slice(0,7));break;}
         case 'next':{const date=new Date(month+'-01T12:00:00Z');date.setUTCMonth(date.getUTCMonth()+1);jump(date.toISOString().slice(0,7));break;}
         case 'today':jump(now().slice(0,7));break;
-        case 'export':KirkstoneWork.download(P.calendarFile(shownJobs()),'kirkstone-jobs.ics','text/calendar;charset=utf-8');break;
+        case 'export':KirkstoneWork.download(P.calendarFile(shownJobs(),new Date(),filter),'kirkstone-jobs.ics','text/calendar;charset=utf-8');break;
         case 'save':await KirkstoneWork.save(job);render();break;
         case 'connect':await KirkstoneOutlook.connect();await refreshOutlook();break;
         case 'disconnect':KirkstoneOutlook.disconnect();break;

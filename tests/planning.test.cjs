@@ -186,3 +186,18 @@ test('automatic Shelley fuel uses her own route, attendance and rate without cha
  const lead=context.calculateQuote({...input,assignedPerson:'shelley',secondPersonKind:'owner'},settings);
  assert.equal(lead.costTravel,0);assert.equal(lead.shelleyMileageInFuel,true);assert.equal(lead.costShelleyFuel,400*settings.mileageRatePence/100);
 });
+
+test('joining dates are unique, valid, and limit Shelley calendar days without shortening Dan schedule',()=>{
+ const job={id:'joint',assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',scheduleStartDate:'2026-10-20',scheduleEndDate:'2026-10-25',
+  shelleyAvailableDays:2,shelleyJoiningDates:['2026-10-24','2026-10-21','2026-10-21','2026-02-30','bad']};
+ assert.equal(P.joiningDates(job).join(','),'2026-10-21,2026-10-24');
+ assert.equal(P.onDate(job,'2026-10-22','owner'),true);assert.equal(P.onDate(job,'2026-10-22','shelley'),false);
+ assert.equal(P.onDate(job,'2026-10-21','shelley'),true);assert.equal(P.dayTeamName(job,'2026-10-21'),'Dan + Shelley');
+ assert.equal(P.dayTeamName(job,'2026-10-22'),'Dan');
+ const payload=P.outlookPayload(job);assert(payload.body.content.includes('2026-10-21, 2026-10-24'));assert(!payload.body.content.includes('not set'));
+ const ics=P.calendarFile([job],new Date('2026-10-16T12:00:00Z'),'shelley');
+ assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,2);assert(ics.includes('DTSTART;VALUE=DATE:20261021'));assert(!ics.includes('DTSTART;VALUE=DATE:20261020'));
+ assert.equal(P.joiningDates({shelleyJoiningDates:[],quoteSnapshot:{shelleyJoiningDates:['2026-10-21']}}).length,0);
+ const unknown={...job,scheduleStartDate:'',scheduleEndDate:''};assert.equal(P.onDate(unknown,'2026-10-21','shelley'),true);assert.equal(P.onDate(unknown,'2026-10-21','owner'),false);
+ assert(P.operationalCsv(P.operational(job)).includes('Shelley joining dates'));
+});

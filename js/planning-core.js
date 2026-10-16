@@ -33,6 +33,20 @@ window.KirkstonePlanning = (() => {
     const start = job.scheduleStartDate || '', end = job.scheduleEndDate || start;
     return validDate(start) && validDate(end) && end >= start ? { start, end } : null;
   }
+  function joiningDates(job) {
+    const dates=job?.shelleyJoiningDates ?? job?.quoteSnapshot?.shelleyJoiningDates;
+    return Array.isArray(dates) ? [...new Set(dates.filter(validDate))].sort() : [];
+  }
+  function onDate(job,date,who='all') {
+    const range=schedule(job),within=!!range&&date>=range.start&&date<=range.end,joining=joiningDates(job);
+    return participants(job).some(person=>(who==='all'||who===person)
+      &&(person==='shelley'&&joining.length ? joining.includes(date) : within));
+  }
+  const dayTeamName=(job,date)=>participants(job).filter(who=>onDate(job,date,who)).map(personName).join(' + ');
+  function calendarBounds(job) {
+    const range=schedule(job),dates=joiningDates(job);
+    return range || (dates.length ? {start:dates[0],end:dates[dates.length-1]} : null);
+  }
   const active = job => !job.historicalJob && !job.deletedAt && !job.isDeleted
     && !['completed','closed','deleted','cancelled'].includes(String(job.status || '').toLowerCase());
   const totals = rows => Object.fromEntries(fields.map(field => [field,
@@ -49,7 +63,7 @@ window.KirkstonePlanning = (() => {
       quoteRef:job.quoteRef || '', assignedPerson:person(job), secondPerson:hasSecondPerson(job), secondPersonKind:secondWorker(job), travelOriginPostcode:origin(job,settings),
       destinationPostcode:job.destinationPostcode || job.quoteSnapshot?.destinationPostcode || '',
       expected, actual, remaining:Object.fromEntries(fields.map(field=>[field,expected[field]-actual[field]])),
-      actualEntries:countRows, schedule:schedule(job), shelleyAvailableDays:availability(job),
+      actualEntries:countRows, schedule:schedule(job), shelleyAvailableDays:availability(job),shelleyJoiningDates:joiningDates(job),
       serviceLevels:(job.settingsSnapshot?.serviceLevels || settings.serviceLevels || []).map(level=>({id:level.id,name:level.name})),
       costs:Object.fromEntries(allowedCosts.map(field=>[field,Number(job.costs?.[field]) || 0])),
       parts:(job.parts || []).map(part=>({id:part.id,catalogPartId:part.catalogPartId || '',
@@ -64,7 +78,8 @@ window.KirkstonePlanning = (() => {
     return {
       subject:'Kirkstone · ' + (job.customerName || 'Calibration job') + (job.quoteRef ? ' · ' + job.quoteRef : ''),
       body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job)) + '\nWorking on job: ' + teamName(job)
-        + (participants(job).includes('shelley') && availability(job) !== null ? '\nShelley available: '+availability(job)+' days (attendance dates not set)' : '')},
+        + (participants(job).includes('shelley') && joiningDates(job).length ? '\nShelley joining: '+joiningDates(job).join(', ')
+          : participants(job).includes('shelley') && availability(job) !== null ? '\nShelley available: '+availability(job)+' days (attendance dates not set)' : '')},
       location:{displayName:job.customerAddress || ''},isAllDay:true,isReminderOn:false,
       showAs:job.scheduleStatus === 'provisional' ? 'tentative' : 'busy',
       start:{dateTime:dates.start+'T00:00:00',timeZone:'GMT Standard Time'},
@@ -88,16 +103,21 @@ window.KirkstonePlanning = (() => {
     }
     lines.push(current);return lines.join('\r\n');
   }
-  function calendarFile(jobs, now = new Date()) {
+  function calendarFile(jobs, now = new Date(), personFilter = 'all') {
     const stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
     const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kirkstone Calibration//Job Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-    for(const job of jobs.filter(active)){
+    for(const source of jobs.filter(active)){
+      const joining=joiningDates(source);
+      const ownDates=joining.length && (personFilter==='shelley'||(!schedule(source)&&personFilter==='all'));
+      const entries=ownDates?joining.map(date=>({...source,id:source.id+'-shelley-'+date,scheduleStartDate:date,scheduleEndDate:date})): [source];
+      for(const job of entries){
       const dates=schedule(job);if(!dates)continue;
-      const event=outlookPayload(job);
+      const event=outlookPayload(job);if(ownDates)event.subject+=' · Shelley joining';
       lines.push('BEGIN:VEVENT','UID:'+encodeURIComponent(job.id)+'@kirkstonecalibration','DTSTAMP:'+stamp,
         'DTSTART;VALUE=DATE:'+dates.start.replace(/-/g,''),'DTEND;VALUE=DATE:'+addDays(dates.end,1).replace(/-/g,''),
         'SUMMARY:'+icsEscape(event.subject),'DESCRIPTION:'+icsEscape(event.body.content),
         'LOCATION:'+icsEscape(event.location.displayName),'STATUS:'+(job.scheduleStatus==='provisional'?'TENTATIVE':'CONFIRMED'),'END:VEVENT');
+    }
     }
     lines.push('END:VCALENDAR');return lines.map(foldLine).join('\r\n')+'\r\n';
   }
@@ -114,11 +134,12 @@ window.KirkstonePlanning = (() => {
       ['Remaining',...fields.map(f=>sheet.remaining[f])],[],['Date','Service level',...labels]];
     for(const row of sheet.actualEntries)rows.push([row.date,sheet.serviceLevels.find(l=>l.id===row.serviceLevelId)?.name || row.serviceLevelId,...fields.map(f=>row[f])]);
     if(participants(sheet).includes('shelley') && availability(sheet) !== null)rows.push(['Shelley available days',availability(sheet)]);
+    if(joiningDates(sheet).length)rows.push(['Shelley joining dates',joiningDates(sheet).join(', ')]);
     rows.push([],['Job expenses']);for(const [key,value] of Object.entries(sheet.costs))rows.push([key,value]);
     rows.push([],['Parts','Quantity','Unit cost']);for(const part of sheet.parts)rows.push([part.name,part.quantity,part.costPerUnit]);
     rows.push(['Total job costs',sheet.calculatedCosts.total],['Work carried out',sheet.workCarriedOut],['Work notes',sheet.operationalNotes]);
     return '\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   }
-  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
+  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,joiningDates,onDate,dayTeamName,calendarBounds,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
 })();
 

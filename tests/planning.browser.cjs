@@ -94,11 +94,20 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
     field.value=old;field.dispatchEvent(new Event('input',{bubbles:true}));window.calculateRoute=original;await refreshShelleyRoute();
   });
   await page.locator('#shelleyFuelCost').fill('25');
+  await page.locator('#shelleyNoTimeSaving').check();
+  for(const date of ['2026-10-25','2026-10-26']){
+    await page.locator('#quoteShelleyJoiningDates .joining-date-input').fill(date);
+    await page.locator('#quoteShelleyJoiningDates [data-joining-action=add]').click();
+  }
+  assert.equal(await page.locator('#shelleyAvailableDays').inputValue(),'2');
+  assert(await page.locator('#shelleyAvailableDays').evaluate(el=>el.readOnly));
   await page.locator('#saveQuote').click();await page.waitForFunction(()=>currentQuotes.some(q=>q.customerName==='Planning test laboratory'));
   const quoteId=await page.evaluate(()=>currentQuotes.find(q=>q.customerName==='Planning test laboratory').id);
   await page.evaluate(id=>loadQuote(id),quoteId);await page.waitForTimeout(100);
   assert.equal(await page.locator('#secondPersonKind').inputValue(),'owner');
   assert.equal(await page.locator('#shelleyHourlyRate').inputValue(),'15.87');
+  assert(await page.locator('#shelleyNoTimeSaving').isChecked());
+  assert.equal(await page.locator('#quoteShelleyJoiningDates [data-joining-action=remove]').count(),2);
   assert.equal(await page.locator('#shelleyHotelCost').inputValue(),'80');
   assert(await page.locator('#shelleyQuoteCosts').isVisible());
   await page.evaluate(()=>{
@@ -132,6 +141,13 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await card.locator('[data-plan-field=workCarriedOut]').fill('Serviced and calibrated pipettes');await card.locator('[data-plan-field=workCarriedOut]').dispatchEvent('change');
   await card.locator('[data-plan-field=scheduleStartDate]').fill('2026-10-24');await card.locator('[data-plan-field=scheduleStartDate]').dispatchEvent('change');
   await card.locator('[data-plan-field=scheduleEndDate]').fill('2026-10-26');await card.locator('[data-plan-field=scheduleEndDate]').dispatchEvent('change');
+  const joining=card.locator('[data-joining-job]');
+  await joining.locator('.joining-date-input').fill('2026-10-24');await joining.locator('[data-joining-action=add]').click();
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),3);
+  await joining.locator('[data-joining-date="2026-10-24"]').click();
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),2);
+  await joining.locator('.joining-date-input').fill('2026-10-23');await joining.locator('[data-joining-action=add]').click();
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),2);
   await card.getByRole('button',{name:'Save Job Sheet',exact:true}).first().click();
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'owner');
   assert.equal(await page.evaluate(id=>getJobById(id).assignedPerson,id),'shelley');
@@ -153,6 +169,11 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Planning test laboratory/}).count(),3);
   assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Month-only lab/}).count(),0);
   assert((await page.locator('.calendar-agenda').innerText()).includes('Month-only lab'));
+  await page.locator('#calendarPerson').selectOption('shelley');
+  assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Planning test laboratory/}).count(),2);
+  await page.locator('#calendarPerson').selectOption('owner');
+  assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Planning test laboratory/}).count(),3);
+  await page.locator('#calendarPerson').selectOption('all');
   const icsDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Export jobs for Outlook (.ics)'}).click();
   assert((await icsDownload).suggestedFilename().endsWith('.ics'));
   const ics=await page.evaluate(()=>latestExportBlob.text());assert(ics.includes('DTEND;VALUE=DATE:20261027'));assert(!ics.includes('ATTENDEE'));
@@ -199,6 +220,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.reload();await page.waitForFunction(()=>document.getElementById('cloudStatus').classList.contains('cloud-status-ready'));
   assert.equal(await page.evaluate(id=>getJobById(id).assignedPerson,id),'shelley');
   assert.equal(await page.evaluate(id=>getJobById(id).travelOriginPostcode,id),'NE32 5QA');
+  assert.deepEqual(await page.evaluate(id=>getJobById(id).shelleyJoiningDates,id),['2026-10-25','2026-10-26']);
   assert.equal(await page.evaluate(id=>getJobById(id).costs.hotel,id),42);
   assert.equal(await page.evaluate(id=>getJobById(id).scheduleStartDate,id),'2026-10-25');
   assert.equal(await page.evaluate(id=>getJobById(id).shelleyAvailableDays,id),2);

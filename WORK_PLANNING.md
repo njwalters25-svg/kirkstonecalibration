@@ -87,3 +87,11 @@ When Shelley is lead, her mileage is carried in fuel instead of also being count
 ## Shelley training override
 
 Tick **No time saving for Shelley — training** in Shelley’s quote costs to remove both the normal second-person percentage reduction and the contribution from her available days. Pipette/service timings stay at the solo work duration. Her hourly pay, travel and expenses still apply. The checkbox is saved with the quote and restored on reload; clearing the form resets it. Untick it to restore normal Shelley time savings. Phil’s existing reduction is unaffected. Manual Planned days overrides remain authoritative.
+
+## Shelley joining dates
+
+Add individual **Shelley’s joining dates** on the quote; the selected dates set her available-day count. Dates copy to the new Job Sheet, where they can be added or removed and saved through the existing persistence path. When whole-job dates are set, Shelley dates must be inside that range. Job Sheet scheduling changes do not rewrite quoted prices or actual expenses.
+
+The calendar shows Shelley on her chosen dates and Dan across the whole scheduled job. Joining dates can be shown before the whole-job date range is known. Without exact Shelley dates, existing whole-job calendar behaviour remains. Calendar event descriptions and operational print/CSV include her joining dates. A Shelley-filtered ICS export creates individual day events; the everyone export retains the whole job with Shelley dates in its description (or her individual dates if the whole-job range is not set). Live Outlook sends still update the whole-job event with her dates in its description.
+
+Overnight fuel still assumes one home return trip for a visit. For separate visits or extra home trips between joining dates, use the fuel and paid-hours overrides. Dates do not establish hotel bookings or extra journeys automatically.
