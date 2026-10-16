@@ -36,7 +36,7 @@ test('calendar uses explicit dates and validates leap days and inclusive multi-d
 });
 test('Outlook payload carries dates and operational identity only',()=>{
  const payload=P.outlookPayload({customerName:'Lab',customerAddress:'Cambridge',quoteRef:'KC105Q',assignedPerson:'shelley',
-  scheduleStartDate:'2026-11-01',scheduleStatus:'provisional',costs:{hotel:12345},profit:12345,notes:'PRIVATE-NOTES',
+  scheduleStartDate:'2026-11-02',scheduleStatus:'provisional',costs:{hotel:12345},profit:12345,notes:'PRIVATE-NOTES',
   quoteSnapshot:{price:12345}},'transaction');
  assert.equal(payload.showAs,'tentative');assert(payload.body.content.includes('Shelley'));
  assert(!JSON.stringify(payload).includes('12345'));assert(!JSON.stringify(payload).includes('PRIVATE'));
@@ -143,7 +143,7 @@ test('operational outputs include availability but no pay or invented attendance
  const job={assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2,scheduleStartDate:'2026-11-01',scheduleEndDate:'2026-11-06',shelleyHourlyRate:15.87};
  const safe=P.operational(job);assert.equal(safe.shelleyAvailableDays,2);assert(!JSON.stringify(safe).includes('15.87'));
  const event=P.outlookPayload(job);assert(event.body.content.includes('2 days (attendance dates not set)'));
- assert.equal(event.end.dateTime,'2026-11-07T00:00:00');
+ assert.equal(event.end.dateTime,'2026-11-03T00:00:00');assert.equal(event.recurrence.range.endDate,'2026-11-06');
  assert(P.operationalCsv(safe).includes('Shelley available days'));
 });
 
@@ -196,8 +196,21 @@ test('joining dates are unique, valid, and limit Shelley calendar days without s
  assert.equal(P.dayTeamName(job,'2026-10-22'),'Dan');
  const payload=P.outlookPayload(job);assert(payload.body.content.includes('2026-10-21, 2026-10-24'));assert(!payload.body.content.includes('not set'));
  const ics=P.calendarFile([job],new Date('2026-10-16T12:00:00Z'),'shelley');
- assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,2);assert(ics.includes('DTSTART;VALUE=DATE:20261021'));assert(!ics.includes('DTSTART;VALUE=DATE:20261020'));
+ assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,1);assert(ics.includes('DTSTART;VALUE=DATE:20261021'));assert(!ics.includes('DTSTART;VALUE=DATE:20261020'));
  assert.equal(P.joiningDates({shelleyJoiningDates:[],quoteSnapshot:{shelleyJoiningDates:['2026-10-21']}}).length,0);
  const unknown={...job,scheduleStartDate:'',scheduleEndDate:''};assert.equal(P.onDate(unknown,'2026-10-21','shelley'),true);assert.equal(P.onDate(unknown,'2026-10-21','owner'),false);
  assert(P.operationalCsv(P.operational(job)).includes('Shelley joining dates'));
+});
+
+test('4–10 November books exactly five weekdays, with weekday Outlook and ICS recurrence',()=>{
+ const job={id:'nov-job',assignedPerson:'owner',scheduleStartDate:'2026-11-04',scheduleEndDate:'2026-11-10'};
+ assert.equal(P.workDates(job).join(','),'2026-11-04,2026-11-05,2026-11-06,2026-11-09,2026-11-10');
+ assert.equal(P.onDate(job,'2026-11-07'),false);assert.equal(P.onDate(job,'2026-11-08'),false);assert.equal(P.onDate(job,'2026-11-09'),true);
+ const event=P.outlookPayload(job);assert.equal(event.start.dateTime,'2026-11-04T00:00:00');assert.equal(event.end.dateTime,'2026-11-05T00:00:00');
+ assert.equal(event.recurrence.pattern.daysOfWeek.join(','),'monday,tuesday,wednesday,thursday,friday');assert.equal(event.recurrence.range.endDate,'2026-11-10');
+ assert.equal(P.outlookDates(event).end,'2026-11-10');
+ const ics=P.calendarFile([job]);assert(ics.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20261110'));
+ assert(ics.includes('DTSTART;VALUE=DATE:20261104'));assert(ics.includes('DTEND;VALUE=DATE:20261105'));
+ const weekend={...job,scheduleStartDate:'2026-11-07',scheduleEndDate:'2026-11-08'};
+ assert.equal(P.workDates(weekend).length,0);assert(!P.calendarFile([weekend]).includes('BEGIN:VEVENT'));assert.throws(()=>P.outlookPayload(weekend),/no weekdays/);
 });

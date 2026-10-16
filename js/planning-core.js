@@ -33,11 +33,18 @@ window.KirkstonePlanning = (() => {
     const start = job.scheduleStartDate || '', end = job.scheduleEndDate || start;
     return validDate(start) && validDate(end) && end >= start ? { start, end } : null;
   }
+  const weekday=date=>validDate(date)&&![0,6].includes(new Date(date+'T12:00:00Z').getUTCDay());
+  function workDates(job) {
+    const range=schedule(job),dates=[];if(!range)return dates;
+    for(let date=range.start;date<=range.end;date=addDays(date,1))if(weekday(date))dates.push(date);
+    return dates;
+  }
   function joiningDates(job) {
     const dates=job?.shelleyJoiningDates ?? job?.quoteSnapshot?.shelleyJoiningDates;
     return Array.isArray(dates) ? [...new Set(dates.filter(validDate))].sort() : [];
   }
   function onDate(job,date,who='all') {
+    if(!weekday(date))return false;
     const range=schedule(job),within=!!range&&date>=range.start&&date<=range.end,joining=joiningDates(job);
     return participants(job).some(person=>(who==='all'||who===person)
       &&(person==='shelley'&&joining.length ? joining.includes(date) : within));
@@ -75,6 +82,7 @@ window.KirkstonePlanning = (() => {
   }
   function outlookPayload(job, transactionId) {
     const dates=schedule(job); if(!dates)throw new Error('Set valid start and end dates first.');
+    const working=workDates(job);if(!working.length)throw new Error('This job range contains no weekdays. Choose Monday to Friday work dates.');
     return {
       subject:'Kirkstone · ' + (job.customerName || 'Calibration job') + (job.quoteRef ? ' · ' + job.quoteRef : ''),
       body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job)) + '\nWorking on job: ' + teamName(job)
@@ -82,12 +90,18 @@ window.KirkstonePlanning = (() => {
           : participants(job).includes('shelley') && availability(job) !== null ? '\nShelley available: '+availability(job)+' days (attendance dates not set)' : '')},
       location:{displayName:job.customerAddress || ''},isAllDay:true,isReminderOn:false,
       showAs:job.scheduleStatus === 'provisional' ? 'tentative' : 'busy',
-      start:{dateTime:dates.start+'T00:00:00',timeZone:'GMT Standard Time'},
-      end:{dateTime:addDays(dates.end,1)+'T00:00:00',timeZone:'GMT Standard Time'},
+      start:{dateTime:working[0]+'T00:00:00',timeZone:'GMT Standard Time'},
+      end:{dateTime:addDays(working[0],1)+'T00:00:00',timeZone:'GMT Standard Time'},
+      recurrence:working.length>1 ? {
+        pattern:{type:'weekly',interval:1,daysOfWeek:['monday','tuesday','wednesday','thursday','friday'],firstDayOfWeek:'monday'},
+        range:{type:'endDate',startDate:working[0],endDate:working[working.length-1],recurrenceTimeZone:'GMT Standard Time'},
+      } : null,
       ...(transactionId ? {transactionId} : {}),
     };
   }
   function outlookDates(event) {
+    if(event.recurrence?.range?.type==='endDate'&&validDate(event.recurrence.range.startDate)&&validDate(event.recurrence.range.endDate))
+      return {start:event.recurrence.range.startDate,end:event.recurrence.range.endDate};
     const start=event.start?.dateTime?.slice(0,10), rawEnd=event.end?.dateTime?.slice(0,10);
     if(!validDate(start)||!validDate(rawEnd))return null;
     const midnight=/T00:00:00(?:\.0+)?$/.test(event.end.dateTime);
@@ -107,14 +121,16 @@ window.KirkstonePlanning = (() => {
     const stamp=now.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
     const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Kirkstone Calibration//Job Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
     for(const source of jobs.filter(active)){
-      const joining=joiningDates(source);
+      const joining=joiningDates(source).filter(weekday);
       const ownDates=joining.length && (personFilter==='shelley'||(!schedule(source)&&personFilter==='all'));
       const entries=ownDates?joining.map(date=>({...source,id:source.id+'-shelley-'+date,scheduleStartDate:date,scheduleEndDate:date})): [source];
       for(const job of entries){
       const dates=schedule(job);if(!dates)continue;
+      const working=workDates(job);if(!working.length)continue;
       const event=outlookPayload(job);if(ownDates)event.subject+=' · Shelley joining';
       lines.push('BEGIN:VEVENT','UID:'+encodeURIComponent(job.id)+'@kirkstonecalibration','DTSTAMP:'+stamp,
-        'DTSTART;VALUE=DATE:'+dates.start.replace(/-/g,''),'DTEND;VALUE=DATE:'+addDays(dates.end,1).replace(/-/g,''),
+        'DTSTART;VALUE=DATE:'+working[0].replace(/-/g,''),'DTEND;VALUE=DATE:'+addDays(working[0],1).replace(/-/g,''),
+        ...(working.length>1?['RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL='+working[working.length-1].replace(/-/g,'')]:[]),
         'SUMMARY:'+icsEscape(event.subject),'DESCRIPTION:'+icsEscape(event.body.content),
         'LOCATION:'+icsEscape(event.location.displayName),'STATUS:'+(job.scheduleStatus==='provisional'?'TENTATIVE':'CONFIRMED'),'END:VEVENT');
     }
@@ -140,6 +156,6 @@ window.KirkstonePlanning = (() => {
     rows.push(['Total job costs',sheet.calculatedCosts.total],['Work carried out',sheet.workCarriedOut],['Work notes',sheet.operationalNotes]);
     return '\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   }
-  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,joiningDates,onDate,dayTeamName,calendarBounds,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
+  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,joiningDates,onDate,dayTeamName,calendarBounds,weekday,workDates,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
 })();
 

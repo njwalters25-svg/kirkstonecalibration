@@ -95,7 +95,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   });
   await page.locator('#shelleyFuelCost').fill('25');
   await page.locator('#shelleyNoTimeSaving').check();
-  for(const date of ['2026-10-25','2026-10-26']){
+  for(const date of ['2026-10-26','2026-10-27']){
     await page.locator('#quoteShelleyJoiningDates .joining-date-input').fill(date);
     await page.locator('#quoteShelleyJoiningDates [data-joining-action=add]').click();
   }
@@ -139,14 +139,14 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await card.getByRole('button',{name:'Add part',exact:true}).click();
   await card.locator('[data-work-part=quantity]').fill('2');await card.locator('[data-work-part=quantity]').dispatchEvent('change');
   await card.locator('[data-plan-field=workCarriedOut]').fill('Serviced and calibrated pipettes');await card.locator('[data-plan-field=workCarriedOut]').dispatchEvent('change');
-  await card.locator('[data-plan-field=scheduleStartDate]').fill('2026-10-24');await card.locator('[data-plan-field=scheduleStartDate]').dispatchEvent('change');
-  await card.locator('[data-plan-field=scheduleEndDate]').fill('2026-10-26');await card.locator('[data-plan-field=scheduleEndDate]').dispatchEvent('change');
+  await card.locator('[data-plan-field=scheduleStartDate]').fill('2026-10-23');await card.locator('[data-plan-field=scheduleStartDate]').dispatchEvent('change');
+  await card.locator('[data-plan-field=scheduleEndDate]').fill('2026-10-27');await card.locator('[data-plan-field=scheduleEndDate]').dispatchEvent('change');
   const joining=card.locator('[data-joining-job]');
-  await joining.locator('.joining-date-input').fill('2026-10-24');await joining.locator('[data-joining-action=add]').click();
-  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),3);
-  await joining.locator('[data-joining-date="2026-10-24"]').click();
-  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),2);
   await joining.locator('.joining-date-input').fill('2026-10-23');await joining.locator('[data-joining-action=add]').click();
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),3);
+  await joining.locator('[data-joining-date="2026-10-23"]').click();
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),2);
+  await joining.locator('.joining-date-input').fill('2026-10-22');await joining.locator('[data-joining-action=add]').click();
   assert.equal(await page.evaluate(id=>getJobById(id).shelleyJoiningDates.length,id),2);
   await card.getByRole('button',{name:'Save Job Sheet',exact:true}).first().click();
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'owner');
@@ -174,9 +174,15 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.locator('#calendarPerson').selectOption('owner');
   assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Planning test laboratory/}).count(),3);
   await page.locator('#calendarPerson').selectOption('all');
+  await page.evaluate(()=>{currentJobs.push({id:'weekday-example',customerName:'Weekday example',assignedPerson:'owner',scheduleStartDate:'2026-11-04',scheduleEndDate:'2026-11-10',plannedLines:[],actualEntries:[],parts:[],costs:{}});renderJobCalendar();});
+  await page.getByRole('button',{name:'Next month',exact:true}).click();
+  assert.equal(await page.locator('.work-calendar-grid').getByRole('button',{name:/Weekday example/}).count(),5);
+  for(const day of ['2026-11-07','2026-11-08'])assert.equal(await page.locator('[role=gridcell][aria-label="'+day+'"]').getByRole('button',{name:/Weekday example/}).count(),0);
+  await page.getByRole('button',{name:'Previous month',exact:true}).click();
+  await page.evaluate(()=>{currentJobs=currentJobs.filter(job=>job.id!=='weekday-example');renderJobCalendar();});
   const icsDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Export jobs for Outlook (.ics)'}).click();
   assert((await icsDownload).suggestedFilename().endsWith('.ics'));
-  const ics=await page.evaluate(()=>latestExportBlob.text());assert(ics.includes('DTEND;VALUE=DATE:20261027'));assert(!ics.includes('ATTENDEE'));
+  const ics=await page.evaluate(()=>latestExportBlob.text());assert(ics.includes('RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;UNTIL=20261027'));assert(!ics.includes('ATTENDEE'));
   console.log('Calendar: explicit multi-day dates, undated month proposals and Outlook ICS export passed');
   let created=0,patched=0,outlookEvent=null,attendees=[];const graphCalls=[];
   await page.route('https://cdn.jsdelivr.net/npm/@azure/msal-browser@4.29.0/+esm',r=>r.fulfill({contentType:'application/javascript',body:`export class PublicClientApplication {async initialize(){} async loginPopup(){return {account:{homeAccountId:'test-account'}}} async acquireTokenSilent(){return {accessToken:'test-token'}} async clearCache(){}}`}));
@@ -185,7 +191,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
    if(url.pathname==='/v1.0/me')body={id:'test-owner',displayName:'Test owner'};
    else if(url.pathname==='/v1.0/me/calendars')body={value:[{id:'primary',name:'Calendar',canEdit:true,isDefaultCalendar:true},{id:'readonly',name:'Shared work',canEdit:false}]};
    else if(url.pathname.endsWith('/calendarView'))body={value:[{id:'personal',subject:'Outlook test appointment',start:{dateTime:'2026-10-20T09:00:00'},end:{dateTime:'2026-10-20T10:00:00'},isAllDay:false},...(outlookEvent?[outlookEvent]:[])]};
-   else if(url.pathname.endsWith('/events')&&method==='POST'){created++;const data=req.postDataJSON();assert(!('attendees'in data));assert(!/profit|revenue|pension|costs|invoice/i.test(JSON.stringify(data)));outlookEvent={...data,id:'linked-event'};body=outlookEvent;}
+   else if(url.pathname.endsWith('/events')&&method==='POST'){created++;const data=req.postDataJSON();assert(!('attendees'in data));assert.equal(data.recurrence.pattern.daysOfWeek.join(','),'monday,tuesday,wednesday,thursday,friday');assert(!/profit|revenue|pension|costs|invoice/i.test(JSON.stringify(data)));outlookEvent={...data,id:'linked-event'};body=outlookEvent;}
    else if(url.pathname.endsWith('/events/linked-event')&&method==='GET')body={...outlookEvent,attendees};
    else if(url.pathname.endsWith('/events/linked-event')&&method==='PATCH'){patched++;outlookEvent={...outlookEvent,...req.postDataJSON()};body=outlookEvent;}
    else{status=404;body={error:{message:'Missing mocked endpoint'}};}
@@ -200,10 +206,10 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.waitForFunction(()=>!document.querySelector('[data-cal-action=send]').disabled);assert.equal(created,1);assert.equal(patched,1);
   attendees=[{emailAddress:{address:'example@example.invalid'}}];await agenda.getByRole('button',{name:'Send / update in Outlook'}).click();
   await page.waitForFunction(()=>document.getElementById('toast').textContent.includes('attendees'));assert.equal(patched,1);
-  attendees=[];outlookEvent.start.dateTime='2026-10-25T00:00:00';outlookEvent.end.dateTime='2026-10-28T00:00:00';
+  attendees=[];outlookEvent.recurrence=null;outlookEvent.start.dateTime='2026-10-26T00:00:00';outlookEvent.end.dateTime='2026-10-28T00:00:00';
   await page.getByRole('button',{name:'Refresh Outlook'}).click();await page.waitForSelector('[data-cal-event=linked-event]');
   await page.locator('[data-cal-event=linked-event]').first().click();await page.getByRole('button',{name:'Use Outlook dates for this job'}).click();
-  await page.waitForFunction(id=>getJobById(id).scheduleStartDate==='2026-10-25',id);
+  await page.waitForFunction(id=>getJobById(id).scheduleStartDate==='2026-10-26',id);
   assert.equal(await page.evaluate(id=>getJobById(id).scheduleEndDate,id),'2026-10-27');
   await page.locator('#outlookCalendar').selectOption('readonly');assert(await agenda.getByRole('button',{name:'Send / update in Outlook'}).isDisabled());
   await page.getByRole('button',{name:'Disconnect Outlook'}).click();assert.equal(await page.locator('[data-cal-event]').count(),0);
@@ -220,9 +226,9 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.reload();await page.waitForFunction(()=>document.getElementById('cloudStatus').classList.contains('cloud-status-ready'));
   assert.equal(await page.evaluate(id=>getJobById(id).assignedPerson,id),'shelley');
   assert.equal(await page.evaluate(id=>getJobById(id).travelOriginPostcode,id),'NE32 5QA');
-  assert.deepEqual(await page.evaluate(id=>getJobById(id).shelleyJoiningDates,id),['2026-10-25','2026-10-26']);
+  assert.deepEqual(await page.evaluate(id=>getJobById(id).shelleyJoiningDates,id),['2026-10-26','2026-10-27']);
   assert.equal(await page.evaluate(id=>getJobById(id).costs.hotel,id),42);
-  assert.equal(await page.evaluate(id=>getJobById(id).scheduleStartDate,id),'2026-10-25');
+  assert.equal(await page.evaluate(id=>getJobById(id).scheduleStartDate,id),'2026-10-26');
   assert.equal(await page.evaluate(id=>getJobById(id).shelleyAvailableDays,id),2);
   assert.equal(await page.evaluate(()=>KirkstoneOutlook.connected),false);
   console.log('Mobile layout and unchanged anonymous owner startup passed');

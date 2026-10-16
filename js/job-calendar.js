@@ -9,7 +9,7 @@
     const start=P.addDays(first,-offset),end=P.addDays(start,41);return {start,end};
   }
   const shownJobs=()=>currentJobs.filter(job=>P.active(job)&&(filter==='all'||P.participants(job).includes(filter)));
-  const linkedJob=event=>currentJobs.find(job=>job.outlookLink?.eventId===event.id
+  const linkedJob=event=>currentJobs.find(job=>(job.outlookLink?.eventId===event.id||job.outlookLink?.eventId===event.seriesMasterId)
     && job.outlookLink?.accountId===KirkstoneOutlook.profile?.id&&job.outlookLink?.calendarId===KirkstoneOutlook.selected?.id);
   function jump(nextMonth){month=nextMonth;render();refreshOutlook();}
   async function refreshOutlook(){if(!KirkstoneOutlook.connected)return;const range=bounds();try{await KirkstoneOutlook.load(range.start,range.end);}catch{}}
@@ -19,7 +19,7 @@
       &&(!job.proposedDate || job.proposedDate.slice(0,7)===month));
     const title=new Intl.DateTimeFormat('en-GB',{month:'long',year:'numeric',timeZone:'UTC'}).format(new Date(month+'-01T12:00:00Z'));
     const outlook=KirkstoneOutlook,external=externalVisible?outlook.events:[];
-    root.innerHTML='<div class="calendar-heading"><div><h2>Work calendar</h2><p>Booked dates, provisional work and upcoming Outlook events.</p></div>'
+    root.innerHTML='<div class="calendar-heading"><div><h2>Work calendar</h2><p>Job ranges book Monday to Friday only; weekends are excluded. Personal Outlook events keep their own dates.</p></div>'
       +'<div class="planner-actions"><button class="btn-small" data-cal-action="previous" aria-label="Previous month">←</button><strong>'+esc(title)+'</strong>'
       +'<button class="btn-small" data-cal-action="next" aria-label="Next month">→</button><button class="btn-small" data-cal-action="today">Today</button></div></div>'
       +'<div class="planner-actions"><label>Show jobs for <select id="calendarPerson"><option value="all">Everyone</option><option value="owner" '+(filter==='owner'?'selected':'')+'>Dan</option>'
@@ -38,7 +38,7 @@
         const other=external.filter(event=>{
           const dates=P.outlookDates(event);if(!dates||date<dates.start||date>dates.end)return false;
           const linked=linkedJob(event),planned=linked&&P.schedule(linked);
-          return !planned||planned.start!==dates.start||planned.end!==dates.end;
+          return event.seriesMasterId&&linked ? !P.onDate(linked,date) : !planned||planned.start!==dates.start||planned.end!==dates.end;
         });
         return '<div class="calendar-day '+(date.slice(0,7)!==month?'outside-month ':'')+(date===now()?'today':'')+'" role="gridcell" aria-label="'+date+'">'
           +'<span class="calendar-date">'+Number(date.slice(-2))+'</span>'
@@ -54,7 +54,7 @@
   function agenda(job,dated){
     const dates=P.schedule(job);
     return '<article class="calendar-job" data-id="'+esc(job.id)+'"><div><strong>'+esc(job.customerName || 'Unnamed job')+'</strong> · '+esc(job.quoteRef || '')+' · Lead: '+P.personName(P.person(job))+' · Team: '+P.teamName(job)
-      +'<p>'+(dated&&dates?esc(dates.start+' to '+dates.end)+(job.scheduleStatus==='provisional'?' · Provisional':''):
+      +'<p>'+(dated&&dates?esc(dates.start+' to '+dates.end)+' · '+P.workDates(job).length+' working days (weekends excluded)'+(job.scheduleStatus==='provisional'?' · Provisional':''):
         job.proposedDate?'Proposed '+esc(job.proposedDate)+' — exact dates not set':'No dates set')+'</p>'+(P.joiningDates(job).length?'<p>Shelley joining: '+P.joiningDates(job).join(', ')+'</p>':'')+'</div>'
       +'<div class="planner-fields"><label>Assigned to<select data-calendar-field="assignedPerson"><option value="owner">Dan</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<label>Start date<input type="date" data-calendar-field="scheduleStartDate" value="'+esc(job.scheduleStartDate || '')+'"></label>'
@@ -67,7 +67,7 @@
     const root=document.getElementById('outlookEventDetail');if(!root)return;
     const job=linkedJob(event),dates=P.outlookDates(event);
     root.innerHTML='<div class="calendar-job"><h3>'+esc(event.subject || 'Outlook event')+'</h3><p>'+esc(dates?dates.start+' to '+dates.end:'Dates unavailable')+'</p><p>'+esc(event.location?.displayName || '')+'</p>'
-      +(job?'<button class="btn-small" data-cal-action="apply" data-job-id="'+esc(job.id)+'" data-event-id="'+esc(event.id)+'">Use Outlook dates for this job</button>':'')
+      +(job&&!event.seriesMasterId?'<button class="btn-small" data-cal-action="apply" data-job-id="'+esc(job.id)+'" data-event-id="'+esc(event.id)+'">Use Outlook dates for this job</button>':'')
       +'<button class="btn-small" data-cal-action="close-detail">Close</button></div>';
   }
   window.renderJobCalendar=render;

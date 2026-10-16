@@ -66,7 +66,7 @@ window.KirkstoneOutlook = (() => {
     try{
       const params=new URLSearchParams({startDateTime:KirkstonePlanning.addDays(start,-1)+'T00:00:00Z',
         endDateTime:KirkstonePlanning.addDays(end,2)+'T00:00:00Z',
-        '$select':'id,subject,start,end,isAllDay,webLink,location,lastModifiedDateTime','$top':'200'});
+        '$select':'id,subject,start,end,isAllDay,webLink,location,lastModifiedDateTime,seriesMasterId,type,recurrence','$top':'200'});
       let next='/me/calendars/'+encodeURIComponent(calendarId)+'/calendarView?'+params.toString(),items=[],pages=0;
       while(next&&pages++<20){const result=await request(next);items.push(...(result.value||[]));next=result['@odata.nextLink'];}
       if(next)throw new Error('Too many Outlook events in this range. Choose a shorter calendar range.');
@@ -110,6 +110,7 @@ window.KirkstoneOutlook = (() => {
     }finally{busy.delete(job.id);}
   }
   async function applyDates(job,event){
+    if(event.seriesMasterId)throw new Error('A single recurring occurrence cannot replace the whole job date range. Edit the job schedule directly.');
     if(job.outlookLink?.accountId!==profile?.id||job.outlookLink?.calendarId!==selected?.id||job.outlookLink?.eventId!==event.id)
       throw new Error('This Outlook event is not linked to that job.');
     const dates=KirkstonePlanning.outlookDates(event);if(!dates)throw new Error('Outlook dates could not be read.');

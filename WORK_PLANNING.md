@@ -95,3 +95,11 @@ Add individual **Shelley’s joining dates** on the quote; the selected dates se
 The calendar shows Shelley on her chosen dates and Dan across the whole scheduled job. Joining dates can be shown before the whole-job date range is known. Without exact Shelley dates, existing whole-job calendar behaviour remains. Calendar event descriptions and operational print/CSV include her joining dates. A Shelley-filtered ICS export creates individual day events; the everyone export retains the whole job with Shelley dates in its description (or her individual dates if the whole-job range is not set). Live Outlook sends still update the whole-job event with her dates in its description.
 
 Overnight fuel still assumes one home return trip for a visit. For separate visits or extra home trips between joining dates, use the fuel and paid-hours overrides. Dates do not establish hotel bookings or extra journeys automatically.
+
+## Weekday-only work diary
+
+Job date ranges now book Monday to Friday only. For 4–10 November 2026, the diary shows 4, 5, 6, 9 and 10 November (five working days). Saturdays and Sundays remain visible as calendar columns but have no job bookings. Personal Outlook events keep their own weekend dates. New Shelley joining-date selections reject weekends. Saved date ranges and quoted costs are not automatically rewritten.
+
+ICS exports and live Outlook payloads use weekday-only all-day recurrence through the last workday, rather than an event that occupies a weekend. A weekend-only range exports no job event and cannot be sent to Outlook. Existing linked Outlook events are changed only when Send / update in Outlook is selected. Recurring occurrences cannot replace the whole job date range; edit the schedule or use the series range instead. Previously imported ICS events are not automatically removed from Outlook.
+
+Microsoft recurrence definitions: https://learn.microsoft.com/en-us/graph/api/resources/recurrencepattern?view=graph-rest-1.0 and https://learn.microsoft.com/en-us/graph/api/resources/recurrencerange?view=graph-rest-1.0

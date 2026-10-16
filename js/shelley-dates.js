@@ -34,7 +34,7 @@
       let dates=id==='quote'?[...quoteDates]:P.joiningDates(job);
       if(button.dataset.joiningAction==='add'){
         const date=root.querySelector('.joining-date-input').value;
-        if(!P.validDate(date)){showToast('Choose a valid joining date.');return;}
+        if(!P.weekday(date)){showToast('Choose a Monday to Friday joining date; weekends are excluded.');return;}
         const range=job&&P.schedule(job);
         if(range&&(date<range.start||date>range.end)){showToast('Choose a date within this job’s start and end dates.');return;}
         dates=[...new Set([...dates,date])].sort();
