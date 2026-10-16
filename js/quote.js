@@ -383,6 +383,13 @@ function shelleyAvailability(input) {
 function shelleyOnJob(input) {
   return input.assignedPerson === 'shelley' || (!!input.secondPerson && input.secondPersonKind === 'shelley');
 }
+function validShelleyRoute(input) {
+  const clean=value=>String(value||'').replace(/\s/g,'').toUpperCase();
+  const route=input.shelleyRoute;
+  return !!route && clean(route.origin)===clean(input.shelleyHomePostcode) && clean(route.destination)===clean(input.destinationPostcode)
+    && !!clean(input.destinationPostcode) && Number.isFinite(route.distanceMiles) && route.distanceMiles>=0
+    && Number.isFinite(route.durationMinutes) && route.durationMinutes>=0;
+}
 function applyTeamCosting(result, input, settings) {
   if (input.teamCostingVersion !== 1) return result;
   const lead = input.assignedPerson === 'shelley' ? 'shelley' : 'owner';
@@ -418,6 +425,26 @@ function applyTeamCosting(result, input, settings) {
     result.costShelleyHotel = nonnegative(input.shelleyHotelCost);
     result.costShelleyFuel = nonnegative(input.shelleyFuelCost);
     result.costShelleyFood = nonnegative(input.shelleyFoodCost);
+    if (input.shelleyTravelVersion === 1) {
+      const separate=input.shelleyTravelsSeparately!==false,valid=validShelleyRoute(input);
+      const days=result.shelleyAttendanceDays ?? nonnegative(result.timePlan.totalDays);
+      const trips=days>0 ? (input.overnightStay ? 1 : days) : 0;
+      const hotelLegs=input.overnightStay && days>0 ? (input.travelDayBefore ? 2*days-1 : 2*Math.max(0,days-1)) : 0;
+      result.shelleyFuelPending=separate && trips>0 && !valid && (input.shelleyFuelCost==null || input.shelleyFuelCost==='');
+      result.shelleyFuelMiles=separate && valid ? input.shelleyRoute.distanceMiles*2*trips + nonnegative(input.hotelToWorkDistanceMiles)*hotelLegs : 0;
+      result.shelleyFuelRatePence=nonnegative(settings.mileageRatePence);
+      result.shelleyFuelAutomatic=input.shelleyFuelCost==null || input.shelleyFuelCost==='';
+      if(result.shelleyFuelAutomatic)result.costShelleyFuel=result.shelleyFuelMiles*result.shelleyFuelRatePence/100;
+      if(separate && lead==='shelley'){
+        // Her mileage is recorded in fuel, not also in the lead's mileage allowance.
+        result.costTravel=0;result.shelleyMileageInFuel=true;
+      }
+      if(separate && valid && (input.shelleyPaidHours==null || input.shelleyPaidHours==='')){
+        const workHours=result.shelleyAttendanceDays==null ? nonnegative(result.timePlan.jobMins)/60 : days*(settings.workingHoursPerDay||8);
+        result.shelleyPaidHours=workHours+(input.shelleyRoute.durationMinutes*2*trips+nonnegative(input.hotelToWorkMinutes)*hotelLegs)/60;
+        result.costShelleyPay=result.shelleyPaidHours*result.shelleyHourlyRate;
+      }
+    }
   }
   if (!ownerPresent) { result.costLabourCalibration = 0; result.costLabourTravel = 0; }
   result.costSecondPerson = result.costPhil + result.costShelleyPay;

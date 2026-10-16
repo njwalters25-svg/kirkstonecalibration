@@ -14,6 +14,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.route('https://www.gstatic.com/**',r=>r.fulfill({contentType:'application/javascript',body:''}));
   await page.goto('http://127.0.0.1:'+server.address().port+'/?preview');
   await page.waitForFunction(()=>document.getElementById('cloudStatus').classList.contains('cloud-status-ready'));
+  await page.evaluate(()=>{window.calculateRoute=async(from,to)=>({distanceMiles:123,durationMinutes:145,from,to});});
   await page.evaluate(()=>{currentJobs=[];currentQuotes=[];StorageManager.saveJobs?.([]);StorageManager.saveQuoteHistory([]);renderJobSheets([]);});
   await page.getByRole('button',{name:'New Quote',exact:true}).click();await page.locator('#clearForm').click();
   await page.waitForFunction(()=>window.__kirkstonePlannedDaysOverrideInstalled===true);
@@ -55,6 +56,44 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
     const hours=2*(getCalculationSettings().workingHoursPerDay||8)+4*input.travelTimeMinutes/60;
     if(Math.abs(r.shelleyPaidHours-hours)>1e-8||Math.abs(r.costShelleyPay-hours*15.87)>1e-8)throw new Error('Shelley paid for wrong attendance');
   });
+
+  // Separate routes and overrides must never modify the lead's route fields.
+  await page.evaluate(async()=>{
+    window.calculateRoute=async(from,to)=>({distanceMiles:cleanTest(from)==='NE325QA'?200:40,durationMinutes:180,from,to});
+    function cleanTest(value){return value.replace(/\s/g,'').toUpperCase();}
+    await refreshShelleyRoute();
+    const input=collectQuoteInputFromForm();if(input.shelleyRoute.distanceMiles!==200)throw new Error('Shelley route missing');
+  });
+  const leadMiles=await page.locator('#travelDistance').inputValue();
+  await page.locator('#shelleyFuelCost').fill('');await page.locator('#shelleyFuelCost').dispatchEvent('change');
+  await page.evaluate(()=>{
+    const r=calculateQuote(collectQuoteInputFromForm(),getCalculationSettings());
+    if(r.shelleyFuelMiles!==800||r.costShelleyFuel!==800*getCalculationSettings().mileageRatePence/100)throw new Error('Fuel used wrong route or attendance');
+  });
+  assert.equal(await page.locator('#travelDistance').inputValue(),leadMiles);
+  await page.locator('#shelleyFuelCost').fill('0');
+  assert.equal(await page.evaluate(()=>calculateQuote(collectQuoteInputFromForm(),getCalculationSettings()).costShelleyFuel),0);
+  await page.locator('#shelleyTravelsSeparately').uncheck();await page.locator('#shelleyFuelCost').fill('');
+  assert.equal(await page.evaluate(()=>calculateQuote(collectQuoteInputFromForm(),getCalculationSettings()).costShelleyFuel),0);
+  await page.locator('#shelleyTravelsSeparately').check();
+  await page.evaluate(async()=>{
+    const old=calculateRoute;window.calculateRoute=async()=>{throw new Error('Test route failure');};
+    await refreshShelleyRoute();
+    const r=calculateQuote(collectQuoteInputFromForm(),getCalculationSettings());if(!r.shelleyFuelPending)throw new Error('Failed route silently accepted');
+    window.calculateRoute=old;
+  });
+  const quotesBefore=await page.evaluate(()=>currentQuotes.length);await page.locator('#saveQuote').click();
+  assert.equal(await page.evaluate(()=>currentQuotes.length),quotesBefore);
+  await page.evaluate(()=>refreshShelleyRoute());
+  await page.evaluate(async()=>{
+    const original=calculateRoute,field=document.getElementById('destinationPostcode'),old=field.value;
+    let complete;window.calculateRoute=()=>new Promise(resolve=>{complete=resolve;});
+    const pending=refreshShelleyRoute();field.value='DE75 7UJ';field.dispatchEvent(new Event('input',{bubbles:true}));
+    complete({distanceMiles:999,durationMinutes:999});await pending;
+    if(collectQuoteInputFromForm().shelleyRoute!==null)throw new Error('Stale route response overwrote changed postcode');
+    field.value=old;field.dispatchEvent(new Event('input',{bubbles:true}));window.calculateRoute=original;await refreshShelleyRoute();
+  });
+  await page.locator('#shelleyFuelCost').fill('25');
   await page.locator('#saveQuote').click();await page.waitForFunction(()=>currentQuotes.some(q=>q.customerName==='Planning test laboratory'));
   const quoteId=await page.evaluate(()=>currentQuotes.find(q=>q.customerName==='Planning test laboratory').id);
   await page.evaluate(id=>loadQuote(id),quoteId);await page.waitForTimeout(100);

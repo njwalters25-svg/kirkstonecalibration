@@ -333,6 +333,8 @@ function renderQuoteSummary(result) {
         <span>${formatCurrency(result.costPhil ?? result.costSecondPerson)}</span>
       </div>` : ''}
       ${result.costShelleyPay > 0 ? `<div class="summary-row"><span>Shelley (${result.shelleyPaidHours.toFixed(2)} hours work + travel${result.shelleyAttendanceDays != null ? ` over ${result.shelleyAttendanceDays} of ${result.timePlan.totalDays} job days` : ""} @ ${formatCurrency(result.shelleyHourlyRate)}/hour)</span><span>${formatCurrency(result.costShelleyPay)}</span></div>` : ''}
+      ${result.shelleyFuelPending ? '<div class="summary-row"><span>Shelley fuel: route needed — calculate her route or enter an override before saving.</span></div>' : ''}
+      ${result.shelleyFuelAutomatic && result.shelleyFuelMiles>0 ? `<div class="summary-row"><span>Shelley automatic fuel: ${result.shelleyFuelMiles.toFixed(1)} miles @ ${result.shelleyFuelRatePence}p/mile</span></div>` : ''}
       ${[['Hotel',result.costShelleyHotel],['Fuel',result.costShelleyFuel],['Food',result.costShelleyFood]].filter(([,cost])=>cost>0).map(([label,cost])=>`<div class="summary-row"><span>Shelley — additional ${label.toLowerCase()}</span><span>${formatCurrency(cost)}</span></div>`).join('')}
       ${result.costSubsistence > 0 ? `
       <div class="summary-row">

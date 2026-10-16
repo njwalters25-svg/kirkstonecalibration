@@ -865,7 +865,7 @@ async function createJobSheetFromQuote(id) {
       shipping: 0,
       secondPerson: quoteResult.costSecondPerson || 0,
       other: 0,
-      mileageMiles: quoteResult.totalTripMiles || 0,
+      mileageMiles: quoteResult.shelleyMileageInFuel ? 0 : (quoteResult.totalTripMiles || 0),
     },
     mileageRatePence: normalizeMileageRatePence(quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence),
     notes: '',

@@ -10,7 +10,7 @@ window.KirkstoneWork = (() => {
   function restoreTeam(quote={}){
     const select=document.getElementById('secondPersonKind');if(!select)return;
     select.innerHTML=workerOptions(P.person(quote),P.secondWorker(quote));
-    for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyAvailableDays:'',shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:0,shelleyFoodCost:0})){
+    for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyAvailableDays:'',shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:'',shelleyFoodCost:0})){
       const field=document.getElementById(key);if(field)field.value=quote[key] ?? fallback;
     }
     showShelleyCosts();

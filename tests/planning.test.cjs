@@ -160,3 +160,21 @@ test('pipette quantities drive eight solo days down to six lead days with two Sh
  const all=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:8},fixture);
  assert.equal(all.timePlan.totalDays,4);assert.equal(all.shelleyAttendanceDays,4);
 });
+
+test('automatic Shelley fuel uses her own route, attendance and rate without changing owner mileage',()=>{
+ const input={teamCostingVersion:1,shelleyTravelVersion:1,assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2,
+  calibrationTimeMinutes:3840,travelDistanceMiles:20,travelTimeMinutes:30,destinationPostcode:'CB2 0AA',shelleyHomePostcode:'NE32 5QA',
+  shelleyRoute:{origin:'NE32 5QA',destination:'CB2 0AA',distanceMiles:100,durationMinutes:120},shelleyFuelCost:null};
+ const r=context.calculateQuote(input,settings);
+ assert.equal(r.shelleyFuelMiles,400);assert.equal(r.costShelleyFuel,400*settings.mileageRatePence/100);
+ assert.equal(r.costTravel,r.totalTripMiles*settings.mileageRatePence/100);assert.equal(r.shelleyPaidHours,2*settings.workingHoursPerDay+8);
+ const manual=context.calculateQuote({...input,shelleyFuelCost:35},settings);assert.equal(manual.costShelleyFuel,35);
+ const zero=context.calculateQuote({...input,shelleyFuelCost:0},settings);assert.equal(zero.costShelleyFuel,0);assert.equal(zero.shelleyFuelAutomatic,false);
+ const shared=context.calculateQuote({...input,shelleyTravelsSeparately:false},settings);assert.equal(shared.costShelleyFuel,0);
+ const overnight=context.calculateQuote({...input,overnightStay:true,hotelToWorkDistanceMiles:5,hotelToWorkMinutes:10},settings);
+ assert.equal(overnight.shelleyFuelMiles,210);assert.equal(overnight.costShelleyFuel,210*settings.mileageRatePence/100);
+ const stale=context.calculateQuote({...input,destinationPostcode:'DE75 7UJ'},settings);assert.equal(stale.shelleyFuelPending,true);assert.equal(stale.costShelleyFuel,0);
+ const legacy=context.calculateQuote({...input,shelleyTravelVersion:undefined,shelleyFuelCost:35},settings);assert.equal(legacy.costShelleyFuel,35);
+ const lead=context.calculateQuote({...input,assignedPerson:'shelley',secondPersonKind:'owner'},settings);
+ assert.equal(lead.costTravel,0);assert.equal(lead.shelleyMileageInFuel,true);assert.equal(lead.costShelleyFuel,400*settings.mileageRatePence/100);
+});
