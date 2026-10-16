@@ -1,0 +1,59 @@
+# Job assignment, operational sheets and calendar
+
+This update leaves the existing site username/password prompt, Firebase authentication, Firestore rules, cPanel settings and deployment workflows unchanged. The paused employee-login implementation is not included.
+
+## Assigning work and travel defaults
+
+- New quotes have an **Assigned to** selector and a **Travel starting postcode** field.
+- Owner jobs use the existing Home Base postcode. Shelley jobs default to **NE32 5QA**, configurable under **Settings → Team travel and Outlook calendar**.
+- The travel start is separate from the customer's address and destination postcode. Selecting Shelley does not overwrite customer details.
+- Assignment remains editable on existing Job Sheets and on the Calendar. Save the Job Sheet or schedule to persist changes through the existing Firebase save path.
+- Changing assignee resets the job's travel start to that person's default and marks the previous route for review. **Calculate travel** gives a one-way estimate. It deliberately does not overwrite recorded expenses or infer total job mileage; enter total job mileage in Costs.
+- Existing quote references, invoice numbering, pricing snapshots, job expenses and owner calculations are retained.
+
+## Shelley work-sheet view
+
+Jobs assigned to Shelley open with an operational sheet containing the customer, quote reference, expected/actual/remaining pipette counts, daily service rows, parts used, job expenses and work notes. Purchase costs remain visible; customer unit prices, revenue, profit/loss, tax, pension, wages and invoice controls are absent.
+
+**Owner financial view** opens the original full Job Sheet for review and pricing. **Back to work sheet** returns to the operational view. Print and CSV actions on the work sheet generate a separate allow-listed output; existing private quote/job notes are not copied into work notes.
+
+This is a view preference in the existing shared owner app, not employee authentication. Anyone with the current site login can still use the owner controls. It is suitable for preparing or printing an operational sheet while the separate employee-login project remains on hold.
+
+## Calendar
+
+The **Calendar** tab shows exact work dates, assignees, provisional bookings and an agenda. Set start and end dates on a Job Sheet or in the agenda, then save. End dates are inclusive. Existing month-only proposals stay under **Needs exact dates**; the app does not assume a day. Archived, cancelled, deleted and historical jobs are excluded from active planning.
+
+**Export jobs for Outlook (.ics)** exports scheduled active jobs for the selected assignee filter, across all dates. Event identifiers are stable, all-day date ranges include the last workday, and exports omit financial amounts and attendees. Importing an ICS file is a snapshot, not a live subscription; repeated manual imports can duplicate events depending on Outlook's import behaviour.
+
+## Optional live Outlook connection
+
+The Outlook connector available in this chat is separate from the self-hosted app. Live app access needs a Microsoft application registration; it does not need a new app login, Firebase changes or a client secret.
+
+1. In Microsoft Entra **App registrations**, register an application that supports personal Microsoft accounts (and organisational accounts if needed).
+2. Add a **Single-page application (SPA)** redirect URI matching the site's deployed callback page exactly: your app's folder URL followed by `outlook-callback.html`. For example, if the app opens at `https://quotes.kirkstonecalibration.co.uk/`, register `https://quotes.kirkstonecalibration.co.uk/outlook-callback.html`. Use the actual host and folder where you open the app.
+3. Enable delegated Microsoft Graph permissions **User.Read** and **Calendars.ReadWrite**. Do not create or paste a client secret.
+4. Copy the public **Application (client) ID** into **Settings → Team travel and Outlook calendar**, then select **Save team and calendar settings**.
+5. On **Calendar**, select **Connect Outlook**, sign in with the intended Microsoft account and choose a calendar. Read-only calendars can be displayed but cannot receive jobs.
+
+The app uses Microsoft's MSAL Browser 4.29.0 (loaded on demand from its pinned jsDelivr npm module) and Microsoft Graph v1.0. The callback is a blank page as recommended for this MSAL version's popup flow. Tokens and fetched event details are kept in browser memory, never saved to Firebase or job records. Reloading requires reconnecting. Disconnect clears the app's Microsoft cache and event overlay without signing the user out of other Microsoft websites.
+
+### What synchronisation does
+
+- **Connect / Refresh Outlook** displays the selected calendar's events, including recurring occurrences in the calendar's visible range.
+- **Send / update in Outlook** saves the job, then creates or updates its linked all-day appointment. It sends the customer name/address, quote reference, assignee and dates, without amounts, financial notes or attendees.
+- Repeated sends update the same linked event. A deterministic transaction ID and local link receipt protect retries after a save failure.
+- If an Outlook appointment's dates change, refresh the calendar, select its entry and choose **Use Outlook dates for this job**. Dates are written back to Firebase without rewriting the rest of the Job Sheet. Timed Outlook events are represented as work dates; time-of-day is not stored on the job.
+- Updates are explicit while the app is open. This is not background server synchronisation.
+- Events with attendees are not updated by the app, to avoid sending meeting changes or invitations. Manage those in Outlook.
+- Archiving/deleting an app job does not cancel or delete its Outlook appointment.
+- Sending to another calendar/account creates a separate copy and does not remove the original. Calendars marked read-only cannot receive jobs.
+- Linked-event deduplication applies to appointments created by this connection, not earlier manually imported ICS copies.
+
+## Validation
+
+- `node --test tests/planning.test.cjs`: seven date, projection, Outlook payload, calendar export and CSV checks.
+- `node tests/planning.browser.cjs` with Playwright available: original startup, new-quote assignment, Shelley travel origin, unchanged customer address, operational edits/exports, owner financial view, archive/restore, reload persistence, calendar layout and Outlook API simulations. The browser checks mock Firebase and Microsoft requests and do not contact real calendars. Set `NODE_PATH` if using a bundled Playwright installation; Chrome is used by default.
+- Real Microsoft sign-in/consent and live Firebase writes require the site's authenticated environment. They are not claimed as tested by local fixtures.
+
+Microsoft references: [MSAL popup redirect guidance for the pinned version](https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/msal-browser-v4.29.0/lib/msal-browser/docs/login-user.md#redirecturi-considerations), [app initialisation and registration](https://learn.microsoft.com/en-us/entra/msal/javascript/browser/initialization), [calendarView](https://learn.microsoft.com/en-us/graph/api/user-list-calendarview?view=graph-rest-1.0), [create event](https://learn.microsoft.com/en-us/graph/api/user-post-events?view=graph-rest-1.0), [Outlook ICS import](https://support.microsoft.com/en-us/outlook/import-or-subscribe-to-a-calendar-in-outlook-com-or-outlook-on-the-web).
+
