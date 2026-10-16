@@ -832,6 +832,7 @@ async function createJobSheetFromQuote(id) {
     proposedDate: quote.proposedDate || '',
     assignedPerson: quote.assignedPerson === 'shelley' ? 'shelley' : 'owner',
     secondPerson: !!quote.secondPerson,
+    shelleyAvailableDays: quote.shelleyAvailableDays ?? null,
     secondPersonKind: quote.secondPersonKind || 'phil',
     travelOriginPostcode: quote.travelOriginPostcode || (quote.assignedPerson === 'shelley' ? (currentSettings.shelleyHomePostcode || 'NE32 5QA') : currentSettings.homePostcode),
     destinationPostcode: quote.destinationPostcode || '',
@@ -1159,7 +1160,7 @@ function toggleQuoteDetail(id) {
         <div class="summary-row"><span>Labour — calibration</span><span>${formatCurrency(result.costLabourCalibration)}</span></div>
         <div class="summary-row"><span>Labour — travel</span><span>${formatCurrency(result.costLabourTravel)}</span></div>
         ${(result.costPhil ?? result.costSecondPerson) > 0 ? `<div class="summary-row"><span>${result.costPhil == null ? "2nd person" : "Phil"} (${result.secondPersonDays} days)</span><span>${formatCurrency(result.costPhil ?? result.costSecondPerson)}</span></div>` : ''}
-        ${result.costShelleyPay > 0 ? `<div class="summary-row"><span>Shelley (${result.shelleyPaidHours.toFixed(2)} hours @ ${formatCurrency(result.shelleyHourlyRate)}/hour)</span><span>${formatCurrency(result.costShelleyPay)}</span></div>` : ''}
+        ${result.costShelleyPay > 0 ? `<div class="summary-row"><span>Shelley (${result.shelleyPaidHours.toFixed(2)} hours${result.shelleyAttendanceDays != null ? ` over ${result.shelleyAttendanceDays} of ${result.timePlan.totalDays} job days` : ""} @ ${formatCurrency(result.shelleyHourlyRate)}/hour)</span><span>${formatCurrency(result.costShelleyPay)}</span></div>` : ''}
         ${[["hotel",result.costShelleyHotel],["fuel",result.costShelleyFuel],["food",result.costShelleyFood]].filter(([,cost])=>cost>0).map(([label,cost])=>`<div class="summary-row"><span>Shelley — additional ${label}</span><span>${formatCurrency(cost)}</span></div>`).join('')}
         ${result.costSubsistence > 0 ? `<div class="summary-row"><span>Subsistence (${result.subsistenceDays} days)</span><span>${formatCurrency(result.costSubsistence)}</span></div>` : ''}
         <div class="summary-row total"><span>TOTAL COST</span><span>${formatCurrency(result.totalInternalCost)}</span></div>

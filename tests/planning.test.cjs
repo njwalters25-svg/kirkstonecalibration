@@ -110,3 +110,53 @@ test('Shelley hours include overnight hotel commutes, travel day before, and ret
  assert.equal(r.shelleyPaidHours,expected);assert(r.timePlan.totalHotelCommuteMins>0);assert(r.returnHomeTimeMins>0);
  assert.equal(r.costShelleyPay,expected*15.87);
 });
+
+test('limited Shelley availability caps team time benefit and charges only her attendance',()=>{
+ const input={teamCostingVersion:1,assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',calibrationTimeMinutes:2880,travelTimeMinutes:60};
+ const full=context.calculateQuote(input,settings),partial=context.calculateQuote({...input,shelleyAvailableDays:2},settings);
+ assert(partial.timePlan.jobMins>full.timePlan.jobMins);assert(partial.timeReductionPercent<full.timeReductionPercent);
+ const sixDays={...partial,timePlan:{...partial.timePlan,totalDays:6}};
+ context.applyTeamCosting(sixDays,{...input,shelleyAvailableDays:2},settings);
+ assert.equal(sixDays.shelleyAttendanceDays,2);assert.equal(sixDays.timePlan.totalDays,6);
+ assert.equal(sixDays.shelleyPaidHours,2*(settings.workingHoursPerDay+2));assert.equal(sixDays.costShelleyPay,sixDays.shelleyPaidHours*15.87);
+ const zero=context.calculateQuote({...input,shelleyAvailableDays:0},settings);
+ assert.equal(zero.timePlan.jobMins,2880);assert.equal(zero.costShelleyPay,0);assert.equal(zero.timeReductionPercent,0);
+ const blank=context.calculateQuote({...input,shelleyAvailableDays:null},settings);
+ assert.equal(blank.totalInternalCost,full.totalInternalCost);assert.equal(blank.timePlan.jobMins,full.timePlan.jobMins);
+ const override=context.calculateQuote({...input,shelleyAvailableDays:2,shelleyPaidHours:17.5},settings);
+ assert.equal(override.shelleyPaidHours,17.5);
+});
+test('limited attendance uses her own overnight trip and caps days at job length',()=>{
+ const input={teamCostingVersion:1,assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',calibrationTimeMinutes:2880,travelTimeMinutes:120,
+  hotelToWorkMinutes:30,overnightStay:true,shelleyAvailableDays:2,returnHome:true,returnHomeTrips:3};
+ const r=context.calculateQuote(input,settings);
+ assert.equal(r.shelleyPaidHours,2*settings.workingHoursPerDay+4+1);
+ const capped=context.calculateQuote({...input,calibrationTimeMinutes:60,shelleyAvailableDays:10,travelTimeMinutes:0},settings);
+ assert.equal(capped.shelleyAttendanceDays,capped.timePlan.totalDays);
+ const phil=context.calculateQuote({...input,secondPersonKind:'phil'},settings);
+ assert.equal(phil.costShelleyPay,0);assert.equal(phil.costPhil,phil.timePlan.totalDays*(settings.secondPersonDayCost||350));
+ const legacy=context.calculateQuote({...input,teamCostingVersion:undefined},settings);
+ const original=context.calculateQuote({...input,teamCostingVersion:undefined,shelleyAvailableDays:null},settings);
+ assert.equal(legacy.totalInternalCost,original.totalInternalCost);
+});
+test('operational outputs include availability but no pay or invented attendance dates',()=>{
+ const job={assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2,scheduleStartDate:'2026-11-01',scheduleEndDate:'2026-11-06',shelleyHourlyRate:15.87};
+ const safe=P.operational(job);assert.equal(safe.shelleyAvailableDays,2);assert(!JSON.stringify(safe).includes('15.87'));
+ const event=P.outlookPayload(job);assert(event.body.content.includes('2 days (attendance dates not set)'));
+ assert.equal(event.end.dateTime,'2026-11-07T00:00:00');
+ assert(P.operationalCsv(safe).includes('Shelley available days'));
+});
+
+test('pipette quantities drive eight solo days down to six lead days with two Shelley days',()=>{
+ const fixture={...settings,workingHoursPerDay:8,serviceLevels:[{...settings.serviceLevels[0],minutesPerSingleChannel:15}]};
+ const input={teamCostingVersion:1,assignedPerson:'owner',pipetteLines:[{serviceLevelId:fixture.serviceLevels[0].id,singleChannelCount:256}],travelTimeMinutes:0};
+ const solo=context.calculateQuote(input,fixture);
+ const together=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2},fixture);
+ assert.equal(solo.timePlan.totalDays,8);assert.equal(together.timePlan.totalDays,6);
+ assert.equal(together.shelleyAttendanceDays,2);assert.equal(together.shelleyPaidHours,16);
+ assert.equal(together.timePlan.jobMins,6*8*60);
+ const bigger=context.calculateQuote({...input,pipetteLines:[{...input.pipetteLines[0],singleChannelCount:512}],secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2},fixture);
+ assert.equal(bigger.timePlan.totalDays,14);
+ const all=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:8},fixture);
+ assert.equal(all.timePlan.totalDays,4);assert.equal(all.shelleyAttendanceDays,4);
+});

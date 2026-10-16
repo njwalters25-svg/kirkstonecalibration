@@ -12,6 +12,10 @@ window.KirkstonePlanning = (() => {
   };
   const participants = job => hasSecondPerson(job) ? [person(job),secondWorker(job)] : [person(job)];
   const teamName = job => participants(job).map(personName).join(' + ');
+  const availability = job => {
+    const value=job?.shelleyAvailableDays ?? job?.quoteSnapshot?.shelleyAvailableDays;
+    return value == null || value === '' ? null : Math.max(0,Math.floor(Number(value)||0));
+  };
   const defaultOrigin = (who, settings = {}) => who === 'shelley'
     ? (settings.shelleyHomePostcode || 'NE32 5QA') : (settings.homePostcode || 'DE75 7UJ');
   const origin = (job, settings) => job?.travelOriginPostcode?.trim() || defaultOrigin(person(job), settings);
@@ -45,7 +49,7 @@ window.KirkstonePlanning = (() => {
       quoteRef:job.quoteRef || '', assignedPerson:person(job), secondPerson:hasSecondPerson(job), secondPersonKind:secondWorker(job), travelOriginPostcode:origin(job,settings),
       destinationPostcode:job.destinationPostcode || job.quoteSnapshot?.destinationPostcode || '',
       expected, actual, remaining:Object.fromEntries(fields.map(field=>[field,expected[field]-actual[field]])),
-      actualEntries:countRows, schedule:schedule(job),
+      actualEntries:countRows, schedule:schedule(job), shelleyAvailableDays:availability(job),
       serviceLevels:(job.settingsSnapshot?.serviceLevels || settings.serviceLevels || []).map(level=>({id:level.id,name:level.name})),
       costs:Object.fromEntries(allowedCosts.map(field=>[field,Number(job.costs?.[field]) || 0])),
       parts:(job.parts || []).map(part=>({id:part.id,catalogPartId:part.catalogPartId || '',
@@ -59,7 +63,8 @@ window.KirkstonePlanning = (() => {
     const dates=schedule(job); if(!dates)throw new Error('Set valid start and end dates first.');
     return {
       subject:'Kirkstone · ' + (job.customerName || 'Calibration job') + (job.quoteRef ? ' · ' + job.quoteRef : ''),
-      body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job)) + '\nWorking on job: ' + teamName(job)},
+      body:{contentType:'text',content:'Job reference: ' + (job.quoteRef || '') + '\nAssigned to: ' + personName(person(job)) + '\nWorking on job: ' + teamName(job)
+        + (participants(job).includes('shelley') && availability(job) !== null ? '\nShelley available: '+availability(job)+' days (attendance dates not set)' : '')},
       location:{displayName:job.customerAddress || ''},isAllDay:true,isReminderOn:false,
       showAs:job.scheduleStatus === 'provisional' ? 'tentative' : 'busy',
       start:{dateTime:dates.start+'T00:00:00',timeZone:'GMT Standard Time'},
@@ -108,11 +113,12 @@ window.KirkstonePlanning = (() => {
       ['Pipettes',...labels],['Expected',...fields.map(f=>sheet.expected[f])],['Actual',...fields.map(f=>sheet.actual[f])],
       ['Remaining',...fields.map(f=>sheet.remaining[f])],[],['Date','Service level',...labels]];
     for(const row of sheet.actualEntries)rows.push([row.date,sheet.serviceLevels.find(l=>l.id===row.serviceLevelId)?.name || row.serviceLevelId,...fields.map(f=>row[f])]);
+    if(participants(sheet).includes('shelley') && availability(sheet) !== null)rows.push(['Shelley available days',availability(sheet)]);
     rows.push([],['Job expenses']);for(const [key,value] of Object.entries(sheet.costs))rows.push([key,value]);
     rows.push([],['Parts','Quantity','Unit cost']);for(const part of sheet.parts)rows.push([part.name,part.quantity,part.costPerUnit]);
     rows.push(['Total job costs',sheet.calculatedCosts.total],['Work carried out',sheet.workCarriedOut],['Work notes',sheet.operationalNotes]);
     return '\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   }
-  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
+  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
 })();
 

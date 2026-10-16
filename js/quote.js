@@ -89,9 +89,21 @@ function calculateQuote(input, settings) {
   // New job extra applies on top of either manual or estimated time
   const baseJobMins = (calMinutes || result.estimatedCalMinutes) + newJobExtraMins;
   // Apply second person time reduction to calibration work only
-  const jobMins = secondPerson
+  let jobMins = secondPerson
     ? Math.round(baseJobMins * (1 - timeReduction / 100))
     : baseJobMins;
+  const availableDays = shelleyAvailability(input);
+  if (availableDays !== null && secondPerson && shelleyOnJob(input)) {
+    // Limit the saved work to the days on which both people can work together.
+    const dayMins = (settings.workingHoursPerDay || 8) * 60;
+    const commuteMins = input.overnightStay ? 2 * (input.hotelToWorkMinutes || 0) : 2 * travelMinutes;
+    const jointMins = availableDays * Math.max(0, dayMins - commuteMins);
+    // Each attending worker contributes the same configured pipette capacity.
+    // Two people cannot finish sooner than half the solo work time.
+    const saving = Math.min(baseJobMins / 2, jointMins);
+    jobMins = Math.round(baseJobMins - saving);
+    result.timeReductionPercent = baseJobMins > 0 ? Math.round(saving / baseJobMins * 1000) / 10 : 0;
+  }
   result.baseJobMins = baseJobMins;
   const workMinsPerDay = (settings.workingHoursPerDay || 8) * 60;
 
@@ -364,6 +376,13 @@ function calculateQuote(input, settings) {
 
 
 // Called again after manual-day overrides so pay uses the final work/travel plan.
+function shelleyAvailability(input) {
+  if (input.teamCostingVersion !== 1 || input.shelleyAvailableDays == null || input.shelleyAvailableDays === '') return null;
+  return Math.max(0, Math.floor(Number(input.shelleyAvailableDays) || 0));
+}
+function shelleyOnJob(input) {
+  return input.assignedPerson === 'shelley' || (!!input.secondPerson && input.secondPersonKind === 'shelley');
+}
 function applyTeamCosting(result, input, settings) {
   if (input.teamCostingVersion !== 1) return result;
   const lead = input.assignedPerson === 'shelley' ? 'shelley' : 'owner';
@@ -381,6 +400,20 @@ function applyTeamCosting(result, input, settings) {
     result.shelleyPaidHours = input.shelleyPaidHours == null || input.shelleyPaidHours === ''
       ? (nonnegative(result.timePlan.jobMins) + nonnegative(result.timePlan.travelOutMins) * 2 * (result.commuteTrips ?? 1)
         + nonnegative(result.timePlan.totalHotelCommuteMins) + nonnegative(result.returnHomeTimeMins)) / 60 : nonnegative(input.shelleyPaidHours);
+    const availableDays = shelleyAvailability(input);
+    if (availableDays !== null) {
+      result.shelleyAvailableDays = availableDays;
+      result.shelleyAttendanceDays = Math.min(availableDays, nonnegative(result.timePlan.totalDays));
+      const days = result.shelleyAttendanceDays;
+      const travel = nonnegative(input.travelTimeMinutes);
+      // Limited attendance has its own trips, not every journey made by the lead.
+      const hotelCommute = input.overnightStay && days > 0
+        ? nonnegative(input.hotelToWorkMinutes) * (input.travelDayBefore ? 2 * days - 1 : 2 * Math.max(0, days - 1)) : 0;
+      const travelHours = days > 0 ? (2 * travel * (input.overnightStay ? 1 : days) + hotelCommute) / 60 : 0;
+      if (input.shelleyPaidHours == null || input.shelleyPaidHours === '') {
+        result.shelleyPaidHours = days * (settings.workingHoursPerDay || 8) + travelHours;
+      }
+    }
     result.costShelleyPay = result.shelleyPaidHours * result.shelleyHourlyRate;
     result.costShelleyHotel = nonnegative(input.shelleyHotelCost);
     result.costShelleyFuel = nonnegative(input.shelleyFuelCost);

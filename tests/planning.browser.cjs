@@ -22,6 +22,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   await page.locator('#shelleyHotelCost').fill('80');await page.locator('#shelleyFuelCost').fill('25');await page.locator('#shelleyFoodCost').fill('15');
   await page.locator('#quoteAssignee').selectOption('shelley');
   assert.equal(await page.locator('#secondPersonKind').inputValue(),'owner');
+  assert.equal(await page.locator('#shelleyAvailableDays').inputValue(),'');
   assert.equal(await page.locator('#shelleyHotelCost').inputValue(),'80');assert.equal(await page.locator('#quoteTravelOrigin').inputValue(),'NE32 5QA');
   await page.locator('#customerName').fill('Planning test laboratory');await page.locator('#customerAddress').fill('Science Park, Cambridge CB2 0AA');
   await page.locator('#refPrefix').fill('PLAN');await page.locator('#destinationPostcode').fill('CB2 0AA');await page.locator('.pl-single').first().fill('10');
@@ -38,6 +39,21 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
     if(single.timePlan.totalDays!==1||single.costShelleyPay<=0)throw new Error('Single-day quote lost hourly pay');
     const phil=calculateQuote({...input,assignedPerson:'owner',secondPersonKind:'phil',plannedDaysOverride:4},settings);
     if(phil.costPhil!==4*(settings.secondPersonDayCost||350)||phil.costShelleyPay!==0)throw new Error('Phil day rate changed');
+  });
+  await page.evaluate(()=>{
+    const settings={...getCalculationSettings(),workingHoursPerDay:8};
+    settings.serviceLevels=[{...settings.serviceLevels[0],minutesPerSingleChannel:15}];
+    const input={...collectQuoteInputFromForm(),assignedPerson:'owner',secondPersonKind:'shelley',secondPerson:true,shelleyAvailableDays:2,
+      pipetteLines:[{serviceLevelId:settings.serviceLevels[0].id,singleChannelCount:256}],calibrationTimeMinutes:0,travelTimeMinutes:0,plannedDaysOverride:0};
+    const r=calculateQuote(input,settings);if(r.timePlan.totalDays!==6||r.shelleyPaidHours!==16)throw new Error('Pipette workload did not reduce eight solo days to six lead days');
+  });
+  await page.locator('#shelleyAvailableDays').fill('2');
+  await page.locator('#plannedDaysOverride').fill('6');
+  await page.evaluate(()=>{
+    const input=collectQuoteInputFromForm(),r=calculateQuote(input,getCalculationSettings());
+    if(r.timePlan.totalDays!==6||r.shelleyAttendanceDays!==2)throw new Error('Attendance changed total job days');
+    const hours=2*(getCalculationSettings().workingHoursPerDay||8)+4*input.travelTimeMinutes/60;
+    if(Math.abs(r.shelleyPaidHours-hours)>1e-8||Math.abs(r.costShelleyPay-hours*15.87)>1e-8)throw new Error('Shelley paid for wrong attendance');
   });
   await page.locator('#saveQuote').click();await page.waitForFunction(()=>currentQuotes.some(q=>q.customerName==='Planning test laboratory'));
   const quoteId=await page.evaluate(()=>currentQuotes.find(q=>q.customerName==='Planning test laboratory').id);
@@ -58,6 +74,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   let card=page.locator('#job-card-'+id);
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'owner');
   assert.equal(await page.evaluate(id=>getJobById(id).costs.fuel,id),25);
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyAvailableDays,id),2);
   await card.locator('[data-plan-field=assignedPerson]').selectOption('owner');
   assert.equal(await page.evaluate(id=>getJobById(id).secondPersonKind,id),'shelley');
   await card.locator('[data-plan-field=assignedPerson]').selectOption('shelley');
@@ -145,6 +162,7 @@ const artifacts=path.resolve(root,'work/planning-browser-tests');fs.mkdirSync(ar
   assert.equal(await page.evaluate(id=>getJobById(id).travelOriginPostcode,id),'NE32 5QA');
   assert.equal(await page.evaluate(id=>getJobById(id).costs.hotel,id),42);
   assert.equal(await page.evaluate(id=>getJobById(id).scheduleStartDate,id),'2026-10-25');
+  assert.equal(await page.evaluate(id=>getJobById(id).shelleyAvailableDays,id),2);
   assert.equal(await page.evaluate(()=>KirkstoneOutlook.connected),false);
   console.log('Mobile layout and unchanged anonymous owner startup passed');
  }finally{if(context)await context.close();server.close();}

@@ -10,7 +10,7 @@ window.KirkstoneWork = (() => {
   function restoreTeam(quote={}){
     const select=document.getElementById('secondPersonKind');if(!select)return;
     select.innerHTML=workerOptions(P.person(quote),P.secondWorker(quote));
-    for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:0,shelleyFoodCost:0})){
+    for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyAvailableDays:'',shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:0,shelleyFoodCost:0})){
       const field=document.getElementById(key);if(field)field.value=quote[key] ?? fallback;
     }
     showShelleyCosts();
@@ -32,6 +32,7 @@ window.KirkstoneWork = (() => {
   window.collectQuoteInputFromForm=()=>({...collectQuote(),assignedPerson:document.getElementById('quoteAssignee')?.value || 'owner',
     secondPersonKind:document.getElementById('secondPersonKind')?.value || 'phil',teamCostingVersion,
     ...Object.fromEntries(['shelleyHourlyRate','shelleyHotelCost','shelleyFuelCost','shelleyFoodCost'].map(key=>[key,Math.max(0,Number(document.getElementById(key)?.value)||0)])),
+    shelleyAvailableDays:document.getElementById('shelleyAvailableDays')?.value === '' ? null : Math.max(0,Math.floor(Number(document.getElementById('shelleyAvailableDays')?.value)||0)),
     shelleyPaidHours:document.getElementById('shelleyPaidHours')?.value === '' ? null : Math.max(0,Number(document.getElementById('shelleyPaidHours')?.value)||0),
     travelOriginPostcode:quoteOrigin()});
   window.getQuoteTravelOrigin=quoteOrigin;window.restoreQuotePlanning=restoreQuote;
@@ -46,6 +47,7 @@ window.KirkstoneWork = (() => {
     return '<div class="planning-controls"><div class="planner-fields"><label>Assigned to<select data-plan-field="assignedPerson">'
       +'<option value="owner" '+(P.person(job)==='owner'?'selected':'')+'>Owner</option><option value="shelley" '+(P.person(job)==='shelley'?'selected':'')+'>Shelley</option></select></label>'
       +'<label>Also working on this job<select data-plan-field="secondPersonKind"><option value="none" '+(!P.hasSecondPerson(job)?'selected':'')+'>No additional worker</option>'+workerOptions(P.person(job),P.hasSecondPerson(job)?P.secondWorker(job):'none')+'</select></label>'
+      +(P.participants(job).includes('shelley') && P.availability(job) !== null?'<p>Shelley available: '+esc(P.availability(job))+' days (set on quote)</p>':'')
       +field(job,'travelOriginPostcode','Travel starting postcode','text',P.origin(job,currentSettings))
       +field(job,'destinationPostcode','Job destination postcode','text',job.destinationPostcode || job.quoteSnapshot?.destinationPostcode || '')
       +field(job,'scheduleStartDate','Work start date','date',job.scheduleStartDate || '')
@@ -123,6 +125,7 @@ window.KirkstoneWork = (() => {
       +'<button onclick="window.print()">Print / PDF</button><h1>Kirkstone Calibration — Work sheet</h1><h2>'+esc(safe.customerName)+'</h2><p>Quote reference: '+esc(safe.quoteRef)+' · Assigned to '+P.personName(safe.assignedPerson)+'</p><p>Working on job: '+esc(P.teamName(safe))+'</p><p>'+esc(date)+'</p><p>Customer address: '+esc(safe.customerAddress)+'</p><p>Travel start: '+esc(safe.travelOriginPostcode)+'</p>'
       +'<table><tr><th>Pipettes</th>'+P.labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>'
       +[['Expected',safe.expected],['Actual',safe.actual],['Remaining',safe.remaining]].map(([label,values])=>'<tr><th>'+label+'</th>'+P.fields.map(k=>'<td>'+values[k]+'</td>').join('')+'</tr>').join('')+'</table>'
+      +(safe.shelleyAvailableDays !== null?'<p>Shelley available: '+safe.shelleyAvailableDays+' days (attendance dates not set)</p>':'')
       +'<h3>Daily work</h3><table><tr><th>Date</th><th>Service level</th>'+P.labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>'
       +safe.actualEntries.map(row=>'<tr><td>'+esc(row.date)+'</td><td>'+esc(safe.serviceLevels.find(l=>l.id===row.serviceLevelId)?.name || row.serviceLevelId)+'</td>'+P.fields.map(k=>'<td>'+row[k]+'</td>').join('')+'</tr>').join('')+'</table>'
       +'<h3>Job expenses</h3>'+Object.entries(safe.costs).map(([key,value])=>'<p>'+costNames[key]+': '+(key==='mileageMiles'?value:formatCurrency(value))+'</p>').join('')
