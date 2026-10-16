@@ -153,6 +153,14 @@ test('pipette quantities drive eight solo days down to six lead days with two Sh
  const solo=context.calculateQuote(input,fixture);
  const together=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2},fixture);
  assert.equal(solo.timePlan.totalDays,8);assert.equal(together.timePlan.totalDays,6);
+ const training=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2,shelleyNoTimeSaving:true},fixture);
+ assert.equal(training.timePlan.totalDays,8);assert.equal(training.timeReductionPercent,0);assert.equal(training.shelleyPaidHours,16);
+ assert.equal(training.costShelleyPay,16*15.87);
+ const wholeJob=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'shelley',shelleyNoTimeSaving:true},fixture);
+ assert.equal(wholeJob.timePlan.totalDays,8);assert.equal(wholeJob.timePlan.jobMins,solo.timePlan.jobMins);
+ const phil=context.calculateQuote({...input,secondPerson:true,secondPersonKind:'phil',shelleyNoTimeSaving:true},fixture);
+ assert.equal(phil.timeReductionPercent,fixture.secondPersonTimeReduction||40);
+
  assert.equal(together.shelleyAttendanceDays,2);assert.equal(together.shelleyPaidHours,16);
  assert.equal(together.timePlan.jobMins,6*8*60);
  const bigger=context.calculateQuote({...input,pipetteLines:[{...input.pipetteLines[0],singleChannelCount:512}],secondPerson:true,secondPersonKind:'shelley',shelleyAvailableDays:2},fixture);

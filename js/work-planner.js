@@ -13,6 +13,7 @@ window.KirkstoneWork = (() => {
     for(const [key,fallback] of Object.entries({shelleyHourlyRate:15.87,shelleyAvailableDays:'',shelleyPaidHours:'',shelleyHotelCost:0,shelleyFuelCost:'',shelleyFoodCost:0})){
       const field=document.getElementById(key);if(field)field.value=quote[key] ?? fallback;
     }
+    document.getElementById('shelleyNoTimeSaving').checked=!!quote.shelleyNoTimeSaving;
     showShelleyCosts();
     queueMicrotask(showShelleyCosts);
   }
@@ -31,6 +32,7 @@ window.KirkstoneWork = (() => {
   const collectQuote=collectQuoteInputFromForm;
   window.collectQuoteInputFromForm=()=>({...collectQuote(),assignedPerson:document.getElementById('quoteAssignee')?.value || 'owner',
     secondPersonKind:document.getElementById('secondPersonKind')?.value || 'phil',teamCostingVersion,
+    shelleyNoTimeSaving:document.getElementById('shelleyNoTimeSaving').checked,
     ...Object.fromEntries(['shelleyHourlyRate','shelleyHotelCost','shelleyFuelCost','shelleyFoodCost'].map(key=>[key,Math.max(0,Number(document.getElementById(key)?.value)||0)])),
     shelleyAvailableDays:document.getElementById('shelleyAvailableDays')?.value === '' ? null : Math.max(0,Math.floor(Number(document.getElementById('shelleyAvailableDays')?.value)||0)),
     shelleyPaidHours:document.getElementById('shelleyPaidHours')?.value === '' ? null : Math.max(0,Number(document.getElementById('shelleyPaidHours')?.value)||0),

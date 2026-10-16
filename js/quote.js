@@ -79,7 +79,8 @@ function calculateQuote(input, settings) {
 
   // --- Second person ---
   const secondPerson = !!input.secondPerson;
-  const timeReduction = secondPerson ? (settings.secondPersonTimeReduction || 40) : 0;
+  const shelleyTraining = !!input.shelleyNoTimeSaving && shelleyOnJob(input);
+  const timeReduction = secondPerson && !shelleyTraining ? (settings.secondPersonTimeReduction || 40) : 0;
   result.secondPerson = secondPerson;
   result.timeReductionPercent = timeReduction;
 
@@ -93,7 +94,7 @@ function calculateQuote(input, settings) {
     ? Math.round(baseJobMins * (1 - timeReduction / 100))
     : baseJobMins;
   const availableDays = shelleyAvailability(input);
-  if (availableDays !== null && secondPerson && shelleyOnJob(input)) {
+  if (availableDays !== null && secondPerson && shelleyOnJob(input) && !shelleyTraining) {
     // Limit the saved work to the days on which both people can work together.
     const dayMins = (settings.workingHoursPerDay || 8) * 60;
     const commuteMins = input.overnightStay ? 2 * (input.hotelToWorkMinutes || 0) : 2 * travelMinutes;
