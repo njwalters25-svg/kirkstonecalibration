@@ -134,10 +134,10 @@
     const bioscienceMatches = matches105.filter(quote => /bioscience/.test(quoteText(quote)));
     if (bioscienceMatches.length === 1) return bioscienceMatches[0];
 
-    // A single saved quote at 105 is not an invoice-number conflict. In this
-    // legacy case it is very likely the quote record that was already corrected
-    // while the spreadsheet/job record remained on 104, so link the job to it.
-    if (matches105.length === 1) return matches105[0];
+    // Never attach an arbitrary 105 quote to Bioscience. The previous version
+    // did this when only one 105 quote existed, which could cross-link an IVP
+    // quote to the Bioscience job. Only a quote that is positively identified as
+    // Bioscience is safe to use here.
     return null;
   }
 
