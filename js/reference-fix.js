@@ -156,6 +156,12 @@
         const ivpJobRecoveryScript = document.createElement('script');
         ivpJobRecoveryScript.src = 'js/recover-ivp-kcsygdc105-job.js?v=20261023-1';
         ivpJobRecoveryScript.async = false;
+        ivpJobRecoveryScript.onload = () => {
+          const ivpRenumberScript = document.createElement('script');
+          ivpRenumberScript.src = 'js/renumber-ivp-kcsygdc107.js?v=20261023-1';
+          ivpRenumberScript.async = false;
+          document.head.appendChild(ivpRenumberScript);
+        };
         document.head.appendChild(ivpJobRecoveryScript);
       };
       document.head.appendChild(bioscienceReferenceRepairScript);
