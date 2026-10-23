@@ -150,8 +150,14 @@
     duplicateJobGuardScript.async = false;
     duplicateJobGuardScript.onload = () => {
       const bioscienceReferenceRepairScript = document.createElement('script');
-      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20260917-2';
+      bioscienceReferenceRepairScript.src = 'js/bioscience-reference-repair.js?v=20261023-1';
       bioscienceReferenceRepairScript.async = false;
+      bioscienceReferenceRepairScript.onload = () => {
+        const ivpJobRecoveryScript = document.createElement('script');
+        ivpJobRecoveryScript.src = 'js/recover-ivp-kcsygdc105-job.js?v=20261023-1';
+        ivpJobRecoveryScript.async = false;
+        document.head.appendChild(ivpJobRecoveryScript);
+      };
       document.head.appendChild(bioscienceReferenceRepairScript);
     };
     document.head.appendChild(duplicateJobGuardScript);
