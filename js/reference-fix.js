@@ -131,6 +131,12 @@
     const plannedDaysOverrideScript = document.createElement('script');
     plannedDaysOverrideScript.src = 'js/planned-days-override.js?v=20261016-2';
     plannedDaysOverrideScript.async = false;
+    plannedDaysOverrideScript.onload = () => {
+      const conceptRecoveryScript = document.createElement('script');
+      conceptRecoveryScript.src = 'js/recover-kcgbocls101.js?v=20261023-1';
+      conceptRecoveryScript.async = false;
+      document.head.appendChild(conceptRecoveryScript);
+    };
     document.head.appendChild(plannedDaysOverrideScript);
   };
   document.head.appendChild(dayRateOverrideScript);
