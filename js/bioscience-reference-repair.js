@@ -1,20 +1,16 @@
 // ============================================================
-// bioscience-reference-repair.js — Reconcile the known SYGDC 104/105 split safely
+// bioscience-reference-repair.js — Keep Bioscience invoice 105 linked to its own quote
 // ============================================================
 
 (function () {
   if (window.__kirkstoneBioscienceReferenceRepairInstalled) return;
   window.__kirkstoneBioscienceReferenceRepairInstalled = true;
 
-  const OLD_INVOICE = 'KCSYGDC104';
-  const NEW_INVOICE = 'KCSYGDC105';
-  const NEW_QUOTE_REF = 'KCSYGDC105Q';
+  const TARGET_INVOICE = 'KCSYGDC105';
   let running = false;
   let completed = false;
 
-  function normalise(value) {
-    return String(value || '').trim().toUpperCase().replace(/\s+/g, '');
-  }
+  const normalise = value => String(value || '').trim().toUpperCase().replace(/\s+/g, '');
 
   function jobText(job) {
     return [
@@ -38,75 +34,84 @@
     return /bioscience/.test(text) && !/\bivp\b/.test(text);
   }
 
-  function isIvpJob(job) {
-    return /\bivp\b/.test(jobText(job));
+  function isBioscienceQuote(quote) {
+    const text = quoteText(quote);
+    return /bioscience/.test(text) && !/\bivp\b/.test(text);
   }
 
-  function jobRefs(job) {
-    const refs = [
-      job?.invoiceNumber,
-      job?.quoteRef,
-      job?.reference,
-      job?.invoiceSpreadsheetSnapshot?.invoiceNumber,
-      job?.quoteSnapshot?.quoteRef,
-      job?.quoteSnapshot?.reference,
-    ];
-    if (job?.quoteSnapshot?.refPrefix && job?.quoteSnapshot?.refNumber) {
-      refs.push(`KC${job.quoteSnapshot.refPrefix}${job.quoteSnapshot.refNumber}Q`);
-    }
-    return refs.filter(Boolean).map(normalise);
+  function invoiceForJob(job) {
+    return normalise(job?.invoiceNumber || job?.invoiceSpreadsheetSnapshot?.invoiceNumber || '');
   }
 
-  function jobHasNumber(job, invoiceNumber) {
-    const base = normalise(invoiceNumber);
-    const quote = `${base}Q`;
-    return jobRefs(job).some(ref => ref === base || ref === quote);
-  }
-
-  function quoteNumber(quote) {
+  function quoteRef(quote) {
     if (!quote?.refPrefix || !Number.isFinite(parseInt(quote.refNumber, 10))) return '';
-    return normalise(`KC${quote.refPrefix}${parseInt(quote.refNumber, 10)}`);
+    return `KC${String(quote.refPrefix).trim().toUpperCase()}${parseInt(quote.refNumber, 10)}Q`;
+  }
+
+  function totalPlanned(job) {
+    return (job?.plannedLines || []).reduce((sum, line) => sum
+      + (Number(line.singleChannelCount) || 0)
+      + (Number(line.multiChannel6Count) || 0)
+      + (Number(line.multiChannel8Count) || 0)
+      + (Number(line.multiChannel12Count) || 0)
+      + (Number(line.multiChannel16Count) || 0), 0);
   }
 
   function jobScore(job) {
     let score = 0;
+    if (invoiceForJob(job) === TARGET_INVOICE) score += 20000;
     if (job?.invoiceSpreadsheetAdded) score += 10000;
     if (job?.invoiceSpreadsheetLocked) score += 5000;
     if (job?.invoiceDateIssued) score += 2500;
     if (job?.invoiceDatePaid) score += 1000;
-    if (job?.invoiceSpreadsheetSettled) score += 500;
     score += (Array.isArray(job?.actualEntries) ? job.actualEntries.length : 0) * 50;
-    score += (Array.isArray(job?.parts) ? job.parts.length : 0) * 10;
-    if (job?.poNumber) score += 100;
-    if (job?.workCarriedOut) score += 50;
+    score += totalPlanned(job);
     return score;
   }
 
   function chooseCanonicalJob(jobs) {
     return [...jobs].sort((a, b) => {
-      const scoreDiff = jobScore(b) - jobScore(a);
-      if (scoreDiff) return scoreDiff;
+      const score = jobScore(b) - jobScore(a);
+      if (score) return score;
       return new Date(b?.updatedAt || b?.createdAt || 0).getTime()
         - new Date(a?.updatedAt || a?.createdAt || 0).getTime();
     })[0] || null;
   }
 
+  function chooseBioscienceQuote(quotes, canonicalJob) {
+    const direct = quotes.find(q => q?.id === canonicalJob?.quoteId && isBioscienceQuote(q));
+    if (direct) return direct;
+
+    const matches = quotes.filter(isBioscienceQuote);
+    const ref104 = matches.find(q => normalise(quoteRef(q)) === 'KCSYGDC104Q');
+    if (ref104) return ref104;
+    if (matches.length === 1) return matches[0];
+
+    return [...matches].sort((a, b) =>
+      new Date(b?.createdAt || 0).getTime() - new Date(a?.createdAt || 0).getTime()
+    )[0] || null;
+  }
+
+  function findInvoice105Conflict(bioscienceIds) {
+    return (typeof currentJobs !== 'undefined' && Array.isArray(currentJobs) ? currentJobs : [])
+      .find(job => job && !bioscienceIds.has(job.id) && invoiceForJob(job) === TARGET_INVOICE);
+  }
+
   async function archiveDuplicateJob(job, keep) {
     if (!job?.id) return;
-    const reason = `Duplicate Bioscience Nottingham SYGDC 104/105 record; kept ${keep?.id || 'canonical job'}`;
     const archived = {
       ...JSON.parse(JSON.stringify(job)),
       deletedAt: new Date().toISOString(),
-      deletedReason: reason,
+      deletedReason: `Duplicate Bioscience Nottingham record; kept ${keep?.id || 'canonical job'}`,
       originalJobId: job.id,
     };
 
     if (typeof isLocalPreviewMode !== 'undefined' && isLocalPreviewMode) {
       const key = 'kirkstone_deleted_jobs';
-      const existing = JSON.parse(localStorage.getItem(key) || '[]');
-      const filtered = existing.filter(item => item.id !== archived.id && item.originalJobId !== archived.id);
-      filtered.unshift(archived);
-      localStorage.setItem(key, JSON.stringify(filtered));
+      const existing = JSON.parse(localStorage.getItem(key) || '[]')
+        .filter(item => item.id !== archived.id && item.originalJobId !== archived.id);
+      existing.unshift(archived);
+      localStorage.setItem(key, JSON.stringify(existing));
       if (typeof StorageManager !== 'undefined' && StorageManager.deleteJob) StorageManager.deleteJob(job.id);
       return;
     }
@@ -119,62 +124,27 @@
     if (typeof StorageManager !== 'undefined' && StorageManager.deleteJob) StorageManager.deleteJob(job.id);
   }
 
-  function findSafe105Quote(bioscienceJobs, quotes, canonicalJob) {
-    const candidateIds = new Set(bioscienceJobs.map(job => job?.quoteId).filter(Boolean));
-
-    // Best case: the job already points at the quote that was partially moved to 105.
-    const directlyLinked = quotes.find(quote => quote?.id === canonicalJob?.quoteId && quoteNumber(quote) === NEW_INVOICE);
-    if (directlyLinked) return directlyLinked;
-
-    // Next prefer a 105 quote linked to any Bioscience duplicate record.
-    const linked = quotes.find(quote => candidateIds.has(quote?.id) && quoteNumber(quote) === NEW_INVOICE);
-    if (linked) return linked;
-
-    const matches105 = quotes.filter(quote => quoteNumber(quote) === NEW_INVOICE);
-    const bioscienceMatches = matches105.filter(quote => /bioscience/.test(quoteText(quote)));
-    if (bioscienceMatches.length === 1) return bioscienceMatches[0];
-
-    // Never attach an arbitrary 105 quote to Bioscience. The previous version
-    // did this when only one 105 quote existed, which could cross-link an IVP
-    // quote to the Bioscience job. Only a quote that is positively identified as
-    // Bioscience is safe to use here.
-    return null;
-  }
-
-  function findReal105JobConflict(bioscienceJobs) {
-    const bioscienceIds = new Set(bioscienceJobs.map(job => job?.id).filter(Boolean));
-    const others = (typeof currentJobs !== 'undefined' && Array.isArray(currentJobs) ? currentJobs : [])
-      .filter(job => job && !bioscienceIds.has(job.id) && jobHasNumber(job, NEW_INVOICE));
-    return others.find(job => !isBioscienceJob(job)) || null;
-  }
-
-  async function persistQuoteAs105(quote) {
-    if (!quote) return;
-    quote.refPrefix = 'SYGDC';
-    quote.refNumber = 105;
-    quote.updatedAt = new Date().toISOString();
-    if (quote.quoteRef) quote.quoteRef = NEW_QUOTE_REF;
-    if (quote.reference) quote.reference = NEW_QUOTE_REF;
-    if (typeof StorageManager !== 'undefined' && StorageManager.updateQuote) StorageManager.updateQuote(quote);
-    if ((typeof isLocalPreviewMode === 'undefined' || !isLocalPreviewMode)
-      && typeof updateQuoteInFirestore === 'function') {
-      await updateQuoteInFirestore(quote);
-    }
-  }
-
-  async function persistCanonicalJob(job) {
-    job.quoteRef = NEW_QUOTE_REF;
-    job.invoiceNumber = NEW_INVOICE;
+  async function persistCanonicalJob(job, quote) {
+    const ref = quoteRef(quote);
+    job.quoteId = quote.id;
+    if (ref) job.quoteRef = ref;
+    job.invoiceNumber = TARGET_INVOICE;
     job.updatedAt = new Date().toISOString();
 
     if (job.quoteSnapshot) {
-      job.quoteSnapshot.refPrefix = 'SYGDC';
-      job.quoteSnapshot.refNumber = 105;
-      job.quoteSnapshot.quoteRef = NEW_QUOTE_REF;
-      if (job.quoteSnapshot.reference) job.quoteSnapshot.reference = NEW_QUOTE_REF;
+      job.quoteSnapshot.id = quote.id;
+      job.quoteSnapshot.refPrefix = quote.refPrefix;
+      job.quoteSnapshot.refNumber = quote.refNumber;
+      if (ref) {
+        job.quoteSnapshot.quoteRef = ref;
+        if (job.quoteSnapshot.reference) job.quoteSnapshot.reference = ref;
+      }
+      if (quote.customerName) job.quoteSnapshot.customerName = quote.customerName;
+      if (quote.customerAddress) job.quoteSnapshot.customerAddress = quote.customerAddress;
     }
+
     if (job.invoiceSpreadsheetSnapshot) {
-      job.invoiceSpreadsheetSnapshot.invoiceNumber = NEW_INVOICE;
+      job.invoiceSpreadsheetSnapshot.invoiceNumber = TARGET_INVOICE;
     }
 
     if (typeof StorageManager !== 'undefined' && StorageManager.saveJob) StorageManager.saveJob(job);
@@ -187,77 +157,59 @@
   async function reconcile() {
     if (running || completed) return;
     if (typeof currentJobs === 'undefined' || !Array.isArray(currentJobs) || !currentJobs.length) return;
-    if (typeof currentQuotes === 'undefined' || !Array.isArray(currentQuotes)) return;
+    if (typeof currentQuotes === 'undefined' || !Array.isArray(currentQuotes) || !currentQuotes.length) return;
 
-    const bioscienceJobs = currentJobs.filter(job =>
-      isBioscienceJob(job) && (jobHasNumber(job, OLD_INVOICE) || jobHasNumber(job, NEW_INVOICE))
-    );
+    const bioscienceJobs = currentJobs.filter(isBioscienceJob);
     if (!bioscienceJobs.length) return;
 
-    const ivp104 = currentJobs.find(job => isIvpJob(job) && jobHasNumber(job, OLD_INVOICE));
-    if (!ivp104) return;
-
     const canonicalJob = chooseCanonicalJob(bioscienceJobs);
-    if (!canonicalJob) return;
+    const bioscienceQuote = chooseBioscienceQuote(currentQuotes, canonicalJob);
+    if (!canonicalJob || !bioscienceQuote) return;
 
-    // Only another JOB using 105 is a genuine invoice conflict. A saved quote at
-    // 105 is expected to share its base number with the eventual invoice and must
-    // not block the repair.
-    const jobConflict = findReal105JobConflict(bioscienceJobs);
-    if (jobConflict) {
-      const text = jobText(jobConflict);
-      const site = /\bivp\b/.test(text) ? 'Nottingham IVP' : (jobConflict.customerName || 'another job');
-      const message = `${NEW_INVOICE} is already attached to ${site}; Bioscience was not changed automatically`;
-      console.warn(message, jobConflict);
-      if (typeof showToast === 'function') showToast(message);
+    const ids = new Set(bioscienceJobs.map(job => job.id).filter(Boolean));
+    const conflict = findInvoice105Conflict(ids);
+    if (conflict) {
+      console.warn('KCSYGDC105 is already used by another invoice; Bioscience link was not changed.', conflict);
+      completed = true;
+      return;
+    }
+
+    const expectedRef = quoteRef(bioscienceQuote);
+    const alreadyCorrect = canonicalJob.quoteId === bioscienceQuote.id
+      && normalise(canonicalJob.invoiceNumber) === TARGET_INVOICE
+      && (!expectedRef || normalise(canonicalJob.quoteRef) === normalise(expectedRef));
+
+    if (alreadyCorrect && bioscienceJobs.length === 1) {
       completed = true;
       return;
     }
 
     running = true;
     try {
-      let quote105 = findSafe105Quote(bioscienceJobs, currentQuotes, canonicalJob);
-      const linkedQuote = currentQuotes.find(quote => quote?.id === canonicalJob.quoteId) || null;
-
-      if (!quote105 && linkedQuote) {
-        // No saved 105 quote exists, so move the Bioscience quote that this job
-        // already belongs to. This keeps quote and invoice numbers aligned.
-        await persistQuoteAs105(linkedQuote);
-        quote105 = linkedQuote;
-      } else if (quote105) {
-        await persistQuoteAs105(quote105);
-        canonicalJob.quoteId = quote105.id;
-      }
-
-      await persistCanonicalJob(canonicalJob);
+      await persistCanonicalJob(canonicalJob, bioscienceQuote);
 
       const duplicates = bioscienceJobs.filter(job => job.id !== canonicalJob.id);
-      for (const duplicate of duplicates) {
-        await archiveDuplicateJob(duplicate, canonicalJob);
-      }
+      for (const duplicate of duplicates) await archiveDuplicateJob(duplicate, canonicalJob);
 
       if (typeof refreshQuoteHistory === 'function') await refreshQuoteHistory();
       if (typeof refreshJobSheets === 'function') await refreshJobSheets();
       if (typeof renderInvoiceSpreadsheet === 'function') renderInvoiceSpreadsheet();
       if (typeof renderAnnualSummary === 'function') renderAnnualSummary();
+
       if (typeof showToast === 'function') {
-        showToast(`Bioscience Nottingham corrected to ${NEW_INVOICE}${duplicates.length ? `; ${duplicates.length} duplicate job moved to Recently Deleted` : ''}`);
+        showToast('Bioscience Nottingham invoice 105 relinked to its own saved quote');
       }
       completed = true;
     } catch (error) {
-      console.error('Could not reconcile Bioscience Nottingham to KCSYGDC105', error);
-      if (typeof showToast === 'function') showToast('Could not reconcile Bioscience Nottingham reference automatically');
+      console.error('Could not repair Bioscience Nottingham quote link', error);
+      if (typeof showToast === 'function') showToast('Could not repair Bioscience Nottingham quote link');
     } finally {
       running = false;
     }
   }
 
-  function install() {
-    reconcile();
-  }
-
-  if (document.readyState === 'complete') install();
-  else window.addEventListener('load', install, { once: true });
+  if (document.readyState === 'complete') reconcile();
+  else window.addEventListener('load', reconcile, { once: true });
 
   const cloudStatus = document.getElementById('cloudStatus');
   if (cloudStatus) {
