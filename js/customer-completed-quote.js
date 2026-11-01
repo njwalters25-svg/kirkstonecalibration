@@ -74,6 +74,11 @@ function openCustomerCompletedQuote(jobId) {
   const calc = calculateJobSheet(job);
   const pipetteRows = getCompletedQuotePipetteRows(job);
   const partRows = getCompletedQuotePartRows(job);
+  // Only customer-facing fields belong in this document.
+  const repairRows = (Array.isArray(job.repairItems) ? job.repairItems : []).map(item => ({
+    description: String(item.description || ''),
+    price: parseFloat(item.price) || 0,
+  }));
   const settings = (typeof currentSettings !== 'undefined' && currentSettings)
     || job.settingsSnapshot
     || DEFAULT_SETTINGS;
@@ -89,7 +94,8 @@ function openCustomerCompletedQuote(jobId) {
   const vatNumber = settings.vatNumber || '';
   const pipetteTotal = pipetteRows.reduce((sum, row) => sum + row.total, 0);
   const partsTotal = partRows.reduce((sum, row) => sum + row.total, 0);
-  const subtotal = pipetteTotal + partsTotal;
+  const repairTotal = repairRows.reduce((sum, row) => sum + row.price, 0);
+  const subtotal = pipetteTotal + partsTotal + repairTotal;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : subtotal * 0.20;
   const grandTotal = subtotal + vatAmount;
 
@@ -204,6 +210,15 @@ function openCustomerCompletedQuote(jobId) {
       <tbody>${partTableRows}</tbody>
     </table>
     <div class="section-total"><span>Total parts</span><span>${formatCurrency(partsTotal)}</span></div>
+
+    ${repairRows.length ? `
+    <h2>Repairs / additional work</h2>
+    <table>
+      <thead><tr><th>Work carried out</th><th class="num">Customer price</th></tr></thead>
+      <tbody>${repairRows.map(row => `<tr><td>${escapeHtml(row.description)}</td><td class="num">${formatCurrency(row.price)}</td></tr>`).join('')}</tbody>
+    </table>
+    <div class="section-total"><span>Total repairs / additional work</span><span>${formatCurrency(repairTotal)}</span></div>
+    ` : ''}
 
     <div class="totals">
       <div class="total-row"><span>Subtotal</span><strong>${formatCurrency(subtotal)}</strong></div>

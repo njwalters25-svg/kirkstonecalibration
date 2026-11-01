@@ -11,7 +11,7 @@
     const job = typeof getJobById === 'function' ? getJobById(jobId) : null;
     if (!job) return;
     job.repairItems = getRepairItems(job);
-    job.repairItems.push({ id: crypto.randomUUID(), description: '', price: 0 });
+    job.repairItems.push({ id: crypto.randomUUID(), description: '', price: 0, cost: 0 });
     renderJobSheets(currentJobs);
   };
 
@@ -21,8 +21,8 @@
     job.repairItems = getRepairItems(job);
     const item = job.repairItems.find(row => row.id === itemId);
     if (!item) return;
-    item[field] = field === 'price' ? (parseFloat(value) || 0) : String(value || '');
-    if (field === 'price') renderJobSheets(currentJobs);
+    item[field] = (field === 'price' || field === 'cost') ? (parseFloat(value) || 0) : String(value || '');
+    if (field === 'price' || field === 'cost') renderJobSheets(currentJobs);
   };
 
   window.deleteJobRepairItem = function (jobId, itemId) {
@@ -32,7 +32,7 @@
     renderJobSheets(currentJobs);
   };
 
-  // Add repair revenue into the normal job totals so invoice spreadsheet,
+  // Add repair revenue and internal cost into the normal job totals so invoice spreadsheet,
   // profit, VAT and completed-job figures all receive the same total.
   if (typeof calculateJobSheet === 'function') {
     const previousCalculateJobSheet = calculateJobSheet;
@@ -40,10 +40,11 @@
       const base = previousCalculateJobSheet(job);
       const roundMoney = value => Math.round(((parseFloat(value) || 0) + Number.EPSILON) * 100) / 100;
       const repairRevenue = getRepairItems(job).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
-      if (!repairRevenue) return { ...base, repairRevenue: 0 };
+      const repairCost = getRepairItems(job).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+      if (!repairRevenue && !repairCost) return { ...base, repairRevenue: 0, repairCost: 0 };
 
       const actualRevenue = (parseFloat(base.actualRevenue) || 0) + repairRevenue;
-      const totalCosts = parseFloat(base.totalCosts) || 0;
+      const totalCosts = (parseFloat(base.totalCosts) || 0) + repairCost;
       const profit = actualRevenue - totalCosts;
       const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
       const taxAt40 = Math.max(profit, 0) * 0.40;
@@ -52,6 +53,8 @@
       return {
         ...base,
         repairRevenue: roundMoney(repairRevenue),
+        repairCost: roundMoney(repairCost),
+        totalCosts: roundMoney(totalCosts),
         actualRevenue: roundMoney(actualRevenue),
         vatAmount: roundMoney(vatAmount),
         revenueIncVat: roundMoney(actualRevenue + vatAmount),
@@ -69,7 +72,7 @@
     return `
       <div class="job-repair-editor">
         <h3>Repairs / additional work</h3>
-        <div class="field-hint" style="margin-bottom:.55rem;">Add the work actually carried out and the customer price. Press Save Job Sheet when finished.</div>
+        <div class="field-hint" style="margin-bottom:.55rem;">Add the work actually carried out, customer price and internal cost (not shown to the customer). Press Save Job Sheet when finished.</div>
         <div class="job-repair-list">
           ${items.map(item => `
             <div class="job-repair-row" data-repair-id="${escapeHtml(item.id)}">
@@ -78,8 +81,12 @@
                 <input type="text" value="${escapeHtml(item.description || '')}" placeholder="e.g. Replaced piston seal and serviced pipette" onchange="updateJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}','description',this.value)">
               </div>
               <div class="form-group job-repair-price">
-                <label>Price</label>
+                <label>Customer price</label>
                 <div class="job-repair-currency"><span aria-hidden="true">£</span><input type="number" min="0" step="0.01" value="${parseFloat(item.price) || 0}" onchange="updateJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}','price',this.value)"></div>
+              </div>
+              <div class="form-group job-repair-cost">
+                <label>Internal cost</label>
+                <div class="job-repair-currency"><span aria-hidden="true">£</span><input type="number" min="0" step="0.01" value="${parseFloat(item.cost) || 0}" onchange="updateJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}','cost',this.value)"></div>
               </div>
               <button type="button" class="btn-small btn-delete" onclick="deleteJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}')">Remove</button>
             </div>`).join('')}
@@ -107,9 +114,9 @@
     const style = document.createElement('style');
     style.id = 'jobRepairStyles';
     style.textContent = `
-      .job-repair-editor{margin:1rem 0}.job-repair-row{display:grid;grid-template-columns:minmax(0,1fr) 170px auto;gap:.75rem;align-items:end;padding:.75rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.6rem}
+      .job-repair-editor{margin:1rem 0}.job-repair-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px auto;gap:.75rem;align-items:end;padding:.75rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.6rem}
       .job-repair-currency{display:flex;align-items:center;width:100%;border:1px solid #cbd5e1;border-radius:6px;background:#fff;overflow:hidden}.job-repair-currency>span{flex:0 0 auto;padding:0 .15rem 0 .7rem;line-height:1}.job-repair-currency>input{flex:1 1 auto;min-width:0;border:0!important;box-shadow:none!important;padding-left:.35rem!important;background:transparent!important}.job-repair-currency>input:focus{outline:none}
-      @media(max-width:650px){.job-repair-row{grid-template-columns:1fr}.job-repair-row .btn-delete{justify-self:start}}
+      @media(max-width:850px){.job-repair-row{grid-template-columns:1fr}.job-repair-row .btn-delete{justify-self:start}}
     `;
     document.head.appendChild(style);
   }
