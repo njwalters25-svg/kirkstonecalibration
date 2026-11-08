@@ -127,8 +127,40 @@ function installInvoiceSpreadsheetJobButtons() {
     const locked=document.createElement('button');locked.type='button';locked.className='btn-small';locked.dataset.invoiceSpreadsheetAction='locked';locked.textContent='Invoice Spreadsheet: Locked';locked.disabled=true;actions.appendChild(locked);
   });
 }
+const invoiceSpreadsheetScrollStates=new WeakMap();
+function invoiceSpreadsheetScrollPosition(container) {
+  const previous=container.querySelector('.invoice-table-wrap');
+  if(!previous)return ()=>{};
+  const pending=invoiceSpreadsheetScrollStates.get(container);
+  const top=pending?.wrap===previous && previous.scrollTop===pending.appliedTop ? pending.top : previous.scrollTop;
+  const left=pending?.wrap===previous && previous.scrollLeft===pending.appliedLeft ? pending.left : previous.scrollLeft;
+  const pageX=window.scrollX,pageY=window.scrollY;
+  return ()=>{
+    const wrap=container.querySelector('.invoice-table-wrap');if(!wrap)return;
+    const state={wrap,top,left,appliedTop:wrap.scrollTop,appliedLeft:wrap.scrollLeft};
+    invoiceSpreadsheetScrollStates.set(container,state);
+    const restore=()=>{
+      if(invoiceSpreadsheetScrollStates.get(container)!==state || !wrap.isConnected)return;
+      // Do not undo scrolling performed by the user after the save.
+      if(wrap.scrollTop===state.appliedTop)wrap.scrollTop=top;
+      if(wrap.scrollLeft===state.appliedLeft)wrap.scrollLeft=left;
+      state.appliedTop=wrap.scrollTop;state.appliedLeft=wrap.scrollLeft;
+    };
+    restore();
+    if(window.scrollX!==pageX || window.scrollY!==pageY)window.scrollTo({left:pageX,top:pageY,behavior:'instant'});
+    // Keep the intended position through repeated renders while the existing
+    // wage decorator appends columns and restores the table's full width.
+    if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{
+      restore();setTimeout(()=>{
+        restore();
+        if(invoiceSpreadsheetScrollStates.get(container)===state)invoiceSpreadsheetScrollStates.delete(container);
+      },0);
+    });
+  };
+}
 function renderInvoiceSpreadsheet() {
   const container=document.getElementById('invoiceSpreadsheet'); if(!container)return;
+  const restoreScroll=invoiceSpreadsheetScrollPosition(container);
   const jobs=getInvoiceSpreadsheetJobs(); if(!jobs.length){container.innerHTML='<p class="empty-state">No jobs have been added yet. Use the “Add to Invoice Spreadsheet” button on a job sheet.</p>';return;}
   const rows=jobs.map(job=>{
     const values=getInvoiceSpreadsheetValues(job), daysToPay=invoiceSpreadsheetDaysBetween(job.invoiceDateIssued,job.invoiceDatePaid), clinicRepair=job.clinicRepair||'';
@@ -145,6 +177,7 @@ function renderInvoiceSpreadsheet() {
   container.innerHTML=`<div class="invoice-spreadsheet-header"><div><h2>${escapeHtml(invoiceSpreadsheetPeriodLabel())}</h2><p>${jobs.length} job${jobs.length!==1?'s':''} · ${liveCount} live · ${lockedCount} completed/locked · <span class="invoice-settled-summary">Settled: ${settledCount}</span> · <span class="invoice-outstanding-summary">Outstanding: ${outstandingCount}</span></p></div></div>
     <div class="invoice-table-wrap"><table class="invoice-table"><thead><tr><th>Company</th><th>Invoice number</th><th>Amount exc vat</th><th>Amount inc vat</th><th class="invoice-highlight-heading">VAT</th><th class="invoice-highlight-heading">Cost</th><th>Pre tax profit</th><th class="invoice-highlight-heading">Pension</th><th class="invoice-highlight-heading">Tax</th><th>Post Tax Profit</th><th>Number of days</th><th>Clinic/Repair</th><th>Date issued</th><th>Date paid</th><th>Days taken to pay</th><th class="invoice-spacer"></th><th>Mileage</th><th class="invoice-highlight-heading">Fuel</th><th class="invoice-highlight-heading">Shelley pay</th><th class="invoice-highlight-heading">Shelley mileage</th><th class="invoice-highlight-heading" title="Already included in Cost">Shelley total</th><th>Paid Off</th></tr></thead>
     <tbody>${rows}</tbody><tfoot><tr><th colspan="2">TOTAL</th><th class="invoice-money">${invoiceSpreadsheetMoney(totals.excVat)}</th><th class="invoice-money">${invoiceSpreadsheetMoney(totals.incVat)}</th><th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.vat)}</th><th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.cost)}</th><th class="invoice-money">${invoiceSpreadsheetMoney(totals.preTax)}</th><th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.pension)}</th><th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.tax)}</th><th class="invoice-money">${invoiceSpreadsheetMoney(totals.postTax)}</th><th class="invoice-number">${totals.days}</th><th colspan="5"></th><th class="invoice-number">${invoiceSpreadsheetRound(totals.mileage)}</th><th class="invoice-money invoice-highlight">${invoiceSpreadsheetMoney(totals.fuel)}</th><th class="invoice-money invoice-highlight" data-shelley-total="pay">${invoiceSpreadsheetMoney(totals.shelleyPay)}</th><th class="invoice-money invoice-highlight" data-shelley-total="mileage">${invoiceSpreadsheetMoney(totals.shelleyMileage)}</th><th class="invoice-money invoice-highlight" data-shelley-total="total">${invoiceSpreadsheetMoney(totals.shelleyCost)}</th><th></th></tr></tfoot></table></div><p class="field-hint">Shelley pay and mileage are already included in Cost. A dash means the breakdown was not recorded when that invoice was locked; totals include recorded amounts only.</p>`;
+  restoreScroll();
 }
 function installInvoiceSpreadsheetStyles(){
   if(document.getElementById('invoiceSpreadsheetStyles'))return;const style=document.createElement('style');style.id='invoiceSpreadsheetStyles';style.textContent=`
