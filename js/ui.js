@@ -689,6 +689,8 @@ function calculateJobSheet(job) {
   const reportedEmployeeMiles = Number(job.employeeExpenses?.mileageMiles);
   const employeeMileageMiles = Number.isFinite(reportedEmployeeMiles) && reportedEmployeeMiles > 0 ? reportedEmployeeMiles : 0;
   const employeeMileageCost = roundMoney(employeeMileageMiles * 0.55);
+  const dayPay = typeof KirkstonePlanning !== 'undefined' ? KirkstonePlanning.shelleyDayPay(job)
+    : {applies:false,days:0,cost:0,otherWorkerCost:parseFloat(costs.secondPerson)||0};
   const stickerCostPerPipette = parseFloat(
     job.stickerCostPerPipette
     ?? job.quotedAssumptions?.stickerCostPerPipette
@@ -703,9 +705,9 @@ function calculateJobSheet(job) {
     (parseFloat(costs.fuel) || 0) +
     stickerCost +
     (parseFloat(costs.shipping) || 0) +
-    (parseFloat(costs.secondPerson) || 0) +
+    dayPay.otherWorkerCost +
     (parseFloat(costs.other) || 0);
-  const totalCosts = mileageCost + employeeMileageCost + otherCosts + partsCost;
+  const totalCosts = mileageCost + employeeMileageCost + dayPay.cost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
   const profitMarginPercent = actualRevenue > 0 ? (profit / actualRevenue) * 100 : 0;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
@@ -726,6 +728,10 @@ function calculateJobSheet(job) {
     mileageRatePence,
     employeeMileageMiles,
     employeeMileageCost,
+    employeeDayPayApplies: dayPay.applies,
+    employeePaidDays: dayPay.days,
+    employeeDayPayCost: dayPay.cost,
+    otherWorkerCost: dayPay.otherWorkerCost,
     stickerCostPerPipette,
     stickerCost: roundMoney(stickerCost),
     vatAmount: roundMoney(vatAmount),
@@ -845,7 +851,8 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'fuel', 'Other travel cost', job.costs?.fuel, true)}
             ${renderJobCalculatedCost('Extra parts cost', calc.partsCost, true)}
             ${renderJobCostInput(job.id, 'shipping', 'Shipping', job.costs?.shipping, true)}
-            ${renderJobCostInput(job.id, 'secondPerson', 'Second person', job.costs?.secondPerson, true)}
+            ${!calc.employeeDayPayApplies || KirkstonePlanning.participants(job).includes('phil') ? renderJobCostInput(job.id, 'secondPerson', 'Second person', calc.otherWorkerCost ?? job.costs?.secondPerson, true) : ''}
+            ${calc.employeeDayPayApplies ? renderJobCalculatedCost(`Shelley pay: ${calc.employeePaidDays} days @ £126.96`, calc.employeeDayPayCost, true) : ''}
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other, true)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
             ${renderJobCalculatedCost(`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost, true)}

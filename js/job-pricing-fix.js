@@ -60,9 +60,9 @@
         (parseFloat(costs.fuel) || 0) +
         (parseFloat(base.stickerCost) || 0) +
         (parseFloat(costs.shipping) || 0) +
-        (parseFloat(costs.secondPerson) || 0) +
+        (parseFloat(base.otherWorkerCost ?? costs.secondPerson) || 0) +
         (parseFloat(costs.other) || 0);
-      const totalCosts = (parseFloat(base.mileageCost) || 0) + (parseFloat(base.employeeMileageCost) || 0) + otherCosts + partsCost;
+      const totalCosts = (parseFloat(base.mileageCost) || 0) + (parseFloat(base.employeeMileageCost) || 0) + (parseFloat(base.employeeDayPayCost) || 0) + otherCosts + partsCost;
       const profit = actualRevenue - totalCosts;
       const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
       const taxAt40 = Math.max(profit, 0) * 0.40;

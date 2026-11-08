@@ -1069,7 +1069,9 @@ function exportJobSheetCsv(jobId) {
   add(['Sticker cost', calc.stickerCost]);
   add(['Extra parts cost', calc.partsCost]);
   add(['Shipping', job.costs?.shipping || 0]);
-  add(['Second person', job.costs?.secondPerson || 0]);
+  add(['Second person', calc.otherWorkerCost ?? (job.costs?.secondPerson || 0)]);
+  add(['Shelley paid work days', calc.employeePaidDays || 0]);
+  add(['Shelley pay @ £126.96 per day', calc.employeeDayPayCost || 0]);
   add(['Other', job.costs?.other || 0]);
   add(['Mileage miles', job.costs?.mileageMiles || 0]);
   add([`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost]);

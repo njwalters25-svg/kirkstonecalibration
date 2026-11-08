@@ -59,6 +59,7 @@ window.KirkstoneWork = (() => {
       +'<p><strong>Shelley — work carried out</strong><br>'+esc(job.employeeWorkCarriedOut || '').replace(/\n/g,'<br>')+'</p>'
       +'<div><strong>Shelley — reported expenses</strong><p>'+Object.entries({mileageMiles:'Mileage (miles)',hotel:'Hotel (£)',food:'Meals (£)',travel:'Other travel / parking (£)',other:'Other expenses (£)'}).map(([key,label])=>esc(label)+': '+esc(job.employeeExpenses?.[key] ?? 0)).join(' · ')+'</p><p class="field-hint">Shelley mileage at 55p per mile: '+formatCurrency(calculateJobSheet(job).employeeMileageCost || 0)+'. Included automatically in job costs. Other reported expenses remain separate for review.</p></div>'
       +'<p><strong>Shelley — work notes</strong><br>'+esc(job.employeeNotes || '').replace(/\n/g,'<br>')+'</p>'
+      +(P.participants(job).includes('shelley')?field(job,'shelleyPaidDays','Shelley paid work days (blank = automatic)','number',job.shelleyPaidDays ?? '', 'min="0" step="0.5"')+'<p>Shelley pay: '+esc(calculateJobSheet(job).employeePaidDays || 0)+' days × £126.96 = '+formatCurrency(calculateJobSheet(job).employeeDayPayCost || 0)+'. Automatic days use joining dates, then available days, then dated daily work entries. Save Job Sheet after changes.</p>':'')
       +'<p class="field-hint">Save the Job Sheet to keep assignment, travel and calendar changes.</p>'
       +'<div class="planner-actions"><button class="btn-small" data-work-action="route">Calculate travel</button>'
       +'<button class="btn-small" data-work-action="save">Save Job Sheet</button></div>'
@@ -81,7 +82,7 @@ window.KirkstoneWork = (() => {
       +P.labels.map(label=>'<span>'+label+'</span>').join('')+'<span></span></div>'
       +(job.actualEntries || []).map(row=>renderJobEntryRow(job,row)).join('')+'</div>'
       +'<button class="btn-small" data-work-action="add-day">Add day / service row</button><h3>Job costs and expenses</h3><div class="planner-fields">'
-      +Object.entries(safe.costs).map(([key,value])=>'<label>'+costNames[key]+(key==='mileageMiles'?'':' (£)')+'<input data-work-cost="'+key+'" type="number" min="0" step="0.01" value="'+value+'"></label>').join('')+'</div>'
+      +Object.entries(safe.costs).filter(([key])=>key!=='secondPerson'||!calculateJobSheet(job).employeeDayPayApplies||P.participants(job).includes('phil')).map(([key,value])=>'<label>'+costNames[key]+(key==='mileageMiles'?'':' (£)')+'<input data-work-cost="'+key+'" type="number" min="0" step="0.01" value="'+value+'"></label>').join('')+'</div>'
       +'<div class="work-cost-totals"><span>Parts cost '+formatCurrency(safe.calculatedCosts.parts)+'</span><span>Mileage cost '+formatCurrency(safe.calculatedCosts.mileage)+'</span><span>Sticker costs '+formatCurrency(safe.calculatedCosts.stickers)+'</span><strong>Total job costs '+formatCurrency(safe.calculatedCosts.total)+'</strong></div>'
       +'<h3>Parts used</h3>'+safe.parts.map(part=>'<div class="work-part-row"><label>Part<select data-work-part="catalogPartId" data-part-id="'+esc(part.id)+'">'
         +catalog.map(item=>'<option value="'+esc(item.id)+'" '+(item.id===part.catalogPartId?'selected':'')+'>'+esc(typeof getCatalogPartName==='function'?getCatalogPartName(item):item.name)+'</option>').join('')
@@ -136,7 +137,7 @@ window.KirkstoneWork = (() => {
       +(P.joiningDates(safe).length?'<p>Shelley joining: '+P.joiningDates(safe).join(', ')+'</p>':safe.shelleyAvailableDays !== null?'<p>Shelley available: '+safe.shelleyAvailableDays+' days (attendance dates not set)</p>':'')
       +'<h3>Daily work</h3><table><tr><th>Date</th><th>Service level</th>'+P.labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>'
       +safe.actualEntries.map(row=>'<tr><td>'+esc(row.date)+'</td><td>'+esc(safe.serviceLevels.find(l=>l.id===row.serviceLevelId)?.name || row.serviceLevelId)+'</td>'+P.fields.map(k=>'<td>'+row[k]+'</td>').join('')+'</tr>').join('')+'</table>'
-      +'<h3>Job expenses</h3>'+Object.entries(safe.costs).map(([key,value])=>'<p>'+costNames[key]+': '+(key==='mileageMiles'?value:formatCurrency(value))+'</p>').join('')
+      +'<h3>Job expenses</h3>'+Object.entries(safe.costs).filter(([key])=>key!=='secondPerson'||!calculateJobSheet(job).employeeDayPayApplies||P.participants(job).includes('phil')).map(([key,value])=>'<p>'+costNames[key]+': '+(key==='mileageMiles'?value:formatCurrency(value))+'</p>').join('')
       +'<h3>Parts used</h3>'+safe.parts.map(p=>'<p>'+esc(p.name)+' × '+p.quantity+' · Purchase cost '+formatCurrency(p.costPerUnit)+'</p>').join('')
       +'<p><strong>Total job costs: '+formatCurrency(safe.calculatedCosts.total)+'</strong></p><h3>Work carried out</h3><pre>'+esc(safe.workCarriedOut)+'</pre><h3>Work notes</h3><pre>'+esc(safe.operationalNotes)+'</pre></body></html>';
     const url=URL.createObjectURL(new Blob([html],{type:'text/html'}));window.open(url,'_blank','noopener');setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -160,6 +161,8 @@ window.KirkstoneWork = (() => {
     }else if(name==='secondPersonKind'){
       job.secondPerson=value!=='none';job.secondPersonKind=value==='none'?'phil':value;
       renderJobSheets(currentJobs);
+    }else if(name==='shelleyPaidDays'){
+      job.shelleyPaidDays=value===''?null:Math.max(0,Number(value)||0);renderJobSheets(currentJobs);
     }else if(['scheduleStartDate','scheduleEndDate','scheduleStatus','travelOriginPostcode','destinationPostcode','workCarriedOut','operationalNotes','employeeInstructions'].includes(name)){
       job[name]=value;
       if(name==='travelOriginPostcode'||name==='destinationPostcode'){job.travelNeedsReview=true;delete job.travelPlan;}
