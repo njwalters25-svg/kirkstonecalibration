@@ -175,6 +175,7 @@ function renderKirkstoneJobSummary(job) {
     ['Second person', parseFloat(costs.secondPerson) || 0],
     ['Other', parseFloat(costs.other) || 0],
     [`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost || 0],
+    [`Shelley mileage: ${calc.employeeMileageMiles || 0} miles @ 55p`, calc.employeeMileageCost || 0],
     ['Sticker total', calc.stickerCost || 0],
   ];
 
@@ -226,6 +227,7 @@ function toggleKirkstoneJobSummary(jobId) {
     ['Second person', parseFloat(costs.secondPerson) || 0],
     ['Other', parseFloat(costs.other) || 0],
     [`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost || 0],
+    [`Shelley mileage: ${calc.employeeMileageMiles || 0} miles @ 55p`, calc.employeeMileageCost || 0],
     ['Sticker total', calc.stickerCost || 0],
   ];
 
