@@ -179,11 +179,11 @@ async function initialiseFirebaseData() {
   renderQuoteHistory(currentQuotes, currentSettings);
 
   try {
-    await signInAnonymously();
+    await signInWithHostingAccount();
     isSignedIn = true;
   } catch (error) {
     isSignedIn = false;
-    console.warn('Firebase auth unavailable; trying Firestore directly', error);
+    throw error;
   }
 
   const cloudSettings = await loadSettingsFromFirestore();
@@ -1532,4 +1532,5 @@ function generateCustomerQuoteWindow(result, input, quoteSettings = currentSetti
     showToast('Pop-up blocked — please allow pop-ups for this site');
   }
 }
+
 

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kirkstone Calibration — Employee</title>
+<link rel="stylesheet" href="../css/styles.css"><link rel="stylesheet" href="../css/work-planner.css"><link rel="stylesheet" href="employee.css">
+<script src="employee.js" defer></script></head>
+<body><header class="employee-header"><h1>Kirkstone Calibration</h1><p>Shelley’s work calendar and job sheets</p></header>
+<main class="employee-main"><p id="status" role="status">Connecting…</p>
+<nav class="employee-nav" aria-label="Employee sections"><button type="button" id="calendarTab">Calendar</button><button type="button" id="jobsTab">My job sheets</button><button type="button" id="refresh">Refresh</button></nav>
+<section id="calendarPanel"><div class="employee-nav"><button type="button" id="previousMonth">Previous month</button><h2 id="monthTitle"></h2><button type="button" id="nextMonth">Next month</button></div><div id="calendar"></div><div id="agenda"></div></section>
+<section id="jobsPanel" hidden><h2>My job sheets</h2><div id="jobSheets"></div></section>
+</main></body></html>

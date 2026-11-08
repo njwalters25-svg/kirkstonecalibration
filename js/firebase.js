@@ -59,12 +59,33 @@ function isMobile() {
   return /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-function signInAnonymously() {
-  if (isLocalPreviewMode) return Promise.resolve(localPreviewUser);
-  requireFirebase(auth);
-  return auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-    .catch(() => null)
-    .then(() => auth.signInAnonymously());
+// Apache performs the visible login. Only the server can assert the owner role.
+let hostingSignInPending = null;
+async function signInWithHostingAccount() {
+  if (isLocalPreviewMode) return localPreviewUser;
+  if (hostingSignInPending) return hostingSignInPending;
+  hostingSignInPending = (async () => {
+    const endpoint = 'api/owner-token.php';
+    const options = { credentials: 'same-origin', cache: 'no-store' };
+    const session = await fetch(endpoint, options);
+    if (!session.ok) throw new Error('Your hosting account could not be verified.');
+    const { csrf } = await session.json();
+    const response = await fetch(endpoint, { ...options, method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: '{}' });
+    if (!response.ok) throw new Error('Your hosting account could not be verified.');
+    const { token } = await response.json();
+    await requireFirebase(auth).setPersistence(firebase.auth.Auth.Persistence.NONE);
+    return auth.signInWithCustomToken(token);
+  })();
+  try { return await hostingSignInPending; } finally { hostingSignInPending = null; }
+}
+
+if (!isLocalPreviewMode) {
+  // Rules bound each bridge authentication to an hour; refresh only through Apache.
+  setInterval(() => signInWithHostingAccount().catch(() => {
+    auth?.signOut();
+    if (typeof setCloudStatus === 'function') setCloudStatus('error', 'Login could not be refreshed. Reload to reconnect.');
+  }), 40 * 60 * 1000);
 }
 
 function signInWithGoogle() {
@@ -147,7 +168,15 @@ function getJobsRef() {
 
 async function saveJobToFirestore(job) {
   if (isLocalPreviewMode || !job.id) return;
-  await getJobsRef().doc(job.id).set(job, { merge: true });
+  const ref = getJobsRef().doc(job.id);
+  await requireFirebase(db).runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    if (snapshot.exists && ((snapshot.data().employeeRevision || '') !== (job.employeeRevision || '')
+      || (snapshot.data().employeeUpdatedAt || '') !== (job.employeeUpdatedAt || ''))) {
+      throw new Error('Shelley has updated this job. Refresh the job sheets before saving your changes.');
+    }
+    transaction.set(ref, job, { merge: true });
+  });
 }
 
 async function loadJobsFromFirestore() {
@@ -193,3 +222,4 @@ async function loadSettingsFromFirestore() {
   }
   return null;
 }
+

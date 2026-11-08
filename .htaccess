@@ -1,4 +1,10 @@
 AuthType Basic
 AuthName "Kirkstone Calibration"
-AuthUserFile /home/simpxlow/quotes.kirkstonecalibration.co.uk/.htpasswd
-Require valid-user
+# Preserve the existing cPanel-managed password file outside the web root.
+AuthUserFile "/home/simpxlow/.htpasswds/quotes.kirkstonecalibration.co.uk/passwd"
+Require user Danwalters
+Options -Indexes
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+Header always set X-Content-Type-Options "nosniff"
