@@ -1073,6 +1073,8 @@ function exportJobSheetCsv(jobId) {
   add(['Other', job.costs?.other || 0]);
   add(['Mileage miles', job.costs?.mileageMiles || 0]);
   add([`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost]);
+  add(['Shelley mileage miles', calc.employeeMileageMiles || 0]);
+  add(['Shelley mileage @ 55p', calc.employeeMileageCost || 0]);
   add(['Total costs', calc.totalCosts]);
   add([]);
   add(['Invoice amount inc VAT', calc.revenueIncVat]);

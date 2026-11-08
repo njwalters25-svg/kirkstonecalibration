@@ -686,6 +686,9 @@ function calculateJobSheet(job) {
   const costs = job.costs || {};
   const mileageRatePence = normalizeMileageRatePence(job.mileageRatePence ?? settings.mileageRatePence ?? 55);
   const mileageCost = (parseFloat(costs.mileageMiles) || 0) * (mileageRatePence / 100);
+  const reportedEmployeeMiles = Number(job.employeeExpenses?.mileageMiles);
+  const employeeMileageMiles = Number.isFinite(reportedEmployeeMiles) && reportedEmployeeMiles > 0 ? reportedEmployeeMiles : 0;
+  const employeeMileageCost = roundMoney(employeeMileageMiles * 0.55);
   const stickerCostPerPipette = parseFloat(
     job.stickerCostPerPipette
     ?? job.quotedAssumptions?.stickerCostPerPipette
@@ -702,7 +705,7 @@ function calculateJobSheet(job) {
     (parseFloat(costs.shipping) || 0) +
     (parseFloat(costs.secondPerson) || 0) +
     (parseFloat(costs.other) || 0);
-  const totalCosts = mileageCost + otherCosts + partsCost;
+  const totalCosts = mileageCost + employeeMileageCost + otherCosts + partsCost;
   const profit = actualRevenue - totalCosts;
   const profitMarginPercent = actualRevenue > 0 ? (profit / actualRevenue) * 100 : 0;
   const vatAmount = job.quoteSnapshot?.vatExempt ? 0 : actualRevenue * 0.20;
@@ -721,6 +724,8 @@ function calculateJobSheet(job) {
     partsCost: roundMoney(partsCost),
     actualRevenue: roundMoney(actualRevenue),
     mileageRatePence,
+    employeeMileageMiles,
+    employeeMileageCost,
     stickerCostPerPipette,
     stickerCost: roundMoney(stickerCost),
     vatAmount: roundMoney(vatAmount),
@@ -844,6 +849,7 @@ function renderJobSheets(jobs) {
             ${renderJobCostInput(job.id, 'other', 'Other', job.costs?.other, true)}
             ${renderJobCostInput(job.id, 'mileageMiles', 'Mileage miles', job.costs?.mileageMiles)}
             ${renderJobCalculatedCost(`Mileage allowance @ ${calc.mileageRatePence}p`, calc.mileageCost, true)}
+            ${renderJobCalculatedCost(`Shelley mileage: ${calc.employeeMileageMiles || 0} miles @ 55p`, calc.employeeMileageCost || 0, true)}
             ${renderJobFieldInput(job.id, 'stickerCostPerPipette', 'Sticker cost per pipette', job.stickerCostPerPipette ?? calc.stickerCostPerPipette, '0.01', true)}
             ${renderJobCalculatedCost('Sticker total', calc.stickerCost, true)}
           </div>
