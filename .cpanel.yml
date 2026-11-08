@@ -2,4 +2,8 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/simpxlow/quotes.kirkstonecalibration.co.uk
-    - /bin/cp -rf css js assets index.html $DEPLOYPATH/
+    # Only use after the restricted-access cutover has owner approval.
+    # The password file and private backend configuration are never copied.
+    - /bin/cp -rf css js assets employee api server index.html $DEPLOYPATH/
+    - /bin/cp -f .htaccess $DEPLOYPATH/.htaccess
+

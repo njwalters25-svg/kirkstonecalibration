@@ -1,0 +1,11 @@
+const {test,before,after}=require('node:test');
+const {readFileSync}=require('node:fs');
+const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');
+const {doc,getDoc,setDoc,collection,getDocs}=require('firebase/firestore');
+let env;
+before(async()=>{env=await initializeTestEnvironment({projectId:'demo-kirkstone-access',firestore:{rules:readFileSync(require('node:path').join(__dirname,'../security/firestore.rules'),'utf8')}});await env.withSecurityRulesDisabled(async c=>{await setDoc(doc(c.firestore(),'jobs/private'),{profit:'FINANCIAL_SENTINEL'});});});
+after(async()=>{await env?.cleanup();});
+const claims=(overrides={})=>({role:'owner',bridgeVersion:1,auth_time:Math.floor(Date.now()/1000),firebase:{sign_in_provider:'custom'},...overrides});
+test('verified custom owner can read/write owner collections',async()=>{const db=env.authenticatedContext('cpanel-owner',claims()).firestore();await assertSucceeds(getDoc(doc(db,'jobs/private')));await assertSucceeds(setDoc(doc(db,'quotes/test'),{revenue:123}));await assertSucceeds(getDocs(collection(db,'jobs')));});
+test('anonymous, unverified and employee clients cannot read or write any owner collection',async()=>{const clients=[env.unauthenticatedContext(),env.authenticatedContext('anonymous',{firebase:{sign_in_provider:'anonymous'}}),env.authenticatedContext('employee',{role:'employee'}),env.authenticatedContext('unrelated',{email:'person@example.test',firebase:{sign_in_provider:'google.com'}})];for(const c of clients){for(const path of ['jobs/private','quotes/test','config/settings','customers/test','jobTrash/test']){await assertFails(getDoc(doc(c.firestore(),path)));await assertFails(setDoc(doc(c.firestore(),path),{forged:true}));}}});
+test('wrong UID, provider, bridge version or expired bridge authentication fails',async()=>{for(const [uid,c] of [['forged',claims()],['cpanel-owner',claims({firebase:{sign_in_provider:'anonymous'}})],['cpanel-owner',claims({bridgeVersion:0})],['cpanel-owner',claims({auth_time:Math.floor(Date.now()/1000)-7200})],['cpanel-owner',claims({role:'employee'})]]){const db=env.authenticatedContext(uid,c).firestore();await assertFails(getDoc(doc(db,'jobs/private')));await assertFails(setDoc(doc(db,'jobs/private'),{forged:true}));}});

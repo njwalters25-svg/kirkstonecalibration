@@ -1,0 +1,5 @@
+AuthMerging Off
+Require user Danwalters
+<FilesMatch "^(?!owner-token\.php$).+">
+  Require all denied
+</FilesMatch>
