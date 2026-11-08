@@ -55,6 +55,19 @@ function kc_calendar(array $job): array {
         'shelleyJoiningDates'=>array_values(array_unique(array_filter($joining,'kc_date'))),
     ];
 }
+const KC_EXPENSE_FIELDS = ['mileageMiles','hotel','food','travel','other'];
+function kc_expenses(array $source): array {
+    $out=[];foreach(KC_EXPENSE_FIELDS as $key)$out[$key]=round(max(0,(float)($source[$key] ?? 0)),2);
+    return $out;
+}
+function kc_validate_expenses(mixed $source): array {
+    kc_require(is_array($source) && !array_diff(array_keys($source),KC_EXPENSE_FIELDS));
+    foreach(KC_EXPENSE_FIELDS as $key){
+        $value=$source[$key] ?? null;
+        kc_require((is_int($value)||is_float($value)) && is_finite((float)$value) && $value>=0 && $value<=100000 && abs($value-round($value,2))<0.000001);
+    }
+    return kc_expenses($source);
+}
 function kc_sheet(array $job, array $settings, string $version): array {
     kc_require(kc_assigned($job),'Job unavailable');
     $rows=array_map(fn($r)=>['id'=>(string)$r['id'],'date'=>(string)($r['date'] ?? ''),
@@ -72,13 +85,14 @@ function kc_sheet(array $job, array $settings, string $version): array {
         'employeeWorkCarriedOut'=>(string)($job['employeeWorkCarriedOut'] ?? ''),
         'employeeNotes'=>(string)($job['employeeNotes'] ?? ''),
         'employeeInstructions'=>(string)($job['employeeInstructions'] ?? ''),
+        'employeeExpenses'=>kc_expenses($job['employeeExpenses'] ?? []),
     ];
 }
 function kc_patch(array $job, array $settings, array $input, string $identity): array {
     kc_require(kc_assigned($job),'Job unavailable');
-    $allowed=['id','version','actualEntries','parts','employeeWorkCarriedOut','employeeNotes'];
+    $allowed=['id','version','actualEntries','parts','employeeWorkCarriedOut','employeeNotes','employeeExpenses'];
     kc_require(!array_diff(array_keys($input),$allowed));
-    foreach($allowed as $key) kc_require(array_key_exists($key,$input));
+    foreach(array_diff($allowed,['employeeExpenses']) as $key) kc_require(array_key_exists($key,$input));
     kc_require($input['id'] === $job['id']);
     kc_text($input['version'],100);
     $levels=array_column(kc_levels($job,$settings),'id');
@@ -106,6 +120,7 @@ function kc_patch(array $job, array $settings, array $input, string $identity): 
     // Omitting an existing part may not silently delete owner pricing records.
     kc_require(count($parts)===count($existing));
     return ['actualEntries'=>$rows,'parts'=>$parts,
+        'employeeExpenses'=>array_key_exists('employeeExpenses',$input)?kc_validate_expenses($input['employeeExpenses']):kc_expenses($job['employeeExpenses'] ?? []),
         'employeeWorkCarriedOut'=>kc_text($input['employeeWorkCarriedOut'],10000),
         'employeeNotes'=>kc_text($input['employeeNotes'],10000),
         'employeeUpdatedBy'=>$identity,'employeeRevision'=>bin2hex(random_bytes(16)),

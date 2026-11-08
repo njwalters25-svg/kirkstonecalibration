@@ -57,6 +57,7 @@ window.KirkstoneWork = (() => {
       +'<label>Calendar status<select data-plan-field="scheduleStatus"><option value="booked">Booked</option><option value="provisional" '+(job.scheduleStatus==='provisional'?'selected':'')+'>Provisional</option></select></label></div>'
       +'<label class="work-note">Instructions visible to Shelley<textarea data-plan-field="employeeInstructions" rows="3">'+esc(job.employeeInstructions || '')+'</textarea></label>'
       +'<p><strong>Shelley — work carried out</strong><br>'+esc(job.employeeWorkCarriedOut || '').replace(/\n/g,'<br>')+'</p>'
+      +'<div><strong>Shelley — reported expenses</strong><p>'+Object.entries({mileageMiles:'Mileage (miles)',hotel:'Hotel (£)',food:'Meals (£)',travel:'Other travel / parking (£)',other:'Other expenses (£)'}).map(([key,label])=>esc(label)+': '+esc(job.employeeExpenses?.[key] ?? 0)).join(' · ')+'</p><p class="field-hint">Employee-reported amounts are separate from job costing. Review before adding them to the job costs.</p></div>'
       +'<p><strong>Shelley — work notes</strong><br>'+esc(job.employeeNotes || '').replace(/\n/g,'<br>')+'</p>'
       +'<p class="field-hint">Save the Job Sheet to keep assignment, travel and calendar changes.</p>'
       +'<div class="planner-actions"><button class="btn-small" data-work-action="route">Calculate travel</button>'

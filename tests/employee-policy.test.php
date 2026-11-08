@@ -24,7 +24,7 @@ check(!kc_assigned([...$job,'historicalJob'=>true]),'historical denied');
 $input=['id'=>'job1','version'=>'v1','actualEntries'=>[$row],'parts'=>[['id'=>'part1','quantity'=>3]],'employeeWorkCarriedOut'=>'Cleaned','employeeNotes'=>'New seal'];
 $patch=kc_patch($job,$settings,$input,'ShelleyCoates');
 check($patch['parts'][0]['pricePerUnit']===7&&$patch['parts'][0]['costPerUnit']===14,'quantity edits preserve stored pricing');
-check(!array_diff(array_keys($patch),['actualEntries','parts','employeeWorkCarriedOut','employeeNotes','employeeUpdatedBy','employeeRevision','employeeUpdatedAt','updatedAt']),'patch has an explicit top-level allow-list');
+check(!array_diff(array_keys($patch),['employeeExpenses','actualEntries','parts','employeeWorkCarriedOut','employeeNotes','employeeUpdatedBy','employeeRevision','employeeUpdatedAt','updatedAt']),'patch has an explicit top-level allow-list');
 check($patch['employeeUpdatedBy']==='ShelleyCoates','server stamps audit identity');
 foreach(['assignedPerson','costs','quoteSnapshot','settingsSnapshot','employeeInstructions','profit','status','__proto__'] as $field)denied(fn()=>kc_patch($job,$settings,[...$input,$field=>'forged'],'ShelleyCoates'),'reject '.$field);
 denied(fn()=>kc_patch($job,$settings,[...$input,'actualEntries'=>[[...$row,'costPerUnit'=>99]]],'ShelleyCoates'),'reject nested financial field');
@@ -53,3 +53,11 @@ $jwt=kc_jwt(['uid'=>'cpanel-owner','role'=>'owner'],['private_key'=>$pem]);[$h,$
 $unb64=fn($s)=>base64_decode(strtr($s,'-_','+/'));
 check(openssl_verify($h.'.'.$p,$unb64($s),openssl_pkey_get_details($rsa)['key'],OPENSSL_ALGO_SHA256)===1,'bridge JWT has a valid RSA SHA256 signature');
 check(openssl_verify($h.'.'.$p.'tampered',$unb64($s),openssl_pkey_get_details($rsa)['key'],OPENSSL_ALGO_SHA256)===0,'modified bridge JWT is rejected');
+
+$expenses=['mileageMiles'=>120.5,'hotel'=>80,'food'=>12.75,'travel'=>5,'other'=>0];
+$expensePatch=kc_patch($job,$settings,[...$input,'employeeExpenses'=>$expenses],'ShelleyCoates');
+check($expensePatch['employeeExpenses']['hotel']===80.0,'own expenses accepted');
+check(!isset($expensePatch['costs']) && $job['parts'][0]['costPerUnit']===14,'own expenses do not alter owner costs or pricing');
+check(kc_sheet([...$job,'employeeExpenses'=>$expenses],$settings,'v2')['employeeExpenses']['food']===12.75,'own expenses survive projection');
+check(kc_patch([...$job,'employeeExpenses'=>$expenses],$settings,$input,'ShelleyCoates')['employeeExpenses']['hotel']===80.0,'older clients preserve recorded expenses');
+foreach([['hotel'=>-1],['hotel'=>1.234],['hotel'=>'80'],['wages'=>100],['hotel'=>INF]] as $bad)denied(fn()=>kc_patch($job,$settings,[...$input,'employeeExpenses'=>[...$expenses,...$bad]],'ShelleyCoates'),'invalid or private expense rejected');
