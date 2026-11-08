@@ -8,3 +8,8 @@ Options -Indexes
   Require all denied
 </FilesMatch>
 Header always set X-Content-Type-Options "nosniff"
+
+# Do not cache the owner login bootstrap or its authentication scripts.
+<FilesMatch "^(index[.]html|firebase[.]js|app[.]js)$">
+  Header always set Cache-Control "no-store, max-age=0"
+</FilesMatch>
