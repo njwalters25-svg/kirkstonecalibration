@@ -42,6 +42,9 @@
     }
 
     try {
+      if(typeof KirkstonePlanning!=='undefined' && !job.invoiceSpreadsheetLocked){
+        const pay=KirkstonePlanning.shelleyDayPay(job);if(pay.applies)job.shelleyDayPaySnapshot={...pay};
+      }
       job.status = 'completed';
       job.completedAt = job.completedAt || new Date().toISOString();
       job.updatedAt = new Date().toISOString();
@@ -76,6 +79,7 @@
 
     try {
       job.status = 'active';
+      if(!job.invoiceSpreadsheetLocked)delete job.shelleyDayPaySnapshot;
       job.completedAt = null;
       job.updatedAt = new Date().toISOString();
       await persistJob(job);

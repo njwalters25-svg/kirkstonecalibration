@@ -118,3 +118,19 @@ test('Phil-only jobs and completed records retain their costs; Shelley plus Phil
     assert.equal(result.otherWorkerCost,400);
   }
 });
+
+test('archiving retains Shelley pay and restoring an unlocked job resumes day calculation',async()=>{
+  const c=setup(),j={...job(),id:'archive-check',assignedPerson:'shelley',shelleyPaidDays:2};
+  c.currentJobs=[j];c.renderJobSheets=()=>{};c.confirm=()=>true;c.isLocalPreviewMode=true;
+  c.document.querySelector=()=>null;
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/job-close.js'),'utf8'),c);
+  const before=c.calculateJobSheet(j).totalCosts;
+  await c.completeAndArchiveJob(j.id);
+  assert.equal(j.status,'completed');assert.equal(j.shelleyDayPaySnapshot.cost,253.92);
+  assert.equal(c.calculateJobSheet(j).totalCosts,before);
+  j.shelleyPaidDays=3;
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,253.92);
+  await c.restoreArchivedJob(j.id);
+  assert.equal(j.shelleyDayPaySnapshot,undefined);
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,380.88);
+});

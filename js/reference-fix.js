@@ -90,7 +90,7 @@
           customPartsScript.src = 'js/job-custom-parts.js?v=20260828-3'; customPartsScript.async = false;
           customPartsScript.onload = () => {
             const closeJobScript = document.createElement('script');
-            closeJobScript.src = 'js/job-close.js?v=20260902-2'; closeJobScript.async = false;
+            closeJobScript.src = 'js/job-close.js?v=20261108-shelley-costs-1'; closeJobScript.async = false;
             document.head.appendChild(closeJobScript);
           };
           document.head.appendChild(customPartsScript);

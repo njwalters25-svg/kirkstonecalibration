@@ -59,6 +59,9 @@ window.KirkstonePlanning = (() => {
   const totals = rows => Object.fromEntries(fields.map(field => [field,
     (rows || []).reduce((sum,row) => sum + (Number(row[field]) || 0), 0)]));
   function shelleyDayPay(job) {
+    const saved=job.shelleyDayPaySnapshot;
+    if(saved?.applies===true && ['days','cost','otherWorkerCost'].every(key=>Number.isFinite(saved[key])&&saved[key]>=0))
+      return {applies:true,days:saved.days,cost:saved.cost,otherWorkerCost:saved.otherWorkerCost};
     const team=participants(job), rawOther=Number(job.costs?.secondPerson);
     const existingOther=Number.isFinite(rawOther)?Math.max(0,rawOther):0;
     const applies=team.includes('shelley') && active(job) && !job.invoiceSpreadsheetLocked;
