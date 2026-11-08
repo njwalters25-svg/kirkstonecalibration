@@ -11,7 +11,7 @@ function setup(wrappers = true) {
       createElement: () => ({}), head: { appendChild() {} }, addEventListener() {} },
   });
   c.window = c;
-  const files = ['ui.js', ...(wrappers ? ['job-pricing-fix.js', 'part-price-compat.js', 'job-repair.js'] : [])];
+  const files = ['planning-core.js', 'ui.js', ...(wrappers ? ['job-pricing-fix.js', 'part-price-compat.js', 'job-repair.js'] : [])];
   for (const file of files) vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', file), 'utf8'), c);
   return c;
 }
@@ -64,4 +64,57 @@ test('missing and invalid legacy mileage adds zero; fractional miles round to pe
     assert.equal(c.calculateJobSheet(j).employeeMileageCost, 0);
   }
   assert.equal(c.calculateJobSheet(job(1.23)).employeeMileageCost, 0.68);
+});
+
+test('two Shelley joining days replace an old wage allowance with £253.92, alongside mileage', () => {
+  const c=setup(), j=job();
+  Object.assign(j,{assignedPerson:'owner',secondPerson:true,secondPersonKind:'shelley',
+    shelleyJoiningDates:['2026-11-09','2026-11-10']});
+  j.costs.secondPerson=500;
+  const before=JSON.stringify(j), result=c.calculateJobSheet(j);
+  assert.equal(result.employeePaidDays,2);
+  assert.equal(result.employeeDayPayCost,253.92);
+  assert.equal(result.otherWorkerCost,0);
+  assert.equal(result.totalCosts,421.42);
+  assert.equal(result.profit,-91.42);
+  assert.equal(result.employeeMileageCost,82.5);
+  assert.equal(c.calculateJobSheet(j).totalCosts,421.42);
+  assert.equal(JSON.stringify(j),before);
+});
+
+test('paid days override attendance, including zero and half days', () => {
+  const c=setup(),j={...job(),assignedPerson:'shelley',shelleyJoiningDates:['2026-11-09','2026-11-10']};
+  for(const [days,cost] of [[0,0],[0.5,63.48],[3,380.88]]){
+    j.shelleyPaidDays=days;
+    assert.equal(c.calculateJobSheet(j).employeeDayPayCost,cost);
+  }
+  j.shelleyPaidDays=null;
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,253.92);
+});
+
+test('automatic pay uses valid unique joining weekdays, then availability, then distinct work dates', () => {
+  const c=setup(),j={...job(),assignedPerson:'shelley',scheduleStartDate:'2026-11-09',scheduleEndDate:'2026-11-10',
+    shelleyJoiningDates:['2026-11-09','2026-11-09','2026-11-08','2026-11-12','bad'],shelleyAvailableDays:8};
+  assert.equal(c.calculateJobSheet(j).employeePaidDays,1);
+  j.shelleyJoiningDates=[];j.shelleyAvailableDays=2;
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,253.92);
+  j.shelleyAvailableDays=0;
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,0);
+  j.shelleyAvailableDays=null;
+  j.actualEntries=[{date:'2026-11-09'},{date:'2026-11-09'},{date:'2026-11-10'},{date:'bad'}];
+  assert.equal(c.calculateJobSheet(j).employeePaidDays,2);
+});
+
+test('Phil-only jobs and completed records retain their costs; Shelley plus Phil retains his separate pay', () => {
+  const c=setup(),j={...job(),secondPerson:true,secondPersonKind:'phil',shelleyPaidDays:2};j.costs.secondPerson=400;
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,0);
+  assert.equal(c.calculateJobSheet(j).otherWorkerCost,400);
+  j.assignedPerson='shelley';
+  assert.equal(c.calculateJobSheet(j).employeeDayPayCost,253.92);
+  assert.equal(c.calculateJobSheet(j).otherWorkerCost,400);
+  for(const extra of [{status:'completed'},{historicalJob:true},{invoiceSpreadsheetLocked:true}]){
+    const result=c.calculateJobSheet({...j,...extra});
+    assert.equal(result.employeeDayPayCost,0);
+    assert.equal(result.otherWorkerCost,400);
+  }
 });

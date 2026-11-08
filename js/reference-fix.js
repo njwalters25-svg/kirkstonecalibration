@@ -75,7 +75,7 @@
   });
 
   const pricingScript = document.createElement('script');
-  pricingScript.src = 'js/job-pricing-fix.js?v=20261108-mileage-1'; pricingScript.async = false;
+  pricingScript.src = 'js/job-pricing-fix.js?v=20261108-daypay-1'; pricingScript.async = false;
   pricingScript.onload = () => {
     const compatScript = document.createElement('script');
     compatScript.src = 'js/part-price-compat.js?v=20260828-4'; compatScript.async = false;

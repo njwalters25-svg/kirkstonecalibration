@@ -58,6 +58,23 @@ window.KirkstonePlanning = (() => {
     && !['completed','closed','deleted','cancelled'].includes(String(job.status || '').toLowerCase());
   const totals = rows => Object.fromEntries(fields.map(field => [field,
     (rows || []).reduce((sum,row) => sum + (Number(row[field]) || 0), 0)]));
+  function shelleyDayPay(job) {
+    const team=participants(job), rawOther=Number(job.costs?.secondPerson);
+    const existingOther=Number.isFinite(rawOther)?Math.max(0,rawOther):0;
+    const applies=team.includes('shelley') && active(job) && !job.invoiceSpreadsheetLocked;
+    if(!applies)return {applies:false,days:0,cost:0,otherWorkerCost:existingOther};
+    const override=job.shelleyPaidDays, number=Number(override);
+    const range=schedule(job), dates=joiningDates(job).filter(date=>weekday(date)&&(!range||(date>=range.start&&date<=range.end)));
+    let days;
+    if(override!=null && override!=='' && Number.isFinite(number) && number>=0)days=number;
+    else if(dates.length)days=dates.length;
+    else if(availability(job)!==null)days=availability(job);
+    else days=new Set((job.actualEntries||[]).map(row=>row.date).filter(validDate)).size;
+    // Replace the old Shelley-only second-person allowance rather than adding both.
+    // With Phil on a Shelley-led job, retain his separate worker cost.
+    return {applies:true,days,cost:Math.round((days*126.96+Number.EPSILON)*100)/100,
+      otherWorkerCost:team.includes('phil')?existingOther:0};
+  }
   function operational(job, calculated = {}, settings = {}) {
     const expected = totals(job.plannedLines), actual = totals(job.actualEntries);
     const countRows = (job.actualEntries || []).map(row => ({
@@ -72,7 +89,7 @@ window.KirkstonePlanning = (() => {
       expected, actual, remaining:Object.fromEntries(fields.map(field=>[field,expected[field]-actual[field]])),
       actualEntries:countRows, schedule:schedule(job), shelleyAvailableDays:availability(job),shelleyJoiningDates:joiningDates(job),
       serviceLevels:(job.settingsSnapshot?.serviceLevels || settings.serviceLevels || []).map(level=>({id:level.id,name:level.name})),
-      costs:Object.fromEntries(allowedCosts.map(field=>[field,Number(job.costs?.[field]) || 0])),
+      costs:Object.fromEntries(allowedCosts.map(field=>[field,field==='secondPerson' ? (calculated.otherWorkerCost ?? (Number(job.costs?.[field]) || 0)) : (Number(job.costs?.[field]) || 0)])),
       parts:(job.parts || []).map(part=>({id:part.id,catalogPartId:part.catalogPartId || '',
         name:part.name || part.description || '',quantity:Number(part.quantity) || 0,costPerUnit:Number(part.costPerUnit) || 0})),
       calculatedCosts:{ parts:Number(calculated.partsCost) || 0, mileage:Number(calculated.mileageCost) || 0,
@@ -156,6 +173,6 @@ window.KirkstonePlanning = (() => {
     rows.push(['Total job costs',sheet.calculatedCosts.total],['Work carried out',sheet.workCarriedOut],['Work notes',sheet.operationalNotes]);
     return '\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n');
   }
-  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,joiningDates,onDate,dayTeamName,calendarBounds,weekday,workDates,defaultOrigin,origin,validDate,addDays,schedule,active,totals,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
+  return {fields,labels,person,personName,hasSecondPerson,secondWorker,participants,teamName,availability,joiningDates,onDate,dayTeamName,calendarBounds,weekday,workDates,defaultOrigin,origin,validDate,addDays,schedule,active,totals,shelleyDayPay,operational,outlookPayload,outlookDates,calendarFile,operationalCsv};
 })();
 
