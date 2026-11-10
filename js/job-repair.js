@@ -4,8 +4,39 @@
 
 (function () {
   function getRepairItems(job) {
-    return Array.isArray(job?.repairItems) ? job.repairItems : [];
+    if (!job) return [];
+    if (!job.quotedRepairsImported) {
+      const lines = job.quoteSnapshot?.pipetteLines || job.plannedLines || [];
+      const quoted = lines.map((line, index) => ({ line, index })).filter(({ line }) =>
+        line.isRepair || line.repairDescription !== undefined || line.repairPrice !== undefined);
+      if (quoted.length) {
+        const items = Array.isArray(job.repairItems) ? job.repairItems : [];
+        const matched = new Set();
+        quoted.forEach(({ line, index }) => {
+          const description = String(line.repairDescription || '').trim() || 'Repair';
+          const price = parseFloat(line.repairPrice) || 0;
+          // Reuse work already entered manually, preserving its existing charge.
+          const existing = items.find(item => !matched.has(item) && !item.quotedRepair
+            && String(item.description || '').trim() === description
+            && (parseFloat(item.price) || 0) === price);
+          if (existing) {
+            matched.add(existing);
+            existing.quotedRepair = true;
+            existing.completed = existing.completed !== false;
+          } else {
+            items.push({ id: `quoted-repair-${index}`, description, price, cost: 0,
+              quotedRepair: true, completed: false });
+          }
+        });
+        job.repairItems = items;
+        job.quotedRepairsImported = true;
+      }
+    }
+    return Array.isArray(job.repairItems) ? job.repairItems : [];
   }
+
+  window.getJobRepairItems = getRepairItems;
+  window.isJobRepairCompleted = item => item.completed !== false;
 
   window.addJobRepairItem = function (jobId) {
     const job = typeof getJobById === 'function' ? getJobById(jobId) : null;
@@ -21,6 +52,11 @@
     job.repairItems = getRepairItems(job);
     const item = job.repairItems.find(row => row.id === itemId);
     if (!item) return;
+    if (field === 'completed') {
+      item.completed = !!value;
+      renderJobSheets(currentJobs);
+      return;
+    }
     item[field] = (field === 'price' || field === 'cost') ? (parseFloat(value) || 0) : String(value || '');
     if (field === 'price' || field === 'cost') renderJobSheets(currentJobs);
   };
@@ -39,8 +75,8 @@
     window.calculateJobSheet = function (job) {
       const base = previousCalculateJobSheet(job);
       const roundMoney = value => Math.round(((parseFloat(value) || 0) + Number.EPSILON) * 100) / 100;
-      const repairRevenue = getRepairItems(job).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
-      const repairCost = getRepairItems(job).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
+      const repairRevenue = getRepairItems(job).filter(isJobRepairCompleted).reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+      const repairCost = getRepairItems(job).filter(isJobRepairCompleted).reduce((sum, item) => sum + (parseFloat(item.cost) || 0), 0);
       if (!repairRevenue && !repairCost) return { ...base, repairRevenue: 0, repairCost: 0 };
 
       const actualRevenue = (parseFloat(base.actualRevenue) || 0) + repairRevenue;
@@ -72,10 +108,11 @@
     return `
       <div class="job-repair-editor">
         <h3>Repairs / additional work</h3>
-        <div class="field-hint" style="margin-bottom:.55rem;">Add the work actually carried out, customer price and internal cost (not shown to the customer). Press Save Job Sheet when finished.</div>
+        <div class="field-hint" style="margin-bottom:.55rem;">Quoted repairs are carried over below. Tick Completed to include each repair’s price and internal cost in the job totals. Press Save Job Sheet when finished.</div>
         <div class="job-repair-list">
           ${items.map(item => `
             <div class="job-repair-row" data-repair-id="${escapeHtml(item.id)}">
+              <label class="job-repair-completed"><input type="checkbox" ${item.completed !== false ? 'checked' : ''} onchange="updateJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}','completed',this.checked)"> Completed</label>
               <div class="form-group job-repair-description">
                 <label>Work carried out</label>
                 <input type="text" value="${escapeHtml(item.description || '')}" placeholder="e.g. Replaced piston seal and serviced pipette" onchange="updateJobRepairItem('${escapeJsString(job.id)}','${escapeJsString(item.id)}','description',this.value)">
@@ -114,7 +151,7 @@
     const style = document.createElement('style');
     style.id = 'jobRepairStyles';
     style.textContent = `
-      .job-repair-editor{margin:1rem 0}.job-repair-row{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px auto;gap:.75rem;align-items:end;padding:.75rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.6rem}
+      .job-repair-editor{margin:1rem 0}.job-repair-row{display:grid;grid-template-columns:110px minmax(0,1fr) 150px 150px auto;gap:.75rem;align-items:end;padding:.75rem;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:.6rem}
       .job-repair-currency{display:flex;align-items:center;width:100%;border:1px solid #cbd5e1;border-radius:6px;background:#fff;overflow:hidden}.job-repair-currency>span{flex:0 0 auto;padding:0 .15rem 0 .7rem;line-height:1}.job-repair-currency>input{flex:1 1 auto;min-width:0;border:0!important;box-shadow:none!important;padding-left:.35rem!important;background:transparent!important}.job-repair-currency>input:focus{outline:none}
       @media(max-width:850px){.job-repair-row{grid-template-columns:1fr}.job-repair-row .btn-delete{justify-self:start}}
     `;

@@ -75,7 +75,7 @@ function openCustomerCompletedQuote(jobId) {
   const pipetteRows = getCompletedQuotePipetteRows(job);
   const partRows = getCompletedQuotePartRows(job);
   // Only customer-facing fields belong in this document.
-  const repairRows = (Array.isArray(job.repairItems) ? job.repairItems : []).map(item => ({
+  const repairRows = (typeof getJobRepairItems === 'function' ? getJobRepairItems(job) : (Array.isArray(job.repairItems) ? job.repairItems : [])).filter(item => item.completed !== false).map(item => ({
     description: String(item.description || ''),
     price: parseFloat(item.price) || 0,
   }));

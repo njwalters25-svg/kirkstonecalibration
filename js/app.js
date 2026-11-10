@@ -871,6 +871,7 @@ async function createJobSheetFromQuote(id) {
     mileageRatePence: normalizeMileageRatePence(quoteSettings.mileageRatePence || DEFAULT_SETTINGS.mileageRatePence),
     notes: '',
   };
+  if (typeof getJobRepairItems === 'function') getJobRepairItems(job);
   await persistJob(job, 'Job sheet created');
   expandedJobIds.add(job.id);
   renderJobSheets(currentJobs);

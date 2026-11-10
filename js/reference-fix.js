@@ -84,7 +84,7 @@
       lateScript.src = 'js/job-pricing-late.js?v=20260825-3'; lateScript.async = false;
       lateScript.onload = () => {
         const jobRepairScript = document.createElement('script');
-        jobRepairScript.src = 'js/job-repair.js?v=20261101-1'; jobRepairScript.async = false;
+        jobRepairScript.src = 'js/job-repair.js?v=20261110-1'; jobRepairScript.async = false;
         jobRepairScript.onload = () => {
           const customPartsScript = document.createElement('script');
           customPartsScript.src = 'js/job-custom-parts.js?v=20260828-3'; customPartsScript.async = false;

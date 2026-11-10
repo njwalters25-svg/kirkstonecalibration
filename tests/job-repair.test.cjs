@@ -57,3 +57,20 @@ test('legacy customer documents omit empty repair section',()=>{
  const job={id:'job'},s=setup(job);s.c.getCompletedQuotePipetteRows=()=>[];s.c.getCompletedQuotePartRows=()=>[];
  s.c.openCustomerCompletedQuote('job');assert(!s.html().includes('Repairs / additional work'));
 });
+test('quoted repairs carry over once, charge only when completed and persist selection',()=>{
+ const job={id:'job',quoteSnapshot:{pipetteLines:[{isRepair:true,repairDescription:'Seal',repairPrice:50},{isRepair:true,repairDescription:'Delivery',repairPrice:25}]}};
+ const s=setup(job);assert.equal(s.c.calculateJobSheet(job).actualRevenue,100);
+ assert.equal(job.repairItems.length,2);assert.equal(job.repairItems[0].description,'Seal');
+ const id=job.repairItems[0].id;s.c.updateJobRepairItem('job',id,'completed',true);
+ assert.equal(s.c.calculateJobSheet(job).actualRevenue,150);
+ s.c.getCompletedQuotePipetteRows=()=>[];s.c.getCompletedQuotePartRows=()=>[];
+ s.c.openCustomerCompletedQuote('job');assert(s.html().includes('Seal'));assert(!s.html().includes('Delivery'));
+ const restored=JSON.parse(JSON.stringify(job));assert.equal(s.c.calculateJobSheet(restored).repairRevenue,50);
+ s.c.updateJobRepairItem('job',id,'completed',false);assert.equal(s.c.calculateJobSheet(job).repairRevenue,0);
+ s.c.deleteJobRepairItem('job',id);s.c.calculateJobSheet(job);assert.equal(job.repairItems.length,1);
+});
+test('matching manual repairs keep existing charges without duplication',()=>{
+ const job={repairItems:[{id:'manual',description:'Seal',price:50,cost:10}],quoteSnapshot:{pipetteLines:[{isRepair:true,repairDescription:'Seal',repairPrice:50},{isRepair:true,repairDescription:'Seal',repairPrice:50}]}};
+ const s=setup(job);assert.equal(s.c.calculateJobSheet(job).repairRevenue,50);
+ assert.equal(job.repairItems.length,2);assert.equal(job.repairItems[0].cost,10);
+});
