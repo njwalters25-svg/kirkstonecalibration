@@ -5,7 +5,7 @@
     if (window.__kirkstoneReferenceIntegrityInstalled) return;
     if (document.querySelector('script[data-reference-integrity-loader]')) return;
     const script = document.createElement('script');
-    script.src = 'js/invoice-number-edit.js?v=20260917-1';
+    script.src = 'js/invoice-number-edit.js?v=20261117-reissue-1';
     script.async = false;
     script.dataset.referenceIntegrityLoader = 'true';
     document.head.appendChild(script);

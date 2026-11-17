@@ -171,6 +171,9 @@ async function saveJobToFirestore(job) {
   const ref = getJobsRef().doc(job.id);
   await requireFirebase(db).runTransaction(async transaction => {
     const snapshot = await transaction.get(ref);
+    if (snapshot.exists && (Number(snapshot.data().invoiceRevision) || 0) !== (Number(job.invoiceRevision) || 0)) {
+      throw new Error('This invoice has been reissued. Refresh the job sheets before saving your changes.');
+    }
     if (snapshot.exists && ((snapshot.data().employeeRevision || '') !== (job.employeeRevision || '')
       || (snapshot.data().employeeUpdatedAt || '') !== (job.employeeUpdatedAt || ''))) {
       throw new Error('Shelley has updated this job. Refresh the job sheets before saving your changes.');

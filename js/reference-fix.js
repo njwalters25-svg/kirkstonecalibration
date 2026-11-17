@@ -142,7 +142,7 @@
   document.head.appendChild(dayRateOverrideScript);
 
   const invoiceNumberEditScript = document.createElement('script');
-  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20260917-1';
+  invoiceNumberEditScript.src = 'js/invoice-number-edit.js?v=20261117-reissue-1';
   invoiceNumberEditScript.async = false;
   invoiceNumberEditScript.onload = () => {
     const duplicateJobGuardScript = document.createElement('script');

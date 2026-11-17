@@ -35,6 +35,7 @@
   function jobReferences(job) {
     if (!job) return [];
     const refs = [
+      ...(job.invoiceHistory || []).map(item => item.invoiceNumber),
       job.quoteRef,
       job.invoiceNumber,
       job.reference,
@@ -87,7 +88,9 @@
 
     const jobs = typeof currentJobs !== 'undefined' && Array.isArray(currentJobs) ? currentJobs : [];
     for (const job of jobs) {
-      if (!job || job.id === excludeJobId) continue;
+      if (!job) continue;
+      if ((job.invoiceHistory || []).some(item => normaliseReference(item.invoiceNumber) === candidate)) return { type: 'cancelled invoice', item: job };
+      if (job.id === excludeJobId) continue;
       const refs = jobReferences(job).map(ref => normaliseReference(ref).replace(/[QA]$/i, ''));
       if (refs.includes(candidate)) return { type: 'job', item: job };
     }
@@ -225,7 +228,7 @@
           ? currentJobs.find(item => item.id === jobId)
           : null;
         const candidate = job && typeof createInvoiceNumberFromJob === 'function'
-          ? createInvoiceNumberFromJob(job)
+          ? (job.invoiceNumber || createInvoiceNumberFromJob(job))
           : '';
         const conflict = candidate ? invoiceNumberInUse(candidate, jobId, job?.quoteId || null) : null;
         if (conflict) {
